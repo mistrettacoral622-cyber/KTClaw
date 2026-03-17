@@ -326,6 +326,40 @@
       ],
       "notes": "Delivered as high fidelity HTML",
       "subtasks": []
+    },
+    {
+      "id": "DESIGN-011",
+      "title": "Rename KaiTianClaw to KTClaw",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-010"
+      ],
+      "description": "Global rename of KaiTianClaw to KTClaw in the design board.",
+      "acceptance_criteria": [
+        "All text instances updated"
+      ],
+      "notes": "",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-012",
+      "title": "Add Team Overview and Map views",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-011"
+      ],
+      "description": "Design and implement the front-end mockups for 'Team Overview' (staff cards) and 'Team Map' (hierarchy).",
+      "acceptance_criteria": [
+        "Include staff overview with current status, next item, and recent output.",
+        "Include hierarchy map for team visualization.",
+        "Implement interactions indicating clicking a team leads to the map."
+      ],
+      "notes": "Using reference images 1 and 2 provided by user.",
+      "subtasks": []
     }
   ]
 }

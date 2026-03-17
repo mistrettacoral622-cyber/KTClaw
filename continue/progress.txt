@@ -304,3 +304,22 @@ Blockers:
 
 Next recommended step:
 - Request user review for this precise homepage layout.
+
+[2026-03-17 16:11 +08:00] Session: DESIGN-011 & DESIGN-012 Team Overview & Map Views
+Focus: Rename KaiTianClaw to KTClaw and add Team Staff Overview (Light) and Team Hierarchy Map (Dark) views to the HTML board.
+
+What changed:
+- Renamed all instances of KaiTianClaw to KTClaw across the HTML file.
+- Docs/figma-review/kaitianclaw-design-board.html was significantly expanded to hold 3 linear Frames:
+  - Frame 1: The original single-column AutoClaw homepage layout.
+  - Frame 2: Team Staff Overview based on User Image 1. Uses `--staff-bg` and strict card layouts showing current status, next item, recent output, and scheduling status. Left sidebar emphasizes the active state on `团队总览`.
+  - Frame 3: Team Hierarchy Map based on User Image 2. Shifted to a `.dark-mode` scope mimicking the ClawPort command center dark theme. Uses a CSS-based tree map to show relationship nodes spanning top-level orchestration and sub-agents. Left sidebar emphasizes the active state on `Map`.
+
+Results:
+- Provided a unified local HTML file demonstrating three distinct high-fidelity mockups per user specification.
+
+Blockers:
+- None.
+
+Next recommended step:
+- Await user approval on the newly constructed Team Overview (Image 1) and Map (Image 2) sections before slicing them up for React adoption.
