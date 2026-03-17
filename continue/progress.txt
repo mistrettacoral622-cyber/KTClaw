@@ -1,0 +1,53 @@
+[2026-03-17 10:35 +08:00] Session: PERSIST-001 initialization
+Focus: Establish durable session persistence under continue/
+
+Approved design decisions summarized:
+- Workbench-first shell is approved: left work-object rail + center workspace + right lightweight context rail.
+- Left sidebar groups are approved and must include clones, teams, IM channels, and scheduled tasks.
+- Settings center grouping is approved for deep configuration; operational switching remains in the workbench.
+- Implementation strategy is incremental modification of the current ClawX codebase, not a full rewrite.
+
+Work completed in this session:
+- Created continue/AGENT.MD with mandatory startup recovery and status-transition workflow.
+- Created continue/task.json as the structured source of truth and seeded DESIGN/PLAN/BUILD/VERIFY tasks.
+- Created continue/progress.txt initial checkpoint entry.
+
+Blockers:
+- None.
+
+Next recommended step:
+- Start BUILD-001 from the approved implementation plan after PERSIST-001 review confirmation.
+
+[2026-03-17 11:40 +08:00] Session: BUILD-001/002/003/004 workbench UI implementation
+Focus: Land the approved KaiTianClaw workbench shell on top of current source files
+
+What changed:
+- Refactored the left sidebar into work-object accordion groups for clones, teams, IM channels, and scheduled tasks.
+- Added a collapsible right context rail and persisted its collapse state in the settings store.
+- Converted the current Chat page into the main workbench center area while keeping the existing chat runtime wiring and composer path.
+- Added a grouped settings-center layout and preserved existing provider/proxy/developer functionality under the new structure.
+- Restricted exposed UI languages to Chinese-first and English, hiding Japanese from the language selector.
+- Added the `continue/` files as the durable checkpoint mechanism and recovered implementation after an interrupted session.
+
+Validation run:
+- `npm exec --yes pnpm@10.31.0 test -- tests/unit/settings-store-layout.test.ts tests/unit/workbench-context-rail.test.tsx tests/unit/workbench-sidebar.test.tsx tests/unit/settings-center.test.tsx tests/unit/workbench-shell.test.tsx`
+- `npm exec --yes pnpm@10.31.0 run typecheck`
+- `npm exec --yes pnpm@10.31.0 run lint`
+- `npm exec --yes pnpm@10.31.0 run build:vite`
+
+Results:
+- 5 targeted test files passed, 8 tests passed.
+- typecheck passed.
+- build:vite passed.
+- lint completed with one pre-existing warning in `electron/api/routes/providers.ts`; no new lint errors remain.
+
+Decisions:
+- The existing app structure was modified incrementally instead of being rewritten.
+- The root workbench remains on the existing Chat route.
+- Teams stay in the left workbench as operational objects, while deeper team strategy stays in the settings center.
+
+Blockers:
+- README sync has been reviewed but not fully updated yet.
+
+Next recommended step:
+- Decide whether to do a minimal README sync in this iteration or carry it as the next explicit task before calling the current work complete.

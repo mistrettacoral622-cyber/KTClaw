@@ -1,0 +1,200 @@
+{
+  "project": "KaiTianClaw Control Plane",
+  "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
+  "current_phase": "review",
+  "current_focus": "VERIFY-001",
+  "last_updated": "2026-03-17T11:40:00+08:00",
+  "tasks": [
+    {
+      "id": "PERSIST-001",
+      "title": "Establish continue/ persistence mechanism",
+      "type": "ops",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [],
+      "description": "Create AGENT.MD, task.json, and progress.txt in continue/ and use them as the durable source of session state.",
+      "acceptance_criteria": [
+        "continue/AGENT.MD exists",
+        "continue/task.json exists and is valid JSON",
+        "continue/progress.txt includes this planning session"
+      ],
+      "notes": "All three persistence files exist and were used during the recovery after the interrupted session.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-001",
+      "title": "Define main workbench shell",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [],
+      "description": "Approve the top-level workbench shell structure and UX principles.",
+      "acceptance_criteria": [
+        "Approved shell includes left sidebar, center work area, and right context rail",
+        "Responsive collapse priority is documented"
+      ],
+      "notes": "Approved in design spec dated 2026-03-17.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-002",
+      "title": "Define left sidebar work-object grouping",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-001"
+      ],
+      "description": "Approve clones/teams/channels/scheduled-tasks accordion grouping and collapse behavior.",
+      "acceptance_criteria": [
+        "Four required sidebar groups are defined",
+        "Team appears as an operational work object"
+      ],
+      "notes": "Approved in design spec dated 2026-03-17.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-003",
+      "title": "Define right context rail",
+      "type": "design",
+      "status": "done",
+      "priority": "P1",
+      "depends_on": [
+        "DESIGN-001"
+      ],
+      "description": "Approve lightweight context cards and right-rail collapse behavior.",
+      "acceptance_criteria": [
+        "Right rail is contextual and secondary",
+        "Collapsed handle behavior is defined"
+      ],
+      "notes": "Approved in design spec dated 2026-03-17.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-004",
+      "title": "Define settings-center grouping",
+      "type": "design",
+      "status": "done",
+      "priority": "P1",
+      "depends_on": [],
+      "description": "Approve grouped settings information architecture separated from daily workbench operations.",
+      "acceptance_criteria": [
+        "Settings groups are defined",
+        "Operational vs deep-configuration split is explicit"
+      ],
+      "notes": "Approved in design spec dated 2026-03-17.",
+      "subtasks": []
+    },
+    {
+      "id": "PLAN-001",
+      "title": "Break approved design into executable implementation tasks",
+      "type": "planning",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-001",
+        "DESIGN-002",
+        "DESIGN-003",
+        "DESIGN-004"
+      ],
+      "description": "Produce the detailed implementation sequence and file map for phased execution.",
+      "acceptance_criteria": [
+        "Implementation plan exists under docs/superpowers/plans",
+        "PERSIST task is first in execution order"
+      ],
+      "notes": "Approved implementation plan saved on 2026-03-17.",
+      "subtasks": []
+    },
+    {
+      "id": "BUILD-001",
+      "title": "Integrate new workbench shell into current app",
+      "type": "build",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "PERSIST-001",
+        "PLAN-001"
+      ],
+      "description": "Refactor existing layout and chat page into approved workbench shell incrementally.",
+      "acceptance_criteria": [
+        "Main workbench shell appears in existing app structure",
+        "Legacy routing remains safe during transition"
+      ],
+      "notes": "Main workbench shell was integrated into the existing Chat route instead of creating a new app shell.",
+      "subtasks": []
+    },
+    {
+      "id": "BUILD-002",
+      "title": "Implement collapsible left and right rails",
+      "type": "build",
+      "status": "done",
+      "priority": "P1",
+      "depends_on": [
+        "BUILD-001"
+      ],
+      "description": "Add accordion-driven left work-object rail and collapsible right context rail.",
+      "acceptance_criteria": [
+        "Left sidebar supports expanded and icon-rail collapse",
+        "Right context rail supports collapsed handle mode"
+      ],
+      "notes": "Left sidebar accordion groups and right context rail collapse behaviors are implemented and covered by tests.",
+      "subtasks": []
+    },
+    {
+      "id": "BUILD-003",
+      "title": "Implement settings-center grouped UI",
+      "type": "build",
+      "status": "done",
+      "priority": "P1",
+      "depends_on": [
+        "BUILD-001"
+      ],
+      "description": "Convert settings page to grouped secondary navigation and section-card layout.",
+      "acceptance_criteria": [
+        "Grouped settings navigation exists",
+        "Existing working settings modules are preserved and reorganized"
+      ],
+      "notes": "Settings page was reorganized into grouped secondary navigation while preserving working provider/proxy/developer sections.",
+      "subtasks": []
+    },
+    {
+      "id": "BUILD-004",
+      "title": "Land static PRD-aligned workbench and settings content",
+      "type": "build",
+      "status": "review",
+      "priority": "P2",
+      "depends_on": [
+        "BUILD-002",
+        "BUILD-003"
+      ],
+      "description": "Populate workbench/settings surfaces with approved static PRD-first modules and labels.",
+      "acceptance_criteria": [
+        "Core sidebar/context/settings placeholders are present",
+        "i18n labels cover new UI surfaces"
+      ],
+      "notes": "Static workbench placeholders, team structure, context rail cards, and settings-center placeholders are present. Awaiting final docs sync decision.",
+      "subtasks": []
+    },
+    {
+      "id": "VERIFY-001",
+      "title": "Run UI verification and documentation sync",
+      "type": "verify",
+      "status": "in_progress",
+      "priority": "P0",
+      "depends_on": [
+        "BUILD-001",
+        "BUILD-002",
+        "BUILD-003",
+        "BUILD-004"
+      ],
+      "description": "Execute required tests/checks and update README docs if behavior changed.",
+      "acceptance_criteria": [
+        "Targeted unit tests pass",
+        "Typecheck/lint/build pass",
+        "README sync rule is satisfied"
+      ],
+      "notes": "Targeted unit tests, typecheck, lint, and build:vite all ran. Lint only reports a pre-existing warning in electron/api/routes/providers.ts.",
+      "subtasks": []
+    }
+  ]
+}
