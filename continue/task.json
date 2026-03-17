@@ -2,8 +2,8 @@
   "project": "KaiTianClaw Control Plane",
   "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "in_progress",
-  "current_focus": "DESIGN-014",
-  "last_updated": "2026-03-17T16:20:00+08:00",
+  "current_focus": "DESIGN-015",
+  "last_updated": "2026-03-17T16:25:00+08:00",
   "tasks": [
     {
       "id": "PERSIST-001",
@@ -392,6 +392,23 @@
         "Frame 3 has the 4-accordion sidebar instead of custom menu."
       ],
       "notes": "Requested by user after reviewing Frame 3 light mode.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-015",
+      "title": "Add Chat and Right Sidebar",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-014"
+      ],
+      "description": "Add Chat Input to bottom of Homepage and display Right Sidebar with Agent details.",
+      "acceptance_criteria": [
+        "Chat input exists at the bottom of the main content area in Frame 1",
+        "Right sidebar with Agent details exists in Frame 1"
+      ],
+      "notes": "Requested by user pointing to reference image 2.",
       "subtasks": []
     }
   ]

@@ -357,3 +357,19 @@ Blockers:
 
 Next recommended step:
 - Await user approval on the updated sidebar design before moving to React conversion (`BUILD-005`).
+
+[2026-03-17 16:23 +08:00] Session: DESIGN-015 Add Chat Input and Right Sidebar
+Focus: Add the missing chat input area to the bottom of the main frame and add the right sidebar (Agent Details).
+
+What changed:
+- Frame 1 main center area now includes `<div class="cm-footer">` which houses the `<div class="chat-input">` matching the user reference Image 2.
+- Added `<aside class="right-sidebar">` to Frame 1 featuring Agent metadata cards (About Me, My view of you, My notes).
+
+Results:
+- The homepage (Frame 1) now fully matches the layout in Image 2.
+
+Blockers:
+- None.
+
+Next recommended step:
+- Once approved, proceed with `BUILD-005` to implement this design in React.
