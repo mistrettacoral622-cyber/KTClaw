@@ -7,17 +7,17 @@
   <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
   <style>
     :root {
-      --bg: #f4f7f5;
-      --bg-soft: #eef3f0;
+      --bg: #f5f1ec;
+      --bg-soft: #ede7df;
       --panel: #ffffff;
-      --panel-soft: #f8fbf9;
-      --line: #dfe8e3;
-      --line-strong: #c8d7cf;
-      --text: #1f2a24;
-      --muted: #6d7c73;
-      --accent: #10a37f;
-      --accent-soft: #e7f7f2;
-      --shadow: 0 10px 26px rgba(28, 45, 37, 0.08);
+      --panel-soft: #f8f4ef;
+      --line: #e5ddd3;
+      --line-strong: #d4cabd;
+      --text: #2a241f;
+      --muted: #867b6e;
+      --accent: #f37a3f;
+      --accent-soft: #fff0e6;
+      --shadow: 0 10px 26px rgba(56, 40, 27, 0.08);
       --radius-xl: 24px;
       --radius-lg: 16px;
       --radius-md: 12px;
@@ -32,8 +32,8 @@
       font-family: "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 0 0, rgba(16, 163, 127, 0.07), transparent 38%),
-        linear-gradient(180deg, #f7faf8 0%, var(--bg) 42%, var(--bg-soft) 100%);
+        radial-gradient(circle at 0 0, rgba(243, 122, 63, 0.08), transparent 36%),
+        linear-gradient(180deg, #faf7f4 0%, var(--bg) 42%, var(--bg-soft) 100%);
     }
 
     .page {
@@ -157,7 +157,7 @@
       border-radius: 18px;
       border: 1px solid var(--line);
       overflow: hidden;
-      background: linear-gradient(180deg, #f8fbf9 0%, #f1f6f3 100%);
+      background: linear-gradient(180deg, #faf7f3 0%, #f2ede7 100%);
     }
 
     .shell {
@@ -174,10 +174,14 @@
       grid-template-columns: 86px minmax(0, 1fr) 280px;
     }
 
+    .shell.collapsed-right {
+      grid-template-columns: 320px minmax(0, 1fr) 84px;
+    }
+
     .left-rail {
       padding: 12px 10px;
       border-right: 1px solid var(--line);
-      background: #f4f9f6;
+      background: #f4efea;
       display: grid;
       align-content: start;
       gap: 10px;
@@ -196,8 +200,8 @@
       height: 36px;
       border-radius: 11px;
       background: var(--accent-soft);
-      border: 1px solid #bfe5d7;
-      color: #18785e;
+      border: 1px solid #f0cfba;
+      color: #c4602d;
       font-weight: 700;
       font-size: 15px;
       display: grid;
@@ -252,23 +256,23 @@
     }
 
     .object-item.active {
-      border-color: #b8d8cb;
-      background: #f2fbf7;
+      border-color: #efd1bf;
+      background: #fff7f1;
     }
 
     .dot {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #41c4a2, #179a77);
+      background: linear-gradient(135deg, #ff6d62, #ff9c59);
     }
 
     .dot.blue {
-      background: linear-gradient(135deg, #6cb2ff, #4d7cdf);
+      background: linear-gradient(135deg, #76b8ff, #4b88ea);
     }
 
     .dot.gray {
-      background: linear-gradient(135deg, #dfe8e3, #c7d4cd);
+      background: linear-gradient(135deg, #d9d2cb, #c5bab0);
     }
 
     .object-item strong {
@@ -317,9 +321,9 @@
     }
 
     .pill {
-      border: 1px solid #cee2d8;
-      background: #f3faf6;
-      color: #2b6f5a;
+      border: 1px solid #ecd7c9;
+      background: #fff5ee;
+      color: #9f572c;
       border-radius: 999px;
       padding: 5px 9px;
       font-size: 12px;
@@ -348,8 +352,8 @@
       width: 74px;
       height: 74px;
       border-radius: 50%;
-      border: 4px solid #bfe8d9;
-      box-shadow: inset 0 0 0 8px #ecfaf4;
+      border: 4px solid #f4d1be;
+      box-shadow: inset 0 0 0 8px #fff5ee;
     }
 
     .empty-state h4 {
@@ -405,8 +409,8 @@
 
     .bubble.user {
       margin-left: auto;
-      background: #f0faf6;
-      border-color: #c8e7da;
+      background: #fff3eb;
+      border-color: #f0d6c6;
     }
 
     .composer {
@@ -424,7 +428,7 @@
 
     .send {
       background: var(--accent);
-      border: 1px solid #0f916f;
+      border: 1px solid #de6a34;
       color: #fff;
       border-radius: 10px;
       padding: 6px 11px;
@@ -433,18 +437,57 @@
 
     .right-rail {
       border-left: 1px solid var(--line);
-      background: #f8fcfa;
+      background: #fbf8f5;
       padding: 12px 11px;
       display: grid;
       align-content: start;
       gap: 9px;
     }
 
+    .right-rail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 2px 2px 6px;
+      border-bottom: 1px dashed var(--line-strong);
+    }
+
     .rail-title {
       font-size: 12px;
       color: var(--muted);
-      padding: 2px 2px 4px;
-      border-bottom: 1px dashed var(--line-strong);
+    }
+
+    .rail-fold {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .rail-collapsed {
+      border-left: 1px solid var(--line);
+      background: #fbf8f5;
+      display: grid;
+      place-items: center;
+      padding: 12px 8px;
+    }
+
+    .rail-handle {
+      width: 34px;
+      min-height: 160px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
     }
 
     .info-card {
@@ -475,7 +518,7 @@
 
     .settings-nav {
       border-right: 1px solid var(--line);
-      background: #f5faf7;
+      background: #f6f0eb;
       padding: 13px 10px;
       display: grid;
       align-content: start;
@@ -507,9 +550,9 @@
     }
 
     .settings-item.active {
-      color: #1f4f40;
-      background: #eef9f4;
-      border-color: #beddcf;
+      color: #8f4f29;
+      background: #fff4ec;
+      border-color: #efd4c2;
       font-weight: 600;
     }
 
@@ -603,12 +646,14 @@
       }
 
       .shell,
-      .shell.collapsed-left {
+      .shell.collapsed-left,
+      .shell.collapsed-right {
         grid-template-columns: 1fr;
       }
 
       .left-rail,
-      .right-rail {
+      .right-rail,
+      .rail-collapsed {
         border: none;
       }
 
@@ -632,7 +677,7 @@
       </div>
       <h1>KaiTianClaw 本地设计评审板（全页版）</h1>
       <p class="lead">
-        该版本按「主工作台优先」重建评审结构：借鉴 ClawPort 的布局节奏与操作台氛围，融合 OpenClaw Control Center 的轻治理信息卡，并采用 ChatGPT Web 风格的浅中性背景、白色面板、绿色强调与克制层级。
+        该版本按「主工作台优先」重建评审结构：借鉴 ClawPort 的布局节奏与操作台氛围，融合 OpenClaw Control Center 的轻治理信息卡，并将首页主色调收敛到你给的 AutoClaw 参考图那种浅暖灰白背景、奶白卡片与橙橘强调。
       </p>
       <div class="summary-grid">
         <article class="summary-item">
@@ -641,7 +686,7 @@
         </article>
         <article class="summary-item">
           <strong>配色系统</strong>
-          <p>浅中性灰绿底 + 白色卡片 + ChatGPT 风格绿色 Accent；状态通过柔和底色与细边界表达，不用高饱和噪声色。</p>
+          <p>改成 AutoClaw 式浅暖灰白底 + 奶白卡片 + 橙橘色强调；整体更轻、更平，靠局部暖色与圆角卡片建立识别度。</p>
         </article>
         <article class="summary-item">
           <strong>材质 / 卡片层级</strong>
@@ -649,7 +694,7 @@
         </article>
         <article class="summary-item">
           <strong>导航与工作台关系</strong>
-          <p>左侧不是普通路由导航，而是工作对象（分身、Teams、Clones、IM、定时任务）集合；首页即主工作台，Settings Center 为次级域。</p>
+          <p>左侧不是普通路由导航，而是工作对象集合；本轮统一成分身、Channel 频道、任务、团队管理四组折叠栏。首页即主工作台，Settings Center 为次级域。</p>
         </article>
       </div>
     </section>
@@ -659,7 +704,7 @@
         <div class="frame-head">
           <div>
             <h2>01 主工作台 / 空态（Default）</h2>
-            <p>首页直接进入 workbench。左栏以对象切换工作上下文；中区展示空态引导与快速配置；右栏保留轻量状态卡。</p>
+            <p>首页直接进入 workbench。左栏保持我们的对象式结构，但统一为四个折叠组；右栏收敛成文件与 Agent 两个 inspector，并保留折叠能力。</p>
           </div>
           <span class="chip">Workbench Empty</span>
         </div>
@@ -668,11 +713,11 @@
             <aside class="left-rail">
               <div class="rail-top">
                 <div class="rail-logo">KC</div>
-                <div class="rail-tool">+</div>
+                <div class="rail-tool">⌂</div>
                 <div class="rail-tool">⋯</div>
               </div>
               <section class="object-group">
-                <div class="group-head"><span>Clones / 分身</span><small>工作会话</small></div>
+                <div class="group-head"><span>分身</span><small>工作会话</small></div>
                 <div class="group-body">
                   <article class="object-item active"><div class="dot"></div><div><strong>KaiTianClaw 主分身</strong><small>默认执行入口</small></div><span>14:25</span></article>
                   <article class="object-item"><div class="dot blue"></div><div><strong>Browser Agent</strong><small>搜索与页面操作</small></div><span>10:37</span></article>
@@ -680,16 +725,24 @@
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>Teams</span><small>协作单元</small></div>
+                <div class="group-head"><span>Channel 频道</span><small>触发与通知</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot"></div><div><strong>产品评审 Team</strong><small>多分身协同</small></div><span>3</span></article>
+                  <article class="object-item"><div class="dot blue"></div><div><strong>飞书项目群</strong><small>触发与通知</small></div><span>On</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>Telegram Ops</strong><small>告警推送</small></div><span>Warn</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>IM / 定时任务</span><small>外部入口</small></div>
+                <div class="group-head"><span>任务</span><small>工作推进</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot blue"></div><div><strong>飞书项目群</strong><small>触发与通知</small></div><span>On</span></article>
-                  <article class="object-item"><div class="dot gray"></div><div><strong>日报 Cron</strong><small>每天 09:00</small></div><span>Next</span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>任务看板</strong><small>当前事项与状态流转</small></div><span>12</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>任务日程</strong><small>Cron / 时间安排</small></div><span>Next</span></article>
+                </div>
+              </section>
+              <section class="object-group">
+                <div class="group-head"><span>团队管理</span><small>协作结构</small></div>
+                <div class="group-body">
+                  <article class="object-item"><div class="dot"></div><div><strong>团队总览</strong><small>团队容量与角色分工</small></div><span>3</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>团队看板</strong><small>团队视角任务推进</small></div><span>Live</span></article>
                 </div>
               </section>
             </aside>
@@ -699,16 +752,16 @@
                 <div class="pills">
                   <span class="pill">Object-centric IA</span>
                   <span class="pill">Quick Setup</span>
-                  <span class="pill">Light Governance</span>
+                  <span class="pill">Warm Neutral</span>
                 </div>
               </div>
               <div class="canvas empty-state">
                 <div class="halo"></div>
                 <h4>开始描述你的目标</h4>
-                <p>主工作台保持单一心智入口。先选择左侧工作对象，再在中央发起任务；右侧仅展示任务状态、已绑定能力和风险提示。</p>
+                <p>主工作台保持单一心智入口。先选择左侧工作对象，再在中央发起任务；右侧只保留文件和 Agent 两个 inspector，不再承载通道与治理摘要。</p>
                 <div class="hint-card">
                   <strong>快速配置建议</strong>
-                  <p>可在此一步设置模型、默认 Team、IM 通道、计划任务模板，随后直接进入会话执行。</p>
+                  <p>可在此一步设置名称、角色、默认 Agent 与文件上下文，随后直接进入会话执行。</p>
                 </div>
               </div>
               <div class="composer">
@@ -717,11 +770,12 @@
               </div>
             </main>
             <aside class="right-rail">
-              <div class="rail-title">运行上下文 / Context Rail</div>
-              <article class="info-card"><strong>当前任务</strong><p>暂无执行任务，等待输入。</p></article>
-              <article class="info-card"><strong>能力绑定</strong><p>Browser Agent / 总结助理 已预载。</p></article>
-              <article class="info-card"><strong>通道状态</strong><p>飞书在线，Telegram 待验证。</p></article>
-              <article class="info-card"><strong>治理提示</strong><p>默认权限：Standard，允许普通读写与工具调用。</p></article>
+              <div class="right-rail-head">
+                <div class="rail-title">右侧 Inspector</div>
+                <div class="rail-fold">可折叠</div>
+              </div>
+              <article class="info-card"><strong>文件</strong><p>当前挂载：产品文档、设计评审清单、历史 transcript。只保留“现在用到什么文件”。</p></article>
+              <article class="info-card"><strong>Agent</strong><p>当前主 Agent：KaiTianClaw；已预载 Browser Agent 与总结助理作为可调用成员。</p></article>
             </aside>
           </div>
         </div>
@@ -731,7 +785,7 @@
         <div class="frame-head">
           <div>
             <h2>02 主工作台 / 活跃会话（Active）</h2>
-            <p>进入执行后，中心区保持对话与操作轨迹主导。右栏仍为轻治理，不抢主会话视觉权重。</p>
+            <p>进入执行后，中心区保持对话与操作轨迹主导。右栏继续只保留文件与 Agent 两个 inspector，和 AutoClaw 的右侧人物面板关系更接近。</p>
           </div>
           <span class="chip">Active Conversation</span>
         </div>
@@ -744,22 +798,31 @@
                 <div class="rail-tool">⋯</div>
               </div>
               <section class="object-group">
-                <div class="group-head"><span>Clones / 分身</span><small>会话中</small></div>
+                <div class="group-head"><span>分身</span><small>会话中</small></div>
                 <div class="group-body">
                   <article class="object-item active"><div class="dot"></div><div><strong>KaiTianClaw 主分身</strong><small>正在生成评审稿</small></div><span>Now</span></article>
                   <article class="object-item"><div class="dot blue"></div><div><strong>Browser Agent</strong><small>抓取参考页面</small></div><span>Idle</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>Teams</span><small>协作链路</small></div>
+                <div class="group-head"><span>Channel 频道</span><small>回推与通知</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot gray"></div><div><strong>设计评审 Team</strong><small>文案+可视化</small></div><span>2/3</span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>飞书评审群</strong><small>评审链接回推</small></div><span>On</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>Telegram Ops</strong><small>错误提醒</small></div><span>Warn</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>IM / 定时任务</span><small>触发与回推</small></div>
+                <div class="group-head"><span>任务</span><small>执行视角</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot"></div><div><strong>飞书评审群</strong><small>回推链接</small></div><span>On</span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>任务看板</strong><small>设计评审流转中</small></div><span>4</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>任务日程</strong><small>16:00 下次审阅提醒</small></div><span>Next</span></article>
+                </div>
+              </section>
+              <section class="object-group">
+                <div class="group-head"><span>团队管理</span><small>组织视角</small></div>
+                <div class="group-body">
+                  <article class="object-item"><div class="dot gray"></div><div><strong>团队总览</strong><small>设计评审 Team</small></div><span>2/3</span></article>
+                  <article class="object-item"><div class="dot blue"></div><div><strong>团队看板</strong><small>文案 + 可视化</small></div><span>Live</span></article>
                 </div>
               </section>
             </aside>
@@ -773,9 +836,9 @@
               </div>
               <div class="canvas chat">
                 <div class="bubble user">请基于 ClawPort 节奏，重做 KaiTianClaw 设计评审板，保留 object-centric 左栏。</div>
-                <div class="bubble">收到。将保持首页=主工作台，左栏承载 Clones / Teams / IM / 定时任务，设置中心下沉为 secondary pages。</div>
-                <div class="bubble">我会采用浅中性背景 + 白卡 + 绿色强调，并把治理信息收敛到右栏轻卡片层，不影响对话主流程。</div>
-                <div class="bubble user">请再补一个 collapsed state，用于演示高密度工作区。</div>
+                <div class="bubble">收到。首页继续是主工作台，但左栏统一成四组：分身、Channel 频道、任务、团队管理。</div>
+                <div class="bubble">配色改成你给的 AutoClaw 图那种浅暖灰白底，右栏只保留文件和 Agent 两个 inspector。</div>
+                <div class="bubble user">右边侧边栏可以折叠，任务要拆成任务看板和任务日程，团队管理要拆成团队总览和团队看板。</div>
               </div>
               <div class="composer">
                 <span>继续输入下一条指令…</span>
@@ -783,11 +846,12 @@
               </div>
             </main>
             <aside class="right-rail">
-              <div class="rail-title">状态与治理（轻量）</div>
-              <article class="info-card"><strong>执行阶段</strong><p>第 2/6 帧：活跃会话状态。</p></article>
-              <article class="info-card"><strong>工具调用</strong><p>host-api 正常，未触发高风险动作。</p></article>
-              <article class="info-card"><strong>成本概览</strong><p>Token 14.2k，预算阈值 30k。</p></article>
-              <article class="info-card"><strong>失败重试</strong><p>最近 1h：0 次。</p></article>
+              <div class="right-rail-head">
+                <div class="rail-title">文件 / Agent</div>
+                <div class="rail-fold">折叠</div>
+              </div>
+              <article class="info-card"><strong>文件</strong><p>当前引用：`产品文档`、`设计板 HTML`、`reference 对照截图`。保持“当前文件清单”而不是治理卡堆叠。</p></article>
+              <article class="info-card"><strong>Agent</strong><p>主 Agent：KaiTianClaw；辅助：Browser Agent。右栏只负责展示当前角色与人设信息。</p></article>
             </aside>
           </div>
         </div>
@@ -810,24 +874,31 @@
                 <div class="rail-tool">⋯</div>
               </div>
               <section class="object-group">
-                <div class="group-head"><span>Teams</span><small>组织对象</small></div>
+                <div class="group-head"><span>分身</span><small>对象入口</small></div>
                 <div class="group-body">
-                  <article class="object-item active"><div class="dot"></div><div><strong>设计评审 Team</strong><small>3 个角色在线</small></div><span>Live</span></article>
-                  <article class="object-item"><div class="dot gray"></div><div><strong>值守 Team</strong><small>告警与回滚</small></div><span>Standby</span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>KaiTianClaw 主分身</strong><small>总控入口</small></div><span>Live</span></article>
+                  <article class="object-item"><div class="dot blue"></div><div><strong>Browser Agent</strong><small>搜索与抓取</small></div><span>Idle</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>IM Channels</span><small>连接状态</small></div>
+                <div class="group-head"><span>Channel 频道</span><small>连接状态</small></div>
                 <div class="group-body">
                   <article class="object-item"><div class="dot blue"></div><div><strong>飞书项目群</strong><small>双向同步</small></div><span>On</span></article>
                   <article class="object-item"><div class="dot gray"></div><div><strong>Telegram Ops</strong><small>仅告警推送</small></div><span>Warn</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>Scheduled Tasks</span><small>计划执行</small></div>
+                <div class="group-head"><span>任务</span><small>计划执行</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot"></div><div><strong>日报汇总 Cron</strong><small>09:00 每日</small></div><span>Next</span></article>
-                  <article class="object-item"><div class="dot gray"></div><div><strong>质量巡检 Cron</strong><small>每 30 分钟</small></div><span>Ready</span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>任务看板</strong><small>当前事项、状态流转、责任人</small></div><span>12</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>任务日程</strong><small>09:00 日报 / 16:00 审阅提醒</small></div><span>Next</span></article>
+                </div>
+              </section>
+              <section class="object-group">
+                <div class="group-head"><span>团队管理</span><small>团队视角</small></div>
+                <div class="group-body">
+                  <article class="object-item active"><div class="dot"></div><div><strong>团队总览</strong><small>设计评审 Team 当前 3 个角色在线</small></div><span>Live</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>团队看板</strong><small>按团队查看任务推进与阻塞</small></div><span>Board</span></article>
                 </div>
               </section>
             </aside>
@@ -886,7 +957,7 @@
               <h3>基础设置（Basic）</h3>
               <p>常用配置保持轻表单和卡片节奏，中文优先呈现，保留必要术语（Provider、Workflow、Cron）。</p>
               <div class="panel-grid">
-                <article class="panel"><strong>主题与外观</strong><p>Light Neutral 为默认；白卡、细描边、弱阴影与绿色强调保持一致。</p></article>
+                <article class="panel"><strong>主题与外观</strong><p>Light Neutral 为默认；浅暖灰白背景、奶白卡片、细描边与橙橘强调保持一致。</p></article>
                 <article class="panel"><strong>语言策略</strong><p>主界面中文优先，技术关键字与模型名保留英文。</p></article>
                 <article class="panel"><strong>Provider 连接</strong><p>集中管理 API Key、模型默认值、Fallback 优先级。</p></article>
                 <article class="panel"><strong>Workflow Presets</strong><p>预置“评审流”“值守流”“发布流”，支持按 Team 一键应用。</p></article>
@@ -938,56 +1009,68 @@
       <article class="frame-card">
         <div class="frame-head">
           <div>
-            <h2>06 关键折叠态 / Left Rail Collapsed</h2>
-            <p>在高密度执行阶段折叠左侧对象栏，仅保留图标层级，释放中心会话面积，同时维持 IA 一致性。</p>
+            <h2>06 关键折叠态 / Right Inspector Collapsed</h2>
+            <p>首页右 inspector 可折叠，释放中心工作区宽度；左侧对象栏保持完整四组结构，不影响任务和团队管理切换。</p>
           </div>
           <span class="chip">Collapsed State</span>
         </div>
         <div class="stage">
-          <div class="shell collapsed-left">
+          <div class="shell collapsed-right">
             <aside class="left-rail">
               <div class="rail-top">
                 <div class="rail-logo">KC</div>
+                <div class="rail-tool">⌂</div>
+                <div class="rail-tool">⋯</div>
               </div>
               <section class="object-group">
-                <div class="group-head"><span>Objects</span><small></small></div>
+                <div class="group-head"><span>分身</span><small>工作会话</small></div>
                 <div class="group-body">
-                  <article class="object-item active"><div class="dot"></div><div><strong>K</strong></div><span></span></article>
-                  <article class="object-item"><div class="dot blue"></div><div><strong>B</strong></div><span></span></article>
-                  <article class="object-item"><div class="dot gray"></div><div><strong>T</strong></div><span></span></article>
+                  <article class="object-item active"><div class="dot"></div><div><strong>KaiTianClaw 主分身</strong><small>Focus mode 中</small></div><span>Now</span></article>
+                  <article class="object-item"><div class="dot blue"></div><div><strong>Browser Agent</strong><small>抓取参考页</small></div><span>Idle</span></article>
                 </div>
               </section>
               <section class="object-group">
-                <div class="group-head"><span>Channels</span><small></small></div>
+                <div class="group-head"><span>Channel 频道</span><small>触发与通知</small></div>
                 <div class="group-body">
-                  <article class="object-item"><div class="dot"></div><div><strong>F</strong></div><span></span></article>
-                  <article class="object-item"><div class="dot gray"></div><div><strong>C</strong></div><span></span></article>
+                  <article class="object-item"><div class="dot"></div><div><strong>飞书项目群</strong><small>评审回推</small></div><span>On</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>Telegram Ops</strong><small>告警推送</small></div><span>Warn</span></article>
+                </div>
+              </section>
+              <section class="object-group">
+                <div class="group-head"><span>任务</span><small>执行入口</small></div>
+                <div class="group-body">
+                  <article class="object-item"><div class="dot"></div><div><strong>任务看板</strong><small>当前任务推进</small></div><span>12</span></article>
+                  <article class="object-item"><div class="dot gray"></div><div><strong>任务日程</strong><small>下一次提醒 16:00</small></div><span>Next</span></article>
+                </div>
+              </section>
+              <section class="object-group">
+                <div class="group-head"><span>团队管理</span><small>组织视角</small></div>
+                <div class="group-body">
+                  <article class="object-item"><div class="dot"></div><div><strong>团队总览</strong><small>角色与容量</small></div><span>Live</span></article>
+                  <article class="object-item"><div class="dot blue"></div><div><strong>团队看板</strong><small>团队视角流转</small></div><span>Board</span></article>
                 </div>
               </section>
             </aside>
             <main class="main-area">
               <div class="main-top">
-                <h3>主工作台（左栏折叠）</h3>
+                <h3>主工作台（右 Inspector 折叠）</h3>
                 <div class="pills">
                   <span class="pill">Focus Mode</span>
-                  <span class="pill">Context Preserved</span>
+                  <span class="pill">Inspector Hidden</span>
                 </div>
               </div>
               <div class="canvas chat">
-                <div class="bubble user">当前窗口太挤，切到折叠态继续工作。</div>
-                <div class="bubble">已进入 Focus Mode。左栏折叠为对象图标，点击即可展开；对象语义不变，不退化成普通导航。</div>
-                <div class="bubble">你仍可从右栏查看治理卡片，主区获得更大编辑空间，适合长对话和并行任务跟踪。</div>
+                <div class="bubble user">当前窗口太挤，把右边栏折起来继续工作。</div>
+                <div class="bubble">已进入 Focus Mode。右侧 inspector 折叠成把手，中心区更接近 AutoClaw 那种大画布工作感。</div>
+                <div class="bubble">左侧四组对象栏保持完整，不影响在分身、频道、任务和团队管理之间切换。</div>
               </div>
               <div class="composer">
                 <span>Focus Mode 下继续输入…</span>
                 <button class="send">发送</button>
               </div>
             </main>
-            <aside class="right-rail">
-              <div class="rail-title">轻治理（保持可见）</div>
-              <article class="info-card"><strong>模式</strong><p>Left rail collapsed，主区宽度 +28%。</p></article>
-              <article class="info-card"><strong>风险级别</strong><p>Standard，未触发高危权限。</p></article>
-              <article class="info-card"><strong>计划任务</strong><p>下次 Cron：18:00。</p></article>
+            <aside class="rail-collapsed">
+              <div class="rail-handle">文件 / Agent</div>
             </aside>
           </div>
         </div>

@@ -159,3 +159,58 @@ Blockers:
 
 Next recommended step:
 - Start `BUILD-005` and translate the approved review deck into the current ClawX source without diverging from the existing app architecture.
+
+[2026-03-17 15:18 +08:00] Session: DESIGN-006 homepage refinement from AutoClaw reference
+Focus: Adjust the homepage review design to match the provided AutoClaw image direction before the next design round
+
+What changed:
+- Recovered current design state from `continue/task.json` and `continue/progress.txt`, then switched the active focus away from `BUILD-005` and into a new design iteration task: `DESIGN-006`.
+- Re-ran lightweight design verification relevant to this task:
+  - `node -e "JSON.parse(require('fs').readFileSync('continue/task.json','utf8')); console.log('task.json valid')"`
+  - `Select-String` checks against `docs/figma-review/kaitianclaw-design-board.html` for the new palette/rail requirements
+  - `Invoke-WebRequest http://127.0.0.1:4173/kaitianclaw-design-board.html`
+- Used the provided AutoClaw screenshot as the new homepage color reference and adjusted the local review board from the previous green-led ChatGPT direction to a warmer light-neutral palette:
+  - warm off-white background
+  - cream-white cards
+  - orange accent chips, buttons, and focus states
+- Updated the homepage-related review frames so the right side only contains two inspector sections:
+  - `文件`
+  - `Agent`
+- Added explicit fold affordance for the right inspector and changed the key collapsed-state frame to `Right Inspector Collapsed`.
+- Standardized the left rail across the homepage/operations/collapsed-state review frames into four accordion groups:
+  - `分身`
+  - `Channel 频道`
+  - `任务`
+  - `团队管理`
+- Changed the new second-level items as requested:
+  - `任务` -> `任务看板`, `任务日程`
+  - `团队管理` -> `团队总览`, `团队看板`
+- Re-delivered the updated board into the existing Figma review file.
+
+Figma delivery:
+- Existing file used: `KaiTianClaw UI Review Board`
+- File key: `7gBaKvTT8oFRYkPqN02p2F`
+- Updated capture node URL: `https://www.figma.com/design/7gBaKvTT8oFRYkPqN02p2F?node-id=5-2`
+
+Results:
+- `continue/task.json` parses successfully with Node after the updates.
+- The local review board still serves with `HTTP 200`.
+- Required design tokens/labels are present in the HTML for:
+  - AutoClaw warm palette copy
+  - four left-rail groups
+  - `任务看板 / 任务日程`
+  - `团队总览 / 团队看板`
+  - right inspector `文件 / Agent`
+  - `Right Inspector Collapsed`
+- Figma capture completed successfully and screenshot verification confirmed the updated design node is populated.
+
+Decisions:
+- The homepage is no longer using the previous green-led review tone as its primary expression.
+- The right rail should behave as a compact object inspector rather than a governance/status rail.
+- The left rail structure is now explicitly normalized for subsequent design rounds and later implementation.
+
+Blockers:
+- None for this design iteration.
+
+Next recommended step:
+- Continue with `DESIGN-007` once the next image-based visual direction is provided.

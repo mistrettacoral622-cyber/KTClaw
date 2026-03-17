@@ -2,8 +2,8 @@
   "project": "KaiTianClaw Control Plane",
   "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "planned",
-  "current_focus": "BUILD-005",
-  "last_updated": "2026-03-17T14:45:00+08:00",
+  "current_focus": "DESIGN-007",
+  "last_updated": "2026-03-17T15:18:00+08:00",
   "tasks": [
     {
       "id": "PERSIST-001",
@@ -233,6 +233,42 @@
         "Implementation stays on the current source mainline and preserves the renderer/main API boundary"
       ],
       "notes": "Start from the approved Figma deck and local HTML review board instead of inventing a new layout direction during implementation.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-006",
+      "title": "Refine homepage palette and rail structure from AutoClaw reference",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-005"
+      ],
+      "description": "Adjust the homepage review design to follow the provided AutoClaw reference for color direction and simplify the right inspector while reorganizing the left rail into four accordion groups.",
+      "acceptance_criteria": [
+        "Homepage color palette reflects the provided AutoClaw reference image rather than the previous green-led direction",
+        "Right inspector is reduced to File and Agent sections and remains collapsible",
+        "Left rail shows four accordion groups: 分身, Channel 频道, 任务, 团队管理, with 任务 and 团队管理 using the approved new second-level items"
+      ],
+      "notes": "Updated the local/Figma review deck so the homepage follows the provided AutoClaw reference for color direction, uses only File and Agent as the right inspector, and standardizes the left rail to four accordion groups: 分身, Channel 频道, 任务, 团队管理. The key collapsed state now demonstrates the right inspector collapsing instead of the previous left-rail-focused version.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-007",
+      "title": "Continue user-directed visual iteration of the review deck",
+      "type": "design",
+      "status": "planned",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-006"
+      ],
+      "description": "Apply the next round of user-provided visual direction to the KaiTianClaw review artifact before production implementation starts.",
+      "acceptance_criteria": [
+        "Next requested visual direction is reflected in the local review board",
+        "Updated review artifact is re-delivered to Figma MCP",
+        "continue state and progress log stay aligned with the active design iteration"
+      ],
+      "notes": "Reserved for the next image-based design feedback round from the user.",
       "subtasks": []
     }
   ]
