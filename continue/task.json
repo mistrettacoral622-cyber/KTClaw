@@ -2,8 +2,8 @@
   "project": "KaiTianClaw Control Plane",
   "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "in_progress",
-  "current_focus": "DESIGN-016",
-  "last_updated": "2026-03-17T16:29:00+08:00",
+  "current_focus": "DESIGN-017",
+  "last_updated": "2026-03-17T16:35:00+08:00",
   "tasks": [
     {
       "id": "PERSIST-001",
@@ -426,6 +426,23 @@
         "Map nodes have gradient borders and hover animations"
       ],
       "notes": "Requested by user to innovate visually on the list & map beyond the static reference.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-017",
+      "title": "Layout Innovation",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-016"
+      ],
+      "description": "Implement asymmetric Bento Box layout for Team Overview and Left-to-Right horizontal tree for Team Map.",
+      "acceptance_criteria": [
+        "Team Overview uses hero and wide cards to break grid monotony",
+        "Team Map flows horizontally from left to right"
+      ],
+      "notes": "Requested by user to innovate structurally on the list and map views.",
       "subtasks": []
     }
   ]

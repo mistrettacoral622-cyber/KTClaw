@@ -390,3 +390,19 @@ Blockers:
 
 Next recommended step:
 - User review of these advanced hover states and shadow styles before code translation.
+
+[2026-03-17 16:34 +08:00] Session: DESIGN-017 Layout Innovation
+Focus: Redesign the core Team layouts away from standard grids and vertical trees.
+
+What changed:
+- Frame 2 (Staff Overview): Replaced the standard CSS grid with a modern asymmetric Bento Box dashboard format. Created a `hero` card (Main Orchestrator) that spans 2x2 grid spaces with a prominent avatar and typography. Added a `wide` card type spanning 3 columns. This establishes a clear hierarchy based on Agent capabilities.
+- Frame 3 (Team Map): Rewrote the CSS for `.tree` to flow Left-to-Right (Horizontal Mind Map) instead of Top-Down. This utilizes horizontal screen real-estate much better for long agent names and allows an infinite horizontal scroll rather than a narrow vertical scroll.
+
+Results:
+- Both frames feel distinctly more like a professional orchestrator tooling interface rather than a generic template.
+
+Blockers:
+- None.
+
+Next recommended step:
+- Review the layout changes with user. Convert to React if approved.

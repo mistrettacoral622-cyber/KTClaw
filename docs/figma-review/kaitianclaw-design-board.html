@@ -529,7 +529,8 @@
     .staff-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      grid-auto-rows: auto;
+      gap: 24px;
       margin-top: 16px;
     }
     .staff-card {
@@ -604,6 +605,53 @@
     .staff-table td:last-child {
       color: var(--text-dark);
       font-weight: 500;
+    }
+    
+    /* Bento Layout Specifics */
+    .staff-card.staff-hero {
+      grid-column: span 2;
+      grid-row: span 2;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(235, 243, 255, 0.8));
+      border-color: rgba(20, 122, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(20, 122, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+    .staff-card.staff-hero .staff-card-avatar {
+      width: 80px;
+      height: 80px;
+      font-size: 40px;
+    }
+    .staff-card.staff-hero .staff-card-title h3 {
+      font-size: 22px;
+    }
+    
+    .staff-card.staff-wide {
+      grid-column: span 3;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .staff-card.staff-wide .staff-card-top {
+      margin-bottom: 0;
+      width: 30%;
+    }
+    .staff-card.staff-wide .staff-table {
+      width: 65%;
+      margin: 0;
+    }
+    .staff-card.staff-wide .staff-table tbody {
+      display: flex;
+      gap: 32px;
+      justify-content: flex-end;
+    }
+    .staff-card.staff-wide .staff-table tr {
+      display: flex;
+      flex-direction: column;
+      border: none;
+    }
+    .staff-card.staff-wide .staff-table td {
+      border: none;
+      padding: 4px 0;
+      white-space: nowrap;
     }
 
     .staff-footer-rows {
@@ -693,55 +741,78 @@
       position: relative;
     }
     
-    /* Simple CSS Tree */
-    .tree ul {
-      padding-top: 40px; position: relative;
-      transition: all 0.5s;
+    /* Horizontal Mind-Map Tree Structure */
+    .tree {
       display: flex;
-      justify-content: center;
+      padding: 48px;
+      overflow: auto;
+      min-height: 480px;
+      align-items: center;
+    }
+    .tree ul {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      padding-left: 64px;
+      gap: 24px;
+      margin: 0;
       list-style-type: none;
+      justify-content: center;
+    }
+    .tree > ul {
       padding-left: 0;
     }
     .tree li {
-      float: left; text-align: center;
-      list-style-type: none;
+      display: flex;
+      align-items: center;
       position: relative;
-      padding: 40px 10px 0 10px;
-      transition: all 0.5s;
     }
-    /* Lines */
-    .tree li::before, .tree li::after{
-      content: '';
-      position: absolute; top: 0; right: 50%;
-      border-top: 1px solid var(--text-light);
-      width: 50%; height: 40px;
+    
+    /* Vertical line connecting sibling nodes */
+    .tree li::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -32px;
+      border-left: 2px dashed rgba(200, 204, 212, 0.8);
     }
-    .tree li::after{
-      right: auto; left: 50%;
-      border-left: 1px solid var(--text-light);
+    .tree li:first-child::before {
+      top: 50%;
     }
-    /* Clean up lines for only child */
-    .tree li:only-child::after, .tree li:only-child::before {
+    .tree li:last-child::before {
+      bottom: 50%;
+    }
+    .tree li:only-child::before {
       display: none;
     }
-    .tree li:only-child{ padding-top: 0;}
-    /* Clean up lines for first/last children */
-    .tree li:first-child::before, .tree li:last-child::after{
-      border: 0 none;
+    
+    /* Horizontal line entering a child node */
+    .tree li::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -32px;
+      width: 32px;
+      border-top: 2px dashed rgba(200, 204, 212, 0.8);
     }
-    .tree li:last-child::before{
-      border-right: 1px solid var(--text-light);
-      border-radius: 0 5px 0 0;
+    .tree li:only-child::after {
+      /* If only child, extend line directly backwards */
+      left: -64px;
+      width: 64px;
     }
-    .tree li:first-child::after{
-      border-radius: 5px 0 0 0;
-    }
-    /* Downward connectors from parents */
-    .tree ul ul::before{
+    
+    /* Horizontal line exiting a parent node */
+    .tree ul::before {
       content: '';
-      position: absolute; top: 0; left: 50%;
-      border-left: 1px solid var(--text-light);
-      width: 0; height: 40px;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 32px;
+      border-top: 2px dashed rgba(200, 204, 212, 0.8);
+    }
+    .tree > ul::before {
+      display: none;
     }
     
     .map-node {
@@ -1185,7 +1256,37 @@
 
         <div class="staff-grid">
           
-          <!-- Card 1 -->
+          <!-- Card 1 (Hero) -->
+          <div class="staff-card staff-hero" style="cursor: pointer; position: relative;">
+            <div style="position: absolute; top: 20px; right: 20px; background: rgba(20, 122, 255, 0.1); color: #147aff; border: 1px solid rgba(20, 122, 255, 0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600;">✦ Orchestrator Main</div>
+            <div class="staff-card-top">
+              <div class="staff-card-avatar" style="background: linear-gradient(135deg, #e6f0ff 0%, #ffffff 100%); border-color: #b3d4ff; color: #147aff;">🐻</div>
+              <div class="staff-card-title">
+                <h3>main</h3>
+                <p>主控与协调</p>
+              </div>
+            </div>
+            <table class="staff-table" style="margin-top: auto;">
+              <tr>
+                <td>当前状态</td>
+                <td style="color: #00B42A;">● 工作中</td>
+              </tr>
+              <tr>
+                <td>正在处理</td>
+                <td>creatos-sales-lead-radar</td>
+              </tr>
+              <tr>
+                <td>关键决策</td>
+                <td>"先只看X，因为这里容易同时拿到：具体人-具体痛点..."</td>
+              </tr>
+              <tr>
+                <td>最近产出</td>
+                <td>已生成战略大纲 v1.2</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Card 2 -->
           <div class="staff-card">
             <div class="staff-card-top">
               <div class="staff-card-avatar">🐔</div>
@@ -1201,46 +1302,76 @@
               </tr>
               <tr>
                 <td>下一项</td>
-                <td>Coq-每日新闻 | Trend Report 09:00</td>
+                <td>Trend Report 09:00</td>
               </tr>
               <tr>
                 <td>最近产出</td>
-                <td>Daily KTClaw Trend/Report — 2026-03-15 总判断：今天的主线不是“更强模型”，而是“agent基础设施层”继续升温。</td>
+                <td>"今天的主线是agent基础设施层升温。"</td>
               </tr>
               <tr>
-                <td>是否在排班里</td>
+                <td>是否在排班</td>
                 <td>已排班</td>
               </tr>
             </table>
           </div>
 
-          <!-- Card 2 -->
-          <div class="staff-card" style="cursor: pointer; border-color: var(--accent); position: relative;">
-            <div style="position: absolute; top: -10px; right: 10px; background: var(--accent); color: white; padding: 2px 8px; border-radius: 999px; font-size: 11px;">点击查看关系图</div>
+          <!-- Card 3 -->
+          <div class="staff-card">
             <div class="staff-card-top">
-              <div class="staff-card-avatar">🐻</div>
+              <div class="staff-card-avatar">🐒</div>
               <div class="staff-card-title">
-                <h3>main</h3>
-                <p>主控与协调</p>
+                <h3>monkey</h3>
+                <p>YouTube 视频转长文</p>
               </div>
             </div>
             <table class="staff-table">
               <tr>
                 <td>当前状态</td>
-                <td>工作中</td>
+                <td>待命</td>
               </tr>
               <tr>
-                <td>正在处理什么</td>
-                <td>creatos-sales-lead-radar</td>
+                <td>正在处理</td>
+                <td>无</td>
               </tr>
               <tr>
                 <td>最近产出</td>
-                <td>现在第一站我会去：公干讨论里找不是全网乱找。第一小步先只看X，因为这里容易同时拿到：具体人-具体痛点。...</td>
+                <td>Monkey Asset Inta...</td>
               </tr>
               <tr>
-                <td>是否在排班里</td>
-                <td>已排班</td>
+                <td>是否在排班</td>
+                <td>未排班</td>
               </tr>
+            </table>
+          </div>
+
+          <!-- Card 4 (Wide) -->
+          <div class="staff-card staff-wide">
+            <div class="staff-card-top">
+              <div class="staff-card-avatar">🦦</div>
+              <div class="staff-card-title">
+                <h3>otter</h3>
+                <p>私人助理与提醒</p>
+              </div>
+            </div>
+            <table class="staff-table">
+              <tbody>
+                <tr>
+                  <td>当前状态</td>
+                  <td>待命</td>
+                </tr>
+                <tr>
+                  <td>下一项</td>
+                  <td>每日07:30晨报</td>
+                </tr>
+                <tr>
+                  <td>最近产出</td>
+                  <td>"记下了。我会把这件事作为后续提..."</td>
+                </tr>
+                <tr>
+                  <td>是否在排班</td>
+                  <td>已排班</td>
+                </tr>
+              </tbody>
             </table>
           </div>
 
