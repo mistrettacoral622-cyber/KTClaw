@@ -1200,34 +1200,40 @@
     <!-- Left Sidebar -->
     <aside class="left-sidebar">
       <div class="ls-header">
-        <div class="icon-btn" style="width: auto; padding: 0 8px; font-weight: 600;">KTClaw Command</div>
+        <div class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+        </div>
+        <div class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
       </div>
 
       <div class="ls-content">
-        <div class="text-item active"><span style="margin-right:8px">🗺️</span> Map <span style="margin-left:auto; font-size:11px; color:var(--text-light)">31</span></div>
-        <div class="text-item"><span style="margin-right:8px">▦</span> Kanban</div>
-        <div class="text-item"><span style="margin-right:8px">💬</span> Messages</div>
-        <div class="text-item"><span style="margin-right:8px">⏱️</span> Crons <span style="margin-left:auto; font-size:11px; color:var(--text-light)">30</span></div>
-        <div class="text-item"><span style="margin-right:8px">📈</span> Activity</div>
-        <div class="text-item"><span style="margin-right:8px">💲</span> Costs</div>
-        <div class="text-item"><span style="margin-right:8px">🧠</span> Memory</div>
-        <div class="text-item"><span style="margin-right:8px">📖</span> Docs</div>
-        <div class="text-item"><span style="margin-right:8px">⚙️</span> Settings</div>
-      </div>
-
-      <div class="ls-footer" style="flex-direction: column; align-items: flex-start; gap: 16px;">
-        <div style="width: 100%;">
-          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">MAIN USAGE</div>
-          <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom: 4px;"><span>5-Hour</span><span style="color:#00B42A">20%</span></div>
-          <div style="width:100%; height:4px; background:var(--line); border-radius:2px;"><div style="width:20%; height:100%; background:#00B42A; border-radius:2px;"></div></div>
-          <div style="font-size: 10px; color: var(--text-light); margin-top: 4px;">Resets in 1h 15m</div>
+        <div class="accordion">
+          <div class="accordion-head">分身 <span class="arrow">▼</span></div>
         </div>
-        <div class="user-profile">
-          <div class="user-avatar" style="background:#FFEBE8; color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight: bold;">JR</div>
-          <div style="display:flex; flex-direction:column;">
-            <span class="user-name">JR</span>
-            <span style="font-size: 11px; color:var(--text-muted);">Owner</span>
+        <div class="accordion" style="margin-top: 16px;">
+          <div class="accordion-head">Channel 频道 <span class="arrow">▼</span></div>
+        </div>
+        <div class="accordion" style="margin-top: 16px;">
+          <div class="accordion-head">任务 <span class="arrow">▼</span></div>
+          <div class="accordion-body">
+            <div class="text-item">任务看板</div>
+            <div class="text-item">任务日程</div>
           </div>
+        </div>
+        <div class="accordion" style="margin-top: 16px;">
+          <div class="accordion-head">团队管理 <span class="arrow">▼</span></div>
+          <div class="accordion-body">
+            <div class="text-item">团队总览</div>
+            <div class="text-item active">团队看板</div>
+          </div>
+        </div>
+      </div>
+      <div class="ls-footer">
+        <div class="user-profile">
+          <img class="user-avatar" src="https://ui-avatars.com/api/?name=User&background=D9D9D9" alt="User">
+          <div class="user-name">177****7838</div>
         </div>
       </div>
     </aside>

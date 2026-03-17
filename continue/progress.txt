@@ -341,3 +341,19 @@ Blockers:
 
 Next recommended step:
 - Await user approval on the Light Theme map before beginning React implementation `BUILD-005`.
+
+[2026-03-17 16:19 +08:00] Session: DESIGN-014 Standardize Map Sidebar
+Focus: Replace the Map view's left sidebar with the standard 4-accordion sidebar.
+
+What changed:
+- Swapped out the custom list in Frame 3's `.left-sidebar` with the standard 4-group accordion layout (分身, Channel 频道, 任务, 团队管理) from Frame 1/2.
+- Updated task.json to track DESIGN-014 as done.
+
+Results:
+- Consistent left navigation interaction structure across all three frames.
+
+Blockers:
+- None.
+
+Next recommended step:
+- Await user approval on the updated sidebar design before moving to React conversion (`BUILD-005`).

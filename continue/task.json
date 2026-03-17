@@ -2,8 +2,8 @@
   "project": "KaiTianClaw Control Plane",
   "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "in_progress",
-  "current_focus": "DESIGN-010",
-  "last_updated": "2026-03-17T15:58:00+08:00",
+  "current_focus": "DESIGN-014",
+  "last_updated": "2026-03-17T16:20:00+08:00",
   "tasks": [
     {
       "id": "PERSIST-001",
@@ -376,6 +376,22 @@
         "Hierarchy tree styles visible in light theme"
       ],
       "notes": "Requested by user after reviewing Frame 3.",
+      "subtasks": []
+    },
+    {
+      "id": "DESIGN-014",
+      "title": "Standardize Map Sidebar",
+      "type": "design",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "DESIGN-013"
+      ],
+      "description": "Replace Map view left sidebar with homepage accordion sidebar.",
+      "acceptance_criteria": [
+        "Frame 3 has the 4-accordion sidebar instead of custom menu."
+      ],
+      "notes": "Requested by user after reviewing Frame 3 light mode.",
       "subtasks": []
     }
   ]
