@@ -17,6 +17,8 @@ import { Skills } from './pages/Skills';
 import { Cron } from './pages/Cron';
 import { Settings } from './pages/Settings';
 import { TeamOverview } from './pages/TeamOverview';
+import { TeamMap } from './pages/TeamMap';
+import { TaskKanban } from './pages/TaskKanban';
 import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
@@ -174,6 +176,8 @@ function App() {
             <Route path="/skills" element={<Skills />} />
             <Route path="/cron" element={<Cron />} />
             <Route path="/team-overview" element={<TeamOverview />} />
+            <Route path="/team-map" element={<TeamMap />} />
+            <Route path="/kanban" element={<TaskKanban />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>
