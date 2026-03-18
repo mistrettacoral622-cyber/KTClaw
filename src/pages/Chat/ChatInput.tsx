@@ -7,7 +7,7 @@
  * are sent with the message (no base64 over WebSocket).
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { SendHorizontal, Square, X, Paperclip, FileText, Film, Music, FileArchive, File, Loader2, AtSign } from 'lucide-react';
+import { SendHorizontal, Square, X, Mic, FileText, Film, Music, FileArchive, File, Loader2, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { hostApiFetch } from '@/lib/host-api';
@@ -83,7 +83,7 @@ function readFileAsBase64(file: globalThis.File): Promise<string> {
 
 // ── Component ────────────────────────────────────────────────────
 
-export function ChatInput({ onSend, onStop, disabled = false, sending = false, isEmpty: _isEmpty = false }: ChatInputProps) {
+export function ChatInput({ onSend, onStop, disabled = false, sending = false, isEmpty = false }: ChatInputProps) {
   const { t } = useTranslation('chat');
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
@@ -94,10 +94,12 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
   const isComposingRef = useRef(false);
   const agents = useAgentsStore((s) => s.agents);
   const currentAgentId = useChatStore((s) => s.currentAgentId);
-  const currentAgentName = useMemo(
-    () => agents.find((agent) => agent.id === currentAgentId)?.name ?? currentAgentId,
+  const currentAgent = useMemo(
+    () => agents.find((agent) => agent.id === currentAgentId) ?? null,
     [agents, currentAgentId],
   );
+  const currentAgentName = currentAgent?.name ?? 'KTClaw';
+  const currentModelDisplay = currentAgent?.modelDisplay ?? 'GLM-5';
   const mentionableAgents = useMemo(
     () => agents.filter((agent) => agent.id !== currentAgentId),
     [agents, currentAgentId],
@@ -383,7 +385,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
   return (
     <div
       data-testid="chat-input-frame"
-      className="chat-input-frame flex w-full justify-center px-8 pb-8"
+      className={cn('chat-input-frame flex w-full justify-center px-8 pb-8', isEmpty ? 'chat-input-layout-empty' : 'chat-input-layout-active')}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -429,7 +431,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
           )}
 
           <div data-testid="chat-composer-toolbar" className="chat-composer-toolbar relative flex items-end gap-2.5 py-2.5 pl-[18px] pr-[14px]">
-            {/* Attach Button */}
+            {/* Mic / Attach Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -438,7 +440,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
               disabled={disabled || sending}
               title={t('composer.attachFiles')}
             >
-              <Paperclip className="h-4 w-4" />
+              <Mic className="h-4 w-4" />
             </Button>
 
             {showAgentPicker && (
@@ -494,11 +496,18 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                   isComposingRef.current = false;
                 }}
                 onPaste={handlePaste}
-                placeholder={disabled ? t('composer.gatewayDisconnectedPlaceholder') : ''}
+                placeholder={`给 ${currentAgentName ?? 'KTClaw'} 发消息...`}
                 disabled={disabled}
                 className="min-h-[22px] max-h-[200px] resize-none border-0 bg-transparent px-0 py-0 text-[14px] leading-[22px] text-black placeholder:text-[#8e8e93] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:text-white"
                 rows={1}
               />
+            </div>
+
+            {/* Model Pill */}
+            <div data-testid="chat-composer-model-pill" className="flex shrink-0 items-center gap-1 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[12px] text-[#3c3c43] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <span className="h-[6px] w-[6px] rounded-full bg-[#10b981]" />
+              <span className="font-medium">{currentModelDisplay}</span>
+              <span className="text-[#8e8e93]">▾</span>
             </div>
 
             {/* Send Button */}
@@ -508,7 +517,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
               size="icon"
               className={`h-[30px] w-[30px] shrink-0 rounded-full transition-opacity ${
                 (sending || canSend)
-                  ? 'bg-black text-white hover:opacity-85 dark:bg-white dark:text-black'
+                  ? 'bg-[#10b981] text-white hover:bg-[#059669]'
                   : 'text-muted-foreground/50 hover:bg-transparent bg-transparent'
               }`}
               variant="ghost"
@@ -522,12 +531,13 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
             </Button>
           </div>
 
-          <div
-            data-testid="chat-composer-footer"
-            className="chat-composer-footer mt-[6px] text-center text-[11px] text-[#8e8e93]"
-          >
-            <span>Agent 在本地安全运行 · 由 AI 模型生成内容</span>
-          </div>
+        </div>
+
+        <div
+          data-testid="chat-composer-footer"
+          className="chat-composer-footer mt-2 text-center text-[11px] text-[#8e8e93]"
+        >
+          <span>Agent 在本地安全运行 · 由 AI 模型生成内容</span>
         </div>
       </div>
     </div>

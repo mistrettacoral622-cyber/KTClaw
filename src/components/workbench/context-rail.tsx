@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, ChevronDown, Database, Settings2, UserRound, Wrench } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
 
 export function ContextRail() {
@@ -18,12 +18,12 @@ export function ContextRail() {
 
   if (contextRailCollapsed) {
     return (
-      <aside className="flex h-full items-center border-l border-black/5 bg-[linear-gradient(180deg,#faf8f4_0%,#f4f1ec_100%)] px-2 py-3 dark:border-white/10 dark:bg-background">
+      <aside className="flex h-full items-center border-l border-black/[0.06] bg-white px-2 py-3 dark:border-white/10 dark:bg-background">
         <button
           type="button"
-          aria-label="展开上下文栏 Expand context rail"
+          aria-label="展开 Agent 检查器"
           onClick={() => setContextRailCollapsed(false)}
-          className="rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs text-foreground/80 shadow-sm transition-colors hover:bg-white dark:border-white/10 dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
+          className="rounded-full border border-black/10 bg-[#f2f2f7] px-2.5 py-1.5 text-xs text-[#3c3c43] shadow-sm transition-colors hover:bg-[#e5e5ea]"
         >
           {'>'}
         </button>
@@ -32,123 +32,130 @@ export function ContextRail() {
   }
 
   return (
-    <aside className="h-full w-[340px] space-y-4 overflow-y-auto border-l border-black/5 bg-[linear-gradient(180deg,#faf8f4_0%,#f4f1ec_100%)] px-4 py-5 dark:border-white/10 dark:bg-background">
-      <header className="flex items-center justify-between px-1">
-        <p className="text-[14px] font-semibold tracking-wide text-foreground/90">Agent 检查器</p>
+    <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+      {/* Header */}
+      <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
+        <span className="text-[14px] font-semibold text-[#000000]">Agent 检查器</span>
         <button
           type="button"
-          aria-label="收起上下文栏 Collapse context rail"
+          aria-label="关闭 Agent 检查器"
           onClick={() => setContextRailCollapsed(true)}
-          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
         >
-          折叠
+          ✕
         </button>
       </header>
 
-      <section className="rounded-[26px] border border-black/5 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/5 text-foreground dark:bg-white/10">
-            <Bot className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[14px] font-semibold text-foreground">Frame 2 Agent</p>
-            <p className="truncate text-[12px] text-muted-foreground">Inspector Mode · Online</p>
-          </div>
+      {/* Agent Profile */}
+      <div className="flex flex-col items-center px-5 py-6">
+        {/* Blue circle avatar */}
+        <div className="mb-3 flex h-[80px] w-[80px] items-center justify-center rounded-full bg-[#007aff] text-[32px] text-white shadow-[0_4px_16px_rgba(0,122,255,0.25)]">
+          ✦
         </div>
-        <p className="mt-3 text-[13px] leading-6 text-muted-foreground">
-          负责执行状态检查、任务约束核验与上下文质量提醒。
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full bg-black/[0.06] px-2.5 py-1 text-[11px] text-foreground/80 dark:bg-white/[0.08]">
-            Runtime v2
-          </span>
-          <span className="rounded-full bg-black/[0.06] px-2.5 py-1 text-[11px] text-foreground/80 dark:bg-white/[0.08]">
-            Safety Guard
-          </span>
-        </div>
-      </section>
+        <p className="text-[16px] font-semibold text-[#000000]">KTClaw 主脑</p>
+        <p className="mt-0.5 text-[13px] text-[#8e8e93]">AI coworker</p>
+      </div>
 
-      <section className="space-y-3">
-        <article className="overflow-hidden rounded-[24px] border border-black/5 bg-white/75 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-          <button
-            type="button"
-            aria-expanded={openModules.about}
-            onClick={() => toggleModule('about')}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          >
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-[14px] font-semibold text-foreground">关于与基础设置</span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${openModules.about ? 'rotate-180' : 'rotate-0'}`} />
-          </button>
-          {openModules.about && (
-            <div className="space-y-2 border-t border-black/5 px-4 py-3 text-[13px] text-muted-foreground dark:border-white/10">
-              <p>角色：任务编排与状态核验助手</p>
-              <p>响应风格：简洁、可追溯、优先给出可执行结论</p>
-              <p>执行模式：自动巡检（每 15 分钟）</p>
-            </div>
-          )}
-        </article>
+      {/* Accordions */}
+      <div className="flex flex-col gap-0 border-t border-black/[0.06] px-4 pb-6 pt-2">
 
-        <article className="overflow-hidden rounded-[24px] border border-black/5 bg-white/75 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-          <button
-            type="button"
-            aria-expanded={openModules.capabilities}
-            onClick={() => toggleModule('capabilities')}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          >
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-[14px] font-semibold text-foreground">能力与工具</span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${openModules.capabilities ? 'rotate-180' : 'rotate-0'}`} />
-          </button>
-          {openModules.capabilities && (
-            <div className="space-y-2 border-t border-black/5 px-4 py-3 text-[13px] text-muted-foreground dark:border-white/10">
-              <p>代码检索：`rg` / 语义索引</p>
-              <p>变更执行：`apply_patch` 与测试回归</p>
-              <p>外部能力：Gateway 代理调用、诊断任务</p>
-            </div>
-          )}
-        </article>
+        {/* 基础设定（关于我） */}
+        <AccordionRow
+          label="基础设定（关于我）"
+          open={openModules.about}
+          onToggle={() => toggleModule('about')}
+        >
+          <KVRow label="风格" value="sharp resourceful" />
+          <KVRow label="模型" value="GLM-5-Turbo" />
+        </AccordionRow>
 
-        <article className="overflow-hidden rounded-[24px] border border-black/5 bg-white/75 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-          <button
-            type="button"
-            aria-expanded={openModules.context}
-            onClick={() => toggleModule('context')}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          >
-            <UserRound className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-[14px] font-semibold text-foreground">上下文与用户画像</span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${openModules.context ? 'rotate-180' : 'rotate-0'}`} />
-          </button>
-          {openModules.context && (
-            <div className="space-y-2 border-t border-black/5 px-4 py-3 text-[13px] text-muted-foreground dark:border-white/10">
-              <p>关注点：跨代理协作效率与回归风险</p>
-              <p>当前上下文：Workbench 右侧检查器改版</p>
-              <p>偏好：优先稳定交付，其次视觉一致性</p>
-            </div>
-          )}
-        </article>
+        {/* 能力与工具 */}
+        <AccordionRow
+          label="能力与工具"
+          open={openModules.capabilities}
+          onToggle={() => toggleModule('capabilities')}
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {['file_system', 'terminal', 'browser', 'git_ops'].map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md bg-[#f2f2f7] px-2 py-0.5 text-[12px] text-[#3c3c43]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </AccordionRow>
 
-        <article className="overflow-hidden rounded-[24px] border border-black/5 bg-white/75 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-          <button
-            type="button"
-            aria-expanded={openModules.memory}
-            onClick={() => toggleModule('memory')}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          >
-            <Database className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-[14px] font-semibold text-foreground">工作记忆</span>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${openModules.memory ? 'rotate-180' : 'rotate-0'}`} />
-          </button>
-          {openModules.memory && (
-            <div className="space-y-2 border-t border-black/5 px-4 py-3 text-[13px] text-muted-foreground dark:border-white/10">
-              <p>短期记忆窗口：最近 24 条交互</p>
-              <p>关键事实：保留任务约束与测试命令</p>
-              <p>同步状态：3 分钟前已写入</p>
+        {/* 我眼中的你 */}
+        <AccordionRow
+          label="我眼中的你"
+          open={openModules.context}
+          onToggle={() => toggleModule('context')}
+        >
+          <KVRow label="专注" value="coding" />
+          <KVRow label="时区" value="Asia/Shanghai" />
+        </AccordionRow>
+
+        {/* 工作记忆 */}
+        <AccordionRow
+          label="工作记忆"
+          open={openModules.memory}
+          onToggle={() => toggleModule('memory')}
+        >
+          <div className="space-y-2">
+            <div>
+              <p className="text-[12px] font-medium text-[#3c3c43]">
+                最近笔记 <span className="text-[#8e8e93]">🔗</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-[#8e8e93]">Current project not recorded yet...</p>
             </div>
-          )}
-        </article>
-      </section>
+            <div className="rounded-lg border border-[#f59e0b]/30 bg-[#fffbeb] px-3 py-2">
+              <p className="text-[12px] font-medium text-[#92400e]">重要教训</p>
+              <p className="mt-0.5 text-[11px] text-[#b45309]">
+                1. Confirm before making risky changes...
+              </p>
+            </div>
+          </div>
+        </AccordionRow>
+      </div>
     </aside>
+  );
+}
+
+function AccordionRow({
+  label,
+  open,
+  onToggle,
+  children,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-black/[0.06] py-3">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="text-[13px] font-medium text-[#3c3c43]">{label}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-[#8e8e93] transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </div>
+  );
+}
+
+function KVRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-0.5">
+      <span className="text-[12px] text-[#8e8e93]">{label}</span>
+      <span className="text-[12px] text-[#3c3c43]">{value}</span>
+    </div>
   );
 }

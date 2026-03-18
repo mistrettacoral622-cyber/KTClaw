@@ -239,10 +239,15 @@ export function Sidebar() {
           collapsed={sidebarCollapsed}
         >
           {staticTeams.map((team) => (
-            <div key={team.name} className="flex items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
+            <button
+              key={team.name}
+              type="button"
+              onClick={() => navigate(team.name === '团队总览' ? '/team-overview' : '/')}
+              className="flex w-full items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]"
+            >
               <span className="w-5 shrink-0 text-center text-[14px]">{team.name === '团队总览' ? '👥' : '🗺'}</span>
-              <span className="min-w-0 flex-1 truncate">{team.name}</span>
-            </div>
+              <span className="min-w-0 flex-1 truncate text-left">{team.name}</span>
+            </button>
           ))}
         </AccordionGroup>
       </div>
