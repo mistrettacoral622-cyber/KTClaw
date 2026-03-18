@@ -680,3 +680,7 @@ Next: 等待用户审查设计并给出下一步反馈
 
 2026-03-18T11:47:00+08:00 - Expanding Settings Center. Generated 13 distinct secondary settings pages based on 产品文档.md and OpenClaw Control Center reference.
 
+2026-03-18T11:43:00+08:00 - Starting refactor of Frame 10.1 (监控与统计). Implementing 3-tab layout (Dashboard, Usage, Alerts) with HIG styling.
+
+2026-03-18T11:45:00+08:00 - Refactored Frame 10.1 Monitoring into a 3-tab view (Dashboard, Usage, Alerts).
+
