@@ -76,6 +76,42 @@ describe('ChatInput agent targeting', () => {
     gatewayState.status = { state: 'running', port: 18789 };
   });
 
+  it('renders the updated composer shell regions and model pill', () => {
+    agentsState.agents = [
+      {
+        id: 'main',
+        name: 'Main',
+        isDefault: true,
+        modelDisplay: 'MiniMax',
+        inheritedModel: true,
+        workspace: '~/.openclaw/workspace',
+        agentDir: '~/.openclaw/agents/main/agent',
+        mainSessionKey: 'agent:main:main',
+        channelTypes: [],
+      },
+    ];
+
+    render(<ChatInput onSend={vi.fn()} />);
+
+    expect(screen.getByTestId('chat-composer-shell')).toHaveClass('chat-composer-shell');
+    expect(screen.getByTestId('chat-composer-toolbar')).toHaveClass('chat-composer-toolbar');
+    expect(screen.getByTestId('chat-composer-footer')).toHaveClass('chat-composer-footer');
+    expect(screen.getByTestId('chat-composer-model-pill')).toHaveTextContent('MiniMax');
+  });
+
+  it('applies distinct framing classes for empty vs active chat layouts', () => {
+    const { rerender } = render(<ChatInput onSend={vi.fn()} isEmpty />);
+    const frame = screen.getByTestId('chat-input-frame');
+
+    expect(frame).toHaveClass('chat-input-layout-empty');
+    expect(frame).not.toHaveClass('chat-input-layout-active');
+
+    rerender(<ChatInput onSend={vi.fn()} isEmpty={false} />);
+
+    expect(frame).toHaveClass('chat-input-layout-active');
+    expect(frame).not.toHaveClass('chat-input-layout-empty');
+  });
+
   it('hides the @agent picker when only one agent is configured', () => {
     agentsState.agents = [
       {

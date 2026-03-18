@@ -66,22 +66,22 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div
       className={cn(
-        'flex gap-3 group',
+        'flex gap-4 group py-0.5',
         isUser ? 'flex-row-reverse' : 'flex-row',
       )}
     >
       {/* Avatar */}
       {!isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full mt-1 bg-black/5 dark:bg-white/5 text-foreground">
-          <Sparkles className="h-4 w-4" />
+        <div className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/90 text-white shadow-[0_2px_8px_rgba(16,185,129,0.28)]">
+          <Sparkles className="h-3.5 w-3.5" />
         </div>
       )}
 
       {/* Content */}
       <div
         className={cn(
-          'flex flex-col w-full min-w-0 max-w-[80%] space-y-2',
-          isUser ? 'items-end' : 'items-start',
+          'flex flex-col w-full min-w-0 space-y-2.5',
+          isUser ? 'max-w-[78%] items-end' : 'max-w-[86%] items-start',
         )}
       >
         {isStreaming && !isUser && streamingTools.length > 0 && (
@@ -95,7 +95,7 @@ export const ChatMessage = memo(function ChatMessage({
 
         {/* Tool use cards */}
         {visibleTools.length > 0 && (
-          <div className="space-y-1">
+          <div className="w-full space-y-2">
             {visibleTools.map((tool, i) => (
               <ToolCard key={tool.id || i} name={tool.name} input={tool.input} />
             ))}
@@ -261,26 +261,28 @@ function ToolStatusBar({
   }>;
 }) {
   return (
-    <div className="w-full space-y-1">
+    <div className="w-full space-y-2">
       {tools.map((tool) => {
         const duration = formatDuration(tool.durationMs);
         const isRunning = tool.status === 'running';
         const isError = tool.status === 'error';
+        const statusLabel = isRunning ? '执行中' : isError ? '执行失败' : '已完成';
         return (
           <div
             key={tool.toolCallId || tool.id || tool.name}
             className={cn(
-              'flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors',
-              isRunning && 'border-primary/30 bg-primary/5 text-foreground',
-              !isRunning && !isError && 'border-border/50 bg-muted/20 text-muted-foreground',
-              isError && 'border-destructive/30 bg-destructive/5 text-destructive',
+              'flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs transition-colors bg-zinc-50/90 dark:bg-white/[0.03]',
+              isRunning && 'border-sky-200/80 text-sky-700 dark:border-sky-500/30 dark:text-sky-300',
+              !isRunning && !isError && 'border-black/10 text-muted-foreground dark:border-white/10',
+              isError && 'border-destructive/40 text-destructive',
             )}
           >
-            {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />}
+            {isRunning && <Loader2 className="h-3.5 w-3.5 animate-spin text-current shrink-0" />}
             {!isRunning && !isError && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />}
             {isError && <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
             <Wrench className="h-3 w-3 shrink-0 opacity-60" />
             <span className="font-mono text-[12px] font-medium">{tool.name}</span>
+            <span className="ml-auto rounded-full border border-current/20 px-2 py-0.5 text-[10px] leading-none opacity-80">{statusLabel}</span>
             {duration && <span className="text-[11px] opacity-60">{tool.summary ? `(${duration})` : duration}</span>}
             {tool.summary && (
               <span className="truncate text-[11px] opacity-70">{tool.summary}</span>
@@ -333,18 +335,19 @@ function MessageBubble({
 }) {
   return (
     <div
+      data-testid={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}
       className={cn(
-        'relative rounded-2xl px-4 py-3',
+        'relative rounded-2xl px-4 py-3.5',
         !isUser && 'w-full',
         isUser
-          ? 'bg-[#0a84ff] text-white shadow-sm'
-          : 'bg-black/5 dark:bg-white/5 text-foreground',
+          ? 'rounded-tr-md bg-[#0a84ff] text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] ring-1 ring-black/10 dark:ring-white/15'
+          : 'rounded-tl-md bg-white/95 dark:bg-white/[0.04] border border-black/5 dark:border-white/10 text-foreground shadow-sm',
       )}
     >
       {isUser ? (
         <p className="whitespace-pre-wrap break-words break-all text-sm">{text}</p>
       ) : (
-        <div className="prose prose-sm dark:prose-invert max-w-none break-words break-all">
+        <div className="prose prose-sm dark:prose-invert max-w-none break-words break-all text-[14px] leading-6 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-pre:my-3">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -353,13 +356,13 @@ function MessageBubble({
                 const isInline = !match && !className;
                 if (isInline) {
                   return (
-                    <code className="bg-background/50 px-1.5 py-0.5 rounded text-sm font-mono break-words break-all" {...props}>
+                    <code className="bg-black/[0.05] dark:bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono break-words break-all" {...props}>
                       {children}
                     </code>
                   );
                 }
                 return (
-                  <pre className="bg-background/50 rounded-lg p-4 overflow-x-auto">
+                  <pre className="bg-black/[0.045] dark:bg-white/[0.08] rounded-lg p-4 overflow-x-auto">
                     <code className={cn('text-sm font-mono', className)} {...props}>
                       {children}
                     </code>
@@ -368,7 +371,7 @@ function MessageBubble({
               },
               a({ href, children }) {
                 return (
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-words break-all">
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-sky-600 dark:text-sky-400 hover:underline break-words break-all">
                     {children}
                   </a>
                 );
@@ -393,16 +396,16 @@ function ThinkingBlock({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-[14px]">
+    <div className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.03] text-[14px]">
       <button
-        className="flex items-center gap-2 w-full px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-2 w-full px-3.5 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        <span className="font-medium">Thinking</span>
+        <span className="font-medium">思考过程</span>
       </button>
       {expanded && (
-        <div className="px-3 pb-3 text-muted-foreground">
+        <div className="px-3.5 pb-3 text-muted-foreground">
           <div className="prose prose-sm dark:prose-invert max-w-none opacity-75">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
           </div>
@@ -603,18 +606,24 @@ function ToolCard({ name, input }: { name: string; input: unknown }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-[14px]">
+    <div className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.03] text-[14px] overflow-hidden">
       <button
-        className="flex items-center gap-2 w-full px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-muted-foreground hover:text-foreground hover:bg-black/[0.03] dark:hover:bg-white/[0.03] transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
         <Wrench className="h-3 w-3 shrink-0 opacity-60" />
-        <span className="font-mono text-xs">{name}</span>
-        {expanded ? <ChevronDown className="h-3 w-3 ml-auto" /> : <ChevronRight className="h-3 w-3 ml-auto" />}
+        <div className="min-w-0 flex-1 text-left">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-black/10 dark:border-white/15 px-2 py-0.5 text-[10px] leading-none tracking-wide text-muted-foreground">工具执行</span>
+            <span className="font-mono text-xs text-foreground truncate">{name}</span>
+          </div>
+          <span className="mt-1 block text-[11px] text-muted-foreground/85">{expanded ? '收起调用参数' : '展开查看调用参数'}</span>
+        </div>
+        {expanded ? <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />}
       </button>
       {expanded && input != null && (
-        <pre className="px-3 pb-2 text-xs text-muted-foreground overflow-x-auto">
+        <pre className="border-t border-black/10 dark:border-white/10 px-3.5 py-2.5 text-xs text-muted-foreground overflow-x-auto bg-black/[0.015] dark:bg-white/[0.02]">
           {typeof input === 'string' ? input : JSON.stringify(input, null, 2) as string}
         </pre>
       )}

@@ -3,7 +3,7 @@
   "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "in_progress",
   "current_focus": "BUILD-005",
-  "last_updated": "2026-03-18T17:00:47+08:00",
+  "last_updated": "2026-03-18T17:22:40+08:00",
   "tasks": [
     {
       "id": "DESIGN-019",
@@ -607,6 +607,24 @@
         "Targeted workbench tests, npm run typecheck, and npm run lint remain green"
       ],
       "notes": "Completed on 2026-03-18. Upgraded the workbench empty state to the approved Frame 1 hero/suggestion-card layout and refactored the expanded right rail into a Frame 2-style Agent inspector drawer while preserving collapsed behavior. Verified with tests/unit/workbench-empty-state.test.tsx, tests/unit/workbench-context-rail.test.tsx, tests/unit/workbench-shell.test.tsx, npm run typecheck, and npm run lint (existing providers.ts warning remains).",
+      "subtasks": []
+    },
+    {
+      "id": "FRONTEND-005",
+      "title": "Active chat center and composer high-fidelity React migration",
+      "type": "build",
+      "status": "done",
+      "priority": "P0",
+      "depends_on": [
+        "FRONTEND-004"
+      ],
+      "description": "Convert the approved Frame 2 active-chat middle column into the real Chat surface, focusing on assistant/user message presentation, tool execution cards, and the premium composer shell.",
+      "acceptance_criteria": [
+        "Active chat messages visually align with Frame 2, including refined bubbles and tool execution cards",
+        "The composer matches the approved workbench style without breaking existing send/stop/attachment routing",
+        "Targeted chat/workbench tests, npm run typecheck, and npm run lint remain green"
+      ],
+      "notes": "Completed on 2026-03-18. Refined Frame 2 active-chat presentation by upgrading ChatMessage bubbles/tool cards and ChatInput composer shell while preserving current send/stop/attachment/agent-target behavior. Verified with tests/unit/chat-input.test.tsx, tests/unit/chat-message.test.tsx, tests/unit/workbench-shell.test.tsx, tests/unit/workbench-empty-state.test.tsx, tests/unit/workbench-context-rail.test.tsx, npm run typecheck, and npm run lint (existing providers.ts warning remains).",
       "subtasks": []
     }
   ]

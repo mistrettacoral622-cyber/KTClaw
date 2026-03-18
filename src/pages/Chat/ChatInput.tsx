@@ -100,6 +100,10 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     () => agents.find((agent) => agent.id === currentAgentId)?.name ?? currentAgentId,
     [agents, currentAgentId],
   );
+  const currentAgentModel = useMemo(
+    () => agents.find((agent) => agent.id === currentAgentId)?.modelDisplay ?? 'Model',
+    [agents, currentAgentId],
+  );
   const mentionableAgents = useMemo(
     () => agents.filter((agent) => agent.id !== currentAgentId),
     [agents, currentAgentId],
@@ -108,6 +112,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     () => agents.find((agent) => agent.id === targetAgentId) ?? null,
     [agents, targetAgentId],
   );
+  const composerModelLabel = selectedTarget?.modelDisplay ?? currentAgentModel;
   const showAgentPicker = mentionableAgents.length > 0;
 
   // Auto-resize textarea
@@ -385,9 +390,12 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
 
   return (
     <div
+      data-testid="chat-input-frame"
       className={cn(
-        "w-full mx-auto px-6 pb-6 pt-2 transition-all duration-300",
-        isEmpty ? "max-w-3xl" : "max-w-4xl"
+        'chat-input-frame w-full mx-auto px-4 pb-6 pt-3 transition-all duration-300',
+        isEmpty
+          ? 'chat-input-layout-empty max-w-[52rem]'
+          : 'chat-input-layout-active max-w-[64rem]',
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -408,13 +416,28 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         )}
 
         {/* Input Row */}
-        <div className={`relative rounded-[36px] border bg-white/95 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.04)] transition-all dark:bg-card ${dragOver ? 'border-primary ring-1 ring-primary' : 'border-black/8 dark:border-white/10'}`}>
+        <div
+          data-testid="chat-composer-shell"
+          className={cn(
+            'chat-composer-shell relative overflow-hidden rounded-[32px] border p-2.5 transition-all duration-300 backdrop-blur-sm dark:bg-card/95',
+            isEmpty
+              ? 'bg-white/96 shadow-[0_20px_55px_rgba(15,23,42,0.08)]'
+              : 'bg-white/94 shadow-[0_14px_42px_rgba(15,23,42,0.06)]',
+            dragOver
+              ? 'border-primary/60 ring-2 ring-primary/25'
+              : 'border-black/10 dark:border-white/10',
+          )}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-8 top-0 h-12 rounded-b-[999px] bg-white/70 blur-xl dark:bg-white/5"
+          />
           {selectedTarget && (
-            <div className="px-2.5 pt-2 pb-1">
+            <div className="relative px-2.5 pt-2 pb-1">
               <button
                 type="button"
                 onClick={() => setTargetAgentId(null)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[13px] font-medium text-foreground transition-colors hover:bg-primary/10"
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[13px] font-medium text-foreground transition-colors hover:bg-primary/15"
                 title={t('composer.clearTarget')}
               >
                 <span>{t('composer.targetChip', { agent: selectedTarget.name })}</span>
@@ -423,12 +446,12 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
             </div>
           )}
 
-          <div className="flex items-end gap-1.5">
+          <div data-testid="chat-composer-toolbar" className="chat-composer-toolbar relative flex items-end gap-1">
             {/* Attach Button */}
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground transition-colors"
+              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10"
               onClick={pickFiles}
               disabled={disabled || sending}
               title={t('composer.attachFiles')}
@@ -442,7 +465,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    'h-10 w-10 rounded-full text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground transition-colors',
+                    'h-9 w-9 rounded-full text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground dark:hover:bg-white/10',
                     (pickerOpen || selectedTarget) && 'bg-primary/10 text-primary hover:bg-primary/20'
                   )}
                   onClick={() => setPickerOpen((open) => !open)}
@@ -491,7 +514,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                 onPaste={handlePaste}
                 placeholder={disabled ? t('composer.gatewayDisconnectedPlaceholder') : ''}
                 disabled={disabled}
-                className="min-h-[40px] max-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent py-2.5 px-2 text-[15px] placeholder:text-muted-foreground/60 leading-relaxed"
+                className="min-h-[38px] max-h-[200px] resize-none border-0 bg-transparent px-2 py-2 text-[14px] leading-6 placeholder:text-muted-foreground/60 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 rows={1}
               />
             </div>
@@ -501,9 +524,9 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
               onClick={sending ? handleStop : handleSend}
               disabled={sending ? !canStop : !canSend}
               size="icon"
-              className={`shrink-0 h-10 w-10 rounded-full transition-colors ${
+              className={`h-9 w-9 shrink-0 rounded-full transition-colors ${
                 (sending || canSend)
-                  ? 'bg-black/5 dark:bg-white/10 text-foreground hover:bg-black/10 dark:hover:bg-white/20'
+                  ? 'bg-black/6 text-foreground hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20'
                   : 'text-muted-foreground/50 hover:bg-transparent bg-transparent'
               }`}
               variant="ghost"
@@ -516,33 +539,47 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
               )}
             </Button>
           </div>
-        </div>
-        <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] text-muted-foreground/60 px-4">
-          <div className="flex items-center gap-1.5">
-            <div className={cn("w-1.5 h-1.5 rounded-full", gatewayStatus.state === 'running' ? "bg-green-500/80" : "bg-red-500/80")} />
-            <span>
-              {t('composer.gatewayStatus', {
-                state: gatewayStatus.state === 'running'
-                  ? t('composer.gatewayConnected')
-                  : gatewayStatus.state,
-                port: gatewayStatus.port,
-                pid: gatewayStatus.pid ? `| pid: ${gatewayStatus.pid}` : '',
-              })}
-            </span>
+
+          <div
+            data-testid="chat-composer-footer"
+            className="chat-composer-footer relative mt-2 flex items-center justify-between gap-2 rounded-2xl border border-black/5 bg-black/[0.02] px-3 py-1.5 text-[11px] text-muted-foreground/70 dark:border-white/10 dark:bg-white/[0.03]"
+          >
+            <div className="min-w-0 flex items-center gap-1.5">
+              <div className={cn("h-1.5 w-1.5 rounded-full", gatewayStatus.state === 'running' ? "bg-green-500/80" : "bg-red-500/80")} />
+              <span className="truncate">
+                {t('composer.gatewayStatus', {
+                  state: gatewayStatus.state === 'running'
+                    ? t('composer.gatewayConnected')
+                    : gatewayStatus.state,
+                  port: gatewayStatus.port,
+                  pid: gatewayStatus.pid ? `| pid: ${gatewayStatus.pid}` : '',
+                })}
+              </span>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                data-testid="chat-composer-model-pill"
+                className="inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[11px] font-medium text-foreground dark:border-white/15 dark:bg-card"
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", gatewayStatus.state === 'running' ? 'bg-emerald-500' : 'bg-amber-500')} />
+                <span className="max-w-[140px] truncate">{composerModelLabel}</span>
+              </span>
+              {hasFailedAttachments && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-[11px]"
+                  onClick={() => {
+                    setAttachments((prev) => prev.filter((att) => att.status !== 'error'));
+                    void pickFiles();
+                  }}
+                >
+                  {t('composer.retryFailedAttachments')}
+                </Button>
+              )}
+            </div>
           </div>
-          {hasFailedAttachments && (
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 text-[11px]"
-              onClick={() => {
-                setAttachments((prev) => prev.filter((att) => att.status !== 'error'));
-                void pickFiles();
-              }}
-            >
-              {t('composer.retryFailedAttachments')}
-            </Button>
-          )}
         </div>
       </div>
     </div>
