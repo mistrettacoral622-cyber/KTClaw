@@ -640,3 +640,10 @@ Next: 等待用户审查设计并给出下一步反馈
 - Adjusted typography: bold task names, clear time codes.
 - Thinned out background grid lines for a cleaner look.
 - Added hover state actions (Play/Settings).
+
+[2026-03-18T10:25:55.447087] Redesign Home Empty State
+- Refined Welcome Area icon (linear gradient) and text size/weight.
+- Improved Suggestion Cards (.sc) layout, typography, and hover lift effect.
+- Added subtle floating shadows to Composer (.cw) and activated Agent colors.
+- Cleared Sidebar header button styles to plain text + hover backgrounds.
+- Sidebar selection (.si.on) now features a bold 3px left solid border.
