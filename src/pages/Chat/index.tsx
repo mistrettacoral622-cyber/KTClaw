@@ -47,7 +47,7 @@ export function Chat() {
   const { contentRef, scrollRef } = useStickToBottomInstant(currentSessionKey);
   const [streamingTimestamp, setStreamingTimestamp] = useState(0);
 
-  const currentAgentName = agents.find((agent) => agent.id === currentAgentId)?.name ?? 'KaiTianClaw';
+  const currentAgentName = agents.find((agent) => agent.id === currentAgentId)?.name ?? 'KTClaw';
 
   useEffect(() => {
     return () => {

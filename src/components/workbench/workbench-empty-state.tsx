@@ -26,7 +26,7 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
 
   return (
     <div className="flex min-h-full flex-col items-center justify-center px-8 pb-8 pt-12 text-center">
-      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-black text-[26px] text-white dark:bg-white dark:text-black">
+      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-[26px] text-white" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}>
         ✦
       </div>
       <h2 className="mb-8 text-[26px] font-medium text-foreground">有什么我可以帮你的？</h2>

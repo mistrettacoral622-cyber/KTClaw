@@ -84,11 +84,10 @@ describe('workbench sidebar', () => {
     );
 
     expect(screen.getByText('分身')).toBeInTheDocument();
-    expect(screen.getByText('团队')).toBeInTheDocument();
-    expect(screen.getByText('IM 频道')).toBeInTheDocument();
-    expect(screen.getByText('定时任务')).toBeInTheDocument();
+    expect(screen.getByText('团队管理')).toBeInTheDocument();
+    expect(screen.getByText('CHANNEL 频道')).toBeInTheDocument();
+    expect(screen.getByText('任务')).toBeInTheDocument();
     expect(screen.getByText('Alpha Session')).toBeInTheDocument();
-    expect(screen.getByText('设置')).toBeInTheDocument();
   });
 
   it('keeps a collapsed icon rail instead of disappearing', () => {

@@ -183,23 +183,24 @@ export function Sidebar() {
               );
             })
           ) : (
-            <div className="rounded-lg border border-dashed border-[#c6c6c8] bg-transparent px-[10px] py-2 text-[12px] text-[#8e8e93] dark:border-white/10">
-              暂无会话
-            </div>
+            <>
+              <button
+                onClick={() => navigate('/')}
+                className={cn(
+                  'flex w-full items-center gap-[10px] rounded-lg px-[10px] py-2 text-left text-[14px] transition-[background-color] duration-150',
+                  'text-[#000000] hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]',
+                  isOnChat && 'bg-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.04)]',
+                )}
+              >
+                <span className="w-5 shrink-0 text-center text-[14px]">✦</span>
+                <span className="min-w-0 flex-1 truncate">KTClaw</span>
+              </button>
+              <div className="flex items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
+                <span className="w-5 shrink-0 text-center text-[14px]">🔍</span>
+                <span className="min-w-0 flex-1 truncate">沉思小助手</span>
+              </div>
+            </>
           )}
-        </AccordionGroup>
-
-        <AccordionGroup
-          title={groupLabels.teams}
-          icon={<Users className="h-[18px] w-[18px]" strokeWidth={2} />}
-          collapsed={sidebarCollapsed}
-        >
-          {staticTeams.map((team) => (
-            <div key={team.name} className="flex items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
-              <span className="w-5 shrink-0 text-center text-[14px]">{team.name === '团队总览' ? '👥' : '🗺'}</span>
-              <span className="min-w-0 flex-1 truncate">{team.name}</span>
-            </div>
-          ))}
         </AccordionGroup>
 
         <AccordionGroup
@@ -228,6 +229,19 @@ export function Sidebar() {
                 {task.name === '任务看板' ? '📋' : '📅'}
               </span>
               <span className="min-w-0 flex-1 truncate">{task.name}</span>
+            </div>
+          ))}
+        </AccordionGroup>
+
+        <AccordionGroup
+          title={groupLabels.teams}
+          icon={<Users className="h-[18px] w-[18px]" strokeWidth={2} />}
+          collapsed={sidebarCollapsed}
+        >
+          {staticTeams.map((team) => (
+            <div key={team.name} className="flex items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
+              <span className="w-5 shrink-0 text-center text-[14px]">{team.name === '团队总览' ? '👥' : '🗺'}</span>
+              <span className="min-w-0 flex-1 truncate">{team.name}</span>
             </div>
           ))}
         </AccordionGroup>
