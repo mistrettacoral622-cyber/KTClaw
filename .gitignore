@@ -66,3 +66,4 @@ docs/pr-session-notes-*.md
 .pnpm-store/
 .superpowers/
 .specstory/
+.gstack/

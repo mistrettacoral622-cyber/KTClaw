@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gcloud config:*)",
+      "Bash(where gcloud:*)",
+      "Read(//c/Users/22688/AppData/Local/Google/Cloud SDK//**)",
+      "Read(//c/Program Files/Google/**)",
+      "Bash(\"/c/Users/22688/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud\" config set project lateral-boulder-476606-u0 2>&1)",
+      "Bash(where gemini:*)",
+      "Bash(xxd /c/Users/22688/.gemini/antigravity/user_settings.pb)",
+      "Bash(head -10 find /c/Users/22688/AppData -name antigravity* -o -name gemini-cli*)",
+      "Bash(find /c/Users/22688/AppData/Roaming/Antigravity -name *.json -o -name *.yaml -o -name Preferences)",
+      "Bash(/dev/null ls:*)",
+      "Bash(find /c/Users/22688/AppData -path */Antigravity*extensions* -type d)",
+      "Bash(find /c/Users/22688/AppData/Roaming/Antigravity/logs -name *.log)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(/dev/null cat:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,'''':'''',v\\) for k,v in d.items\\(\\) if ''''project'''' in k.lower\\(\\) or ''''cloud'''' in k.lower\\(\\) or ''''gcp'''' in k.lower\\(\\)]\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)[:30]\\)\")",
+      "Bash(\"/c/Users/22688/AppData/Local/Antigravity Tools/antigravity_tools.exe\" --help)"
+    ]
+  }
+}

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Incrementally adapt the existing ClawX codebase into the approved KaiTianClaw workbench UI, add the `continue/` persistence mechanism, and seed the first tracked task state without replacing the current app architecture.
+**Goal:** Incrementally adapt the existing KTClaw codebase into the approved KaiTianClaw workbench UI, add the `continue/` persistence mechanism, and seed the first tracked task state without replacing the current app architecture.
 
 **Architecture:** Keep the current Electron + Vite + React + Zustand skeleton. Refactor the existing main layout, sidebar, chat page, and settings page into a single workbench plus settings-center model. Use existing stores and pages where possible, add only focused helper components, and treat `continue/` as the durable project-memory layer for future sessions.
 
@@ -122,7 +122,7 @@ Seed the product-level task tree with at least:
 ```json
 {
   "project": "KaiTianClaw Control Plane",
-  "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
+  "objective": "Adapt the existing KTClaw demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "planned",
   "current_focus": "PERSIST-001",
   "last_updated": "2026-03-17T00:00:00+08:00",

@@ -2,11 +2,11 @@
 
 Date: 2026-03-17
 Status: Approved in conversation, pending final file review
-Scope: UI/IA design for the current ClawX demo adaptation, plus session persistence mechanism under `continue/`
+Scope: UI/IA design for the current KTClaw demo adaptation, plus session persistence mechanism under `continue/`
 
 ## 1. Goal
 
-Adapt the current ClawX demo into a KaiTianClaw desktop control plane that:
+Adapt the current KTClaw demo into a KaiTianClaw desktop control plane that:
 
 - uses a light, workbench-style interface inspired by the simplicity of AutoClaw
 - does not directly copy the reference layout

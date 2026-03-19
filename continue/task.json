@@ -1,9 +1,9 @@
 {
   "project": "KaiTianClaw Control Plane",
-  "objective": "Adapt the existing ClawX demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
+  "objective": "Adapt the existing KTClaw demo into the approved KaiTianClaw workbench UI and preserve project progress across sessions.",
   "current_phase": "in_progress",
-  "current_focus": "FRONTEND-006",
-  "last_updated": "2026-03-18T18:08:00+08:00",
+  "current_focus": "PIXEL-ALIGN-001",
+  "last_updated": "2026-03-18T23:05:00+08:00",
   "tasks": [
     {
       "id": "DESIGN-019",
@@ -226,7 +226,7 @@
         "DESIGN-003",
         "DESIGN-004"
       ],
-      "description": "Create a Chinese-first full-page KaiTianClaw review deck that fuses ClawPort and OpenClaw Control Center capabilities into the current ClawX information architecture, with ChatGPT-web-inspired visual language.",
+      "description": "Create a Chinese-first full-page KaiTianClaw review deck that fuses ClawPort and OpenClaw Control Center capabilities into the current KTClaw information architecture, with ChatGPT-web-inspired visual language.",
       "acceptance_criteria": [
         "Review deck covers workbench empty state, active conversation, team/channel/scheduled-task view, and grouped settings-center views",
         "Layout rhythm, color system, material hierarchy, and navigation-to-workbench relationship are documented",
@@ -244,7 +244,7 @@
       "depends_on": [
         "DESIGN-005"
       ],
-      "description": "Translate the approved Figma review deck into the existing ClawX workbench and settings-center implementation without introducing a disconnected new frontend.",
+      "description": "Translate the approved Figma review deck into the existing KTClaw workbench and settings-center implementation without introducing a disconnected new frontend.",
       "acceptance_criteria": [
         "Current workbench shell visually aligns with the approved review deck",
         "Settings center reflects the approved grouped page structure and card hierarchy",
@@ -644,6 +644,24 @@
         "Targeted sidebar/workbench tests, npm run typecheck, and npm run lint remain green"
       ],
       "notes": "Completed on 2026-03-18. Reduced sidebar width from 390px to 240px, flattened session/team/channel/task items from large rounded cards to minimal list items with left-border active state, simplified header buttons from bordered cards to plain hover buttons, and removed unused helper functions. Verified with tests/unit/workbench-sidebar-density.test.tsx, tests/unit/workbench-sidebar.test.tsx, tests/unit/chat-input.test.tsx, tests/unit/chat-message.test.tsx, tests/unit/workbench-shell.test.tsx, tests/unit/workbench-empty-state.test.tsx, tests/unit/workbench-context-rail.test.tsx, npm run typecheck, and npm run lint (existing providers.ts warning remains).",
+      "subtasks": []
+    },
+    {
+      "id": "PIXEL-ALIGN-001",
+      "title": "像素级还原设计稿 Frame 1/2",
+      "type": "build",
+      "status": "in_progress",
+      "priority": "P0",
+      "depends_on": ["FRONTEND-006"],
+      "description": "逐帧截图对比设计稿与实现，修复所有视觉差异，直到像素级对齐。",
+      "acceptance_criteria": [
+        "侧边栏分组顺序与设计稿一致：分身→CHANNEL频道→任务→团队管理",
+        "分身组静态展示 KTClaw(active) 和 沉思小助手 两个条目",
+        "顶栏显示 KTClaw 而非 KaiTianClaw",
+        "Hero 图标为绿色渐变 #10b981→#059669",
+        "npm run typecheck 和 npm run test 全部绿色"
+      ],
+      "notes": "本次已修复：侧边栏顺序、分身空态静态项、App名称、Hero图标颜色。已 commit 到 main 分支。截图对比结果显示与设计稿高度吻合。",
       "subtasks": []
     }
   ]
