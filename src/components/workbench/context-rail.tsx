@@ -3,8 +3,8 @@ import { ChevronDown } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
 
 export function ContextRail() {
-  const contextRailCollapsed = useSettingsStore((state) => state.contextRailCollapsed);
-  const setContextRailCollapsed = useSettingsStore((state) => state.setContextRailCollapsed);
+  const rightPanelMode = useSettingsStore((state) => state.rightPanelMode);
+  const setRightPanelMode = useSettingsStore((state) => state.setRightPanelMode);
   const [openModules, setOpenModules] = useState({
     about: true,
     capabilities: true,
@@ -16,17 +16,26 @@ export function ContextRail() {
     setOpenModules((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  if (contextRailCollapsed) {
+  if (rightPanelMode === null) return null;
+
+  if (rightPanelMode === 'files') {
     return (
-      <aside className="flex h-full items-center border-l border-black/[0.06] bg-white px-2 py-3 dark:border-white/10 dark:bg-background">
-        <button
-          type="button"
-          aria-label="展开 Agent 检查器"
-          onClick={() => setContextRailCollapsed(false)}
-          className="rounded-full border border-black/10 bg-[#f2f2f7] px-2.5 py-1.5 text-xs text-[#3c3c43] shadow-sm transition-colors hover:bg-[#e5e5ea]"
-        >
-          {'>'}
-        </button>
+      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+        <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
+          <span className="text-[14px] font-semibold text-[#000000]">会话文件</span>
+          <button
+            type="button"
+            aria-label="关闭文件面板"
+            onClick={() => setRightPanelMode(null)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
+          >
+            ✕
+          </button>
+        </header>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
+          <span className="text-[40px]">📂</span>
+          <p className="text-[13px] text-[#8e8e93]">当前会话暂无文件</p>
+        </div>
       </aside>
     );
   }
@@ -39,7 +48,7 @@ export function ContextRail() {
         <button
           type="button"
           aria-label="关闭 Agent 检查器"
-          onClick={() => setContextRailCollapsed(true)}
+          onClick={() => setRightPanelMode(null)}
           className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
         >
           ✕

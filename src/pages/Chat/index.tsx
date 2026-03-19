@@ -5,6 +5,7 @@
  * workbench surface while retaining the existing chat runtime wiring.
  */
 import { useEffect, useState } from 'react';
+import { useSettingsStore } from '@/stores/settings';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useChatStore, type RawMessage } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
@@ -24,6 +25,9 @@ export function Chat() {
   const { t } = useTranslation(['chat', 'common']);
   const gatewayStatus = useGatewayStore((s) => s.status);
   const isGatewayRunning = gatewayStatus.state === 'running';
+
+  const rightPanelMode = useSettingsStore((s) => s.rightPanelMode);
+  const setRightPanelMode = useSettingsStore((s) => s.setRightPanelMode);
 
   const messages = useChatStore((s) => s.messages);
   const currentSessionKey = useChatStore((s) => s.currentSessionKey);
@@ -98,13 +102,25 @@ export function Chat() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-black/10 bg-white px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:bg-[#f9f9f9] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] hover:border-black/15 active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+              onClick={() => setRightPanelMode(rightPanelMode === 'files' ? null : 'files')}
+              className={cn(
+                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                rightPanelMode === 'files'
+                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
+                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
+              )}
             >
               📄 {t('common:workbench.files')}
             </button>
             <button
               type="button"
-              className="rounded-lg border border-black/10 bg-white px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:bg-[#f9f9f9] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] hover:border-black/15 active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+              onClick={() => setRightPanelMode(rightPanelMode === 'agent' ? null : 'agent')}
+              className={cn(
+                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                rightPanelMode === 'agent'
+                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
+                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
+              )}
             >
               🤖 {t('common:workbench.agent')}
             </button>
@@ -187,7 +203,7 @@ export function Chat() {
             </div>
           </div>
 
-          <ContextRail />
+          {rightPanelMode !== null && <ContextRail />}
         </div>
       </div>
 

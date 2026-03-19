@@ -5,6 +5,7 @@ interface AccordionGroupProps {
   icon?: React.ReactNode;
   collapsed?: boolean;
   children?: React.ReactNode;
+  headerAction?: React.ReactNode;
 }
 
 export function AccordionGroup({
@@ -12,6 +13,7 @@ export function AccordionGroup({
   icon,
   collapsed = false,
   children,
+  headerAction,
 }: AccordionGroupProps) {
   if (collapsed) {
     return (
@@ -32,10 +34,13 @@ export function AccordionGroup({
     <section className="flex flex-col">
       <div
         className={cn(
-          'px-[10px] pb-[6px] pt-4 text-[11px] font-semibold uppercase tracking-[0.5px] text-[#8e8e93]',
+          'flex items-center justify-between px-[10px] pb-[6px] pt-4',
         )}
       >
-        {title}
+        <span className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#8e8e93]">
+          {title}
+        </span>
+        {headerAction}
       </div>
       <div className="flex flex-col gap-0">{children}</div>
     </section>

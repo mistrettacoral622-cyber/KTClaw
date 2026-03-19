@@ -37,6 +37,7 @@ interface SettingsState {
   // UI State
   sidebarCollapsed: boolean;
   contextRailCollapsed: boolean;
+  rightPanelMode: 'agent' | 'files' | null;
   devModeUnlocked: boolean;
 
   // Setup
@@ -62,6 +63,7 @@ interface SettingsState {
   setAutoDownloadUpdate: (value: boolean) => void;
   setSidebarCollapsed: (value: boolean) => void;
   setContextRailCollapsed: (value: boolean) => void;
+  setRightPanelMode: (mode: 'agent' | 'files' | null) => void;
   setDevModeUnlocked: (value: boolean) => void;
   markSetupComplete: () => void;
   resetSettings: () => void;
@@ -86,6 +88,7 @@ const defaultSettings = {
   autoDownloadUpdate: false,
   sidebarCollapsed: false,
   contextRailCollapsed: true,
+  rightPanelMode: null as 'agent' | 'files' | null,
   devModeUnlocked: false,
   setupComplete: false,
 };
@@ -165,6 +168,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoDownloadUpdate: (autoDownloadUpdate) => set({ autoDownloadUpdate }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setContextRailCollapsed: (contextRailCollapsed) => set({ contextRailCollapsed }),
+      setRightPanelMode: (rightPanelMode) => set({ rightPanelMode }),
       setDevModeUnlocked: (devModeUnlocked) => {
         set({ devModeUnlocked });
         void hostApiFetch('/api/settings/devModeUnlocked', {

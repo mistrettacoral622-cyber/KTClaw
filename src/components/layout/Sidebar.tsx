@@ -25,6 +25,8 @@ type SidebarMetaItem = {
 export function Sidebar() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useSettingsStore((state) => state.setSidebarCollapsed);
+  const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
+  const [nickname, setNickname] = useState('Administrator');
 
   const sessions = useChatStore((s) => s.sessions);
   const currentSessionKey = useChatStore((s) => s.currentSessionKey);
@@ -140,6 +142,19 @@ export function Sidebar() {
           title={groupLabels.clones}
           icon={<Bot className="h-[18px] w-[18px]" strokeWidth={2} />}
           collapsed={sidebarCollapsed}
+          headerAction={
+            !sidebarCollapsed ? (
+              <button
+                type="button"
+                aria-label="添加分身"
+                title="添加分身"
+                onClick={() => navigate('/')}
+                className="flex h-5 w-5 items-center justify-center rounded-md text-[14px] text-[#8e8e93] transition-colors hover:bg-[#e5e5ea] hover:text-[#000000]"
+              >
+                ＋
+              </button>
+            ) : undefined
+          }
         >
           {orderedSessions.length > 0 ? (
             orderedSessions.map((session) => {
@@ -215,7 +230,7 @@ export function Sidebar() {
               onClick={() => navigate('/channels')}
               className="flex w-full items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]"
             >
-              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none">
+              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden text-[15px] leading-none">
                 {channel.name === '飞书' ? '🪶' : channel.name === '钉钉' ? '💙' : '🍀'}
               </span>
               <span className="min-w-0 flex-1 truncate">{channel.name}</span>
@@ -260,13 +275,19 @@ export function Sidebar() {
             </button>
           ))}
         </AccordionGroup>
+
       </div>
 
       <div className="mt-auto flex h-[52px] shrink-0 items-center gap-[10px] border-t border-[#c6c6c8] px-4 transition-colors hover:bg-[#e5e5ea] dark:border-white/10 dark:hover:bg-white/[0.04]">
         {!sidebarCollapsed && (
           <>
-            <div className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9]"></div>
-            <span className="flex-1 truncate text-[13px] font-medium">Administrator</span>
+            <button
+              type="button"
+              aria-label="选择头像"
+              onClick={() => setAvatarPopupOpen(true)}
+              className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] transition-colors hover:ring-2 hover:ring-[#007aff]/40"
+            />
+            <span className="flex-1 truncate text-[13px] font-medium">{nickname}</span>
             <button
               type="button"
               aria-label="Settings"
@@ -279,9 +300,23 @@ export function Sidebar() {
           </>
         )}
         {sidebarCollapsed && (
-          <div className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9]"></div>
+          <button
+            type="button"
+            aria-label="选择头像"
+            onClick={() => setAvatarPopupOpen(true)}
+            className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] transition-colors hover:ring-2 hover:ring-[#007aff]/40"
+          />
         )}
       </div>
+
+      {/* Avatar / Nickname popup */}
+      {avatarPopupOpen && (
+        <AvatarPopup
+          nickname={nickname}
+          onNicknameChange={setNickname}
+          onClose={() => setAvatarPopupOpen(false)}
+        />
+      )}
 
       <ConfirmDialog
         open={!!sessionToDelete}
@@ -299,5 +334,106 @@ export function Sidebar() {
         onCancel={() => setSessionToDelete(null)}
       />
     </aside>
+  );
+}
+
+const AVATAR_OPTIONS = [
+  { emoji: '🐱', label: '猫咪' },
+  { emoji: '🐶', label: '小狗' },
+  { emoji: '🦊', label: '狐狸' },
+  { emoji: '🐻', label: '熊熊' },
+  { emoji: '🐼', label: '熊猫' },
+  { emoji: '🦁', label: '狮子' },
+  { emoji: '🐸', label: '青蛙' },
+  { emoji: '🐨', label: '考拉' },
+  { emoji: '🦄', label: '独角兽' },
+];
+
+function AvatarPopup({
+  nickname,
+  onNicknameChange,
+  onClose,
+}: {
+  nickname: string;
+  onNicknameChange: (v: string) => void;
+  onClose: () => void;
+}) {
+  const [selectedAvatar, setSelectedAvatar] = useState('🐱');
+  const [draft, setDraft] = useState(nickname);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-start" onClick={onClose}>
+      <div
+        className="absolute bottom-[60px] left-2 w-[260px] overflow-hidden rounded-[18px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.06]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3">
+          <span className="text-[14px] font-semibold text-[#000000]">个人资料</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f2f2f7] text-[12px] text-[#3c3c43] hover:bg-[#e5e5ea]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Current avatar preview */}
+        <div className="flex flex-col items-center py-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f7] text-[32px]">
+            {selectedAvatar}
+          </div>
+          <span className="mt-2 text-[13px] font-medium text-[#000000]">{draft || nickname}</span>
+        </div>
+
+        {/* Avatar grid */}
+        <div className="grid grid-cols-3 gap-2 px-4 pb-3">
+          {AVATAR_OPTIONS.map((opt) => (
+            <button
+              key={opt.emoji}
+              type="button"
+              onClick={() => setSelectedAvatar(opt.emoji)}
+              className={cn(
+                'flex flex-col items-center gap-1 rounded-xl py-2 text-[22px] transition-colors',
+                selectedAvatar === opt.emoji
+                  ? 'bg-[#007aff]/10 ring-1 ring-[#007aff]/40'
+                  : 'hover:bg-[#f2f2f7]',
+              )}
+            >
+              {opt.emoji}
+              <span className="text-[10px] text-[#8e8e93]">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Nickname input */}
+        <div className="border-t border-black/[0.06] px-4 py-3">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.5px] text-[#8e8e93]">
+            昵称
+          </label>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="输入昵称..."
+            className="w-full rounded-lg border border-black/10 bg-[#f2f2f7] px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-[#007aff] focus:bg-white"
+          />
+        </div>
+
+        {/* Save button */}
+        <div className="px-4 pb-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (draft.trim()) onNicknameChange(draft.trim());
+              onClose();
+            }}
+            className="w-full rounded-full bg-[#007aff] py-2 text-[13px] font-semibold text-white hover:bg-[#0062cc]"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
