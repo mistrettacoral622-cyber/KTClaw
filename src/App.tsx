@@ -19,11 +19,13 @@ import { Settings } from './pages/Settings';
 import { TeamOverview } from './pages/TeamOverview';
 import { TeamMap } from './pages/TeamMap';
 import { TaskKanban } from './pages/TaskKanban';
+import { Activity } from './pages/Activity';
 import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { applyGatewayTransportPreference } from './lib/api-client';
 import { isBrowserPreviewMode } from './lib/browser-preview';
+import { wireGatewayNotifications } from './stores/notifications';
 
 
 /**
@@ -160,6 +162,10 @@ function App() {
     applyGatewayTransportPreference();
   }, []);
 
+  useEffect(() => {
+    return wireGatewayNotifications(useGatewayStore);
+  }, []);
+
   return (
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
@@ -178,6 +184,7 @@ function App() {
             <Route path="/team-overview" element={<TeamOverview />} />
             <Route path="/team-map" element={<TeamMap />} />
             <Route path="/kanban" element={<TaskKanban />} />
+            <Route path="/activity" element={<Activity />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>

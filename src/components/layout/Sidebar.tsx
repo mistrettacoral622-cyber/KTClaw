@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  Bell,
   Bot,
   Clock,
   Network,
@@ -13,6 +14,8 @@ import { useChatStore } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
 import { useAgentsStore } from '@/stores/agents';
 import { useChannelsStore } from '@/stores/channels';
+import { useNotificationsStore } from '@/stores/notifications';
+import { type Notification } from '@/stores/notifications';
 import { CHANNEL_ICONS } from '@/types/channel';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +32,7 @@ export function Sidebar() {
   const setSidebarCollapsed = useSettingsStore((state) => state.setSidebarCollapsed);
   const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
   const [nickname, setNickname] = useState('Administrator');
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const sessions = useChatStore((s) => s.sessions);
   const currentSessionKey = useChatStore((s) => s.currentSessionKey);
@@ -59,6 +63,11 @@ export function Sidebar() {
   const fetchAgents = useAgentsStore((s) => s.fetchAgents);
 
   const { channels, fetchChannels } = useChannelsStore();
+
+  const notifications = useNotificationsStore((s) => s.notifications);
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
+  const markAllRead = useNotificationsStore((s) => s.markAllRead);
+  const dismiss = useNotificationsStore((s) => s.dismiss);
 
   useEffect(() => {
     void fetchAgents();
@@ -96,6 +105,7 @@ export function Sidebar() {
   const staticCronTasks: SidebarMetaItem[] = [
     { name: '任务看板', summary: '', meta: '' },
     { name: '任务日程', summary: '', meta: '' },
+    { name: '运行日志', summary: '', meta: '' },
   ];
 
   return (
@@ -267,11 +277,11 @@ export function Sidebar() {
             <button
               key={task.name}
               type="button"
-              onClick={() => navigate(task.name === '任务看板' ? '/kanban' : '/cron')}
+              onClick={() => navigate(task.name === '任务看板' ? '/kanban' : task.name === '运行日志' ? '/activity' : '/cron')}
               className="flex w-full items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]"
             >
               <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none">
-                {task.name === '任务看板' ? '📋' : '📅'}
+                {task.name === '任务看板' ? '📋' : task.name === '运行日志' ? '📊' : '📅'}
               </span>
               <span className="min-w-0 flex-1 truncate text-left">{task.name}</span>
             </button>
@@ -308,6 +318,22 @@ export function Sidebar() {
               className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] transition-colors hover:ring-2 hover:ring-[#007aff]/40"
             />
             <span className="flex-1 truncate text-[13px] font-medium">{nickname}</span>
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="通知"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[16px] transition-colors hover:bg-[#e5e5ea]"
+                onClick={() => { setNotifOpen((v) => !v); if (!notifOpen && unreadCount > 0) markAllRead(); }}
+                title="通知"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] text-[9px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
             <button
               type="button"
               aria-label="Settings"
@@ -328,6 +354,15 @@ export function Sidebar() {
           />
         )}
       </div>
+
+      {/* Notification panel */}
+      {notifOpen && !sidebarCollapsed && (
+        <NotificationPanel
+          notifications={notifications}
+          onDismiss={dismiss}
+          onClose={() => setNotifOpen(false)}
+        />
+      )}
 
       {/* Avatar / Nickname popup */}
       {avatarPopupOpen && (
@@ -368,6 +403,82 @@ const AVATAR_OPTIONS = [
   { emoji: '🐨', label: '考拉' },
   { emoji: '🦄', label: '独角兽' },
 ];
+
+function NotificationPanel({
+  notifications,
+  onDismiss,
+  onClose,
+}: {
+  notifications: Notification[];
+  onDismiss: (id: string) => void;
+  onClose: () => void;
+}) {
+  function relativeTime(ts: number) {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return '刚刚';
+    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+    return `${Math.floor(diff / 86400)}天前`;
+  }
+
+  const levelColor: Record<string, string> = {
+    success: '#10b981',
+    warn: '#f59e0b',
+    error: '#ef4444',
+    info: '#007aff',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div
+        className="absolute bottom-[60px] left-2 w-[260px] overflow-hidden rounded-[18px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.06]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3">
+          <span className="text-[14px] font-semibold text-[#000000]">通知</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f2f2f7] text-[12px] text-[#3c3c43] hover:bg-[#e5e5ea]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[320px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-[13px] text-[#8e8e93]">
+              暂无通知
+            </div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className="flex items-start gap-3 border-b border-black/[0.04] px-4 py-3 last:border-0">
+                <span
+                  className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: levelColor[n.level] ?? '#8e8e93' }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-[#000000]">{n.title}</p>
+                  {n.message && (
+                    <p className="mt-0.5 line-clamp-2 text-[12px] text-[#8e8e93]">{n.message}</p>
+                  )}
+                  <p className="mt-1 text-[11px] text-[#c6c6c8]">{relativeTime(n.timestamp)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDismiss(n.id)}
+                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] text-[#8e8e93] hover:bg-[#f2f2f7] hover:text-[#000000]"
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AvatarPopup({
   nickname,
