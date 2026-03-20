@@ -20,7 +20,7 @@ import { TeamOverview } from './pages/TeamOverview';
 import { TeamMap } from './pages/TeamMap';
 import { TaskKanban } from './pages/TaskKanban';
 import { Activity } from './pages/Activity';
-import { Memory } from './pages/Memory';
+// Memory page removed — functionality moved to Settings > 记忆与知识
 import { Costs } from './pages/Costs';
 import { Setup } from './pages/Setup';
 import { useSettingsStore } from './stores/settings';
@@ -187,7 +187,7 @@ function App() {
             <Route path="/team-map" element={<TeamMap />} />
             <Route path="/kanban" element={<TaskKanban />} />
             <Route path="/activity" element={<Activity />} />
-            <Route path="/memory" element={<Memory />} />
+            {/* /memory 已迁移至 Settings > 记忆与知识 */}
             <Route path="/costs" element={<Costs />} />
             <Route path="/settings/*" element={<Settings />} />
           </Route>

@@ -9,7 +9,6 @@ export type SettingsSectionId =
   | 'memory-knowledge'
   | 'skills-mcp'
   | 'tool-permissions'
-  | 'monitoring'
   | 'migration-backup'
   | 'feedback-developer';
 
@@ -56,7 +55,6 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
     id: 'governance',
     label: '治理',
     items: [
-      { id: 'monitoring', label: '监控与统计', summary: '' },
       { id: 'migration-backup', label: '迁移与备份', summary: '' },
       { id: 'feedback-developer', label: '反馈与开发者', summary: '' },
     ],
@@ -108,11 +106,6 @@ export const SETTINGS_SECTION_META: Record<
     title: '工具权限',
     subtitle: '严格规范哪些工具甚至哪个文件夹允许被智能系统修改。',
     kicker: '能力沙箱与拦截黑名单',
-  },
-  monitoring: {
-    title: '监控与统计',
-    subtitle: '从 transcript usage 与 Cron 成本视角审视系统运行状态。',
-    kicker: '治理',
   },
   'migration-backup': {
     title: '迁移与备份',

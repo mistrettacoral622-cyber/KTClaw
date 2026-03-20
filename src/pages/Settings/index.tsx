@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { SettingsMemoryKnowledgePanel } from '@/components/settings-center/settings-memory-knowledge-panel';
 import { SettingsMigrationPanel } from '@/components/settings-center/settings-migration-panel';
 import { SettingsMigrationWizard } from '@/components/settings-center/settings-migration-wizard';
-import { SettingsMonitoringPanel } from '@/components/settings-center/settings-monitoring-panel';
 import { SettingsNav } from '@/components/settings-center/settings-nav';
 import { SettingsSectionCard } from '@/components/settings-center/settings-section-card';
 import {
@@ -302,9 +301,6 @@ function renderActiveSection(args: RenderSectionArgs) {
 
     case 'tool-permissions':
       return <ToolPermissionsSection />;
-
-    case 'monitoring':
-      return <SettingsMonitoringPanel />;
 
     case 'migration-backup':
       return <SettingsMigrationPanel onLaunchWizard={args.openMigrationWizard} />;

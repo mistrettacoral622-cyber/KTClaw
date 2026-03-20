@@ -827,3 +827,68 @@ Next recommended step:
 - Run full test suite (npm run test) to verify all existing tests still pass
 - Continue pixel-align pass on remaining frames (Channels, Kanban, Cron, Team pages) against design board
 - Or proceed to next feature as directed by user
+
+[2026-03-20 00:00 +08:00] Session: Store wiring sweep (post-PIXEL-ALIGN-002)
+Focus: 将所有优先页面对接真实 store，完成前后端集成清单
+
+What changed this session:
+1. Sidebar.tsx — 清除 staticChannels 废弃变量，清除未使用的 agents import
+2. Settings/index.tsx — Gateway 端口改为可编辑 input（portDraft + savingPort + 保存按钮），验证范围 1024–65535
+3. Cron/index.tsx — PipelinesTab 实现（run log 表 + stats bar）；ScheduleTab 增加"即将执行"右侧面板（来自 store 的 enabled+nextRun 任务）
+4. context-rail.tsx — 对接 useAgentsStore + useChatStore：真实 agent 名称/ID/模型/channelTypes；修复 CHANNEL_ICONS TypeScript 索引错误
+5. workbench-empty-state.tsx — 建议卡片点击发送消息（useChatStore.sendMessage + Gateway 运行态守卫）
+6. Chat/index.tsx — Agent 切换下拉（agentPickerOpen + agentPickerRef + 鼠标外点击关闭 + switchSession）；ActivityIndicator 英文→中文
+7. Channels/index.tsx — 配置字段标签 i18n（useTranslation + t(field.label)）
+
+Commits in this session:
+- 27d5e71 feat: wire all priority pages to real stores + sidebar cleanup
+- bfd0090 feat: cron pipelines tab + agent switcher + context rail wiring
+- 909268f feat: agent switcher dropdown + channels i18n fix
+
+TypeScript状态: 0 errors
+所有页面 store 对接状态:
+- Chat / — ✅ 已通
+- Channels /channels — ✅ 已通
+- Cron /cron — ✅ 已通（包含 Pipelines + Schedule 实时数据）
+- Team Overview /team-overview — ✅ 已通
+- Team Map /team-map — ✅ 已通
+- Task Kanban /kanban — ⚠️ 本地 localStorage 持久化，待对接 approvals/task API
+- Settings /settings — ✅ 已通（Gateway 端口可编辑）
+- Context Rail — ✅ 已通（真实 agent 数据）
+
+Decisions:
+- TaskKanban 当前使用 localStorage 而非 Gateway API，因 electron/api/routes/ 中无 approvals 路由
+- 下一步：实现 approvals 路由 (electron) + useApprovalsStore (frontend) + Kanban 对接
+
+Blockers:
+- 无
+
+Next recommended step:
+- FRONTEND-007: 实现 approvals 后端路由 + 前端 store + Kanban 对接
+
+[2026-03-20 session: P0 功能完成]
+Focus: NotificationPanel + 记忆页面 + 费用页面
+
+What changed:
+1. NotificationPanel 组件 — 实现完成（Sidebar.tsx 末尾），修复 TS 零错误
+2. electron/api/routes/memory.ts — GET /api/memory (列表), GET/PUT /api/memory/file (读写)
+3. src/pages/Memory/index.tsx — workspace .md 文件浏览器，支持内联编辑保存
+4. src/pages/Costs/index.tsx — Token 用量统计：汇总卡片 + 模型分布 + 明细表
+5. src/App.tsx — 注册 /memory + /costs 路由
+6. Sidebar.tsx — 添加 🧠记忆知识库 + 💰费用用量 导航入口
+
+Commits:
+- e82bc23 feat: notifications store + Bell panel + Activity page + health route
+- 2ff36e8 feat: memory browser + costs page + notification panel (P0 complete)
+
+TypeScript: 0 errors, build: ✅
+
+P0 完成状态:
+- ✅ NotificationPanel 组件
+- ✅ 记忆页面 /memory
+- ✅ 费用/用量页面 /costs
+
+Next: P1 任务
+- 预算治理设置 (budget limit / alert threshold)
+- 审计时间线页面
+- 头像偏好持久化
