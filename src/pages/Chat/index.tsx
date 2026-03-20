@@ -4,7 +4,7 @@
  * via gateway:rpc IPC. The page now acts as the main KaiTianClaw
  * workbench surface while retaining the existing chat runtime wiring.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettingsStore } from '@/stores/settings';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { useChatStore, type RawMessage } from '@/stores/chat';
@@ -51,6 +51,18 @@ export function Chat() {
   const { contentRef, scrollRef } = useStickToBottomInstant(currentSessionKey);
   const [streamingTimestamp, setStreamingTimestamp] = useState(0);
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
+  const agentPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!agentPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (agentPickerRef.current && !agentPickerRef.current.contains(e.target as Node)) {
+        setAgentPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [agentPickerOpen]);
 
   const switchSession = useChatStore((s) => s.switchSession);
   const currentAgentName = agents.find((agent) => agent.id === currentAgentId)?.name ?? 'KTClaw';
@@ -95,7 +107,7 @@ export function Chat() {
     <div className={cn('relative flex h-full min-h-0 bg-white transition-colors duration-500 dark:bg-background')}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 bg-white px-5 dark:bg-background">
-          <div className="relative flex min-w-0 items-center gap-[6px]">
+          <div ref={agentPickerRef} className="relative flex min-w-0 items-center gap-[6px]">
             <button
               type="button"
               onClick={() => setAgentPickerOpen((v) => !v)}
@@ -107,10 +119,7 @@ export function Chat() {
               <span className="text-[12px] text-[#8e8e93]">▾</span>
             </button>
             {agentPickerOpen && agents.length > 0 && (
-              <div
-                className="absolute left-0 top-full z-50 mt-1 w-[200px] overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
-                onBlur={() => setAgentPickerOpen(false)}
-              >
+              <div className="absolute left-0 top-full z-50 mt-1 w-[200px] overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
                 {agents.map((agent) => (
                   <button
                     key={agent.id}

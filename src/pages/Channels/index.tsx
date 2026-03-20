@@ -3,6 +3,7 @@
  * IM 频道配置与状态管理
  */
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useChannelsStore } from '@/stores/channels';
 import { CHANNEL_ICONS, CHANNEL_NAMES, CHANNEL_META, type ChannelType } from '@/types/channel';
@@ -67,6 +68,7 @@ const MESSAGES: Message[] = [
 /* ─── Main component ─── */
 
 export function Channels() {
+  const { t } = useTranslation('channels');
   const [activeChannel, setActiveChannel] = useState<ChannelType>('feishu');
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [composerValue, setComposerValue] = useState('');
@@ -259,7 +261,7 @@ export function Channels() {
                 <div className="flex flex-col gap-1.5">
                   {meta.configFields.map((field) => (
                     <div key={field.key} className="flex items-center justify-between gap-4">
-                      <span className="text-[12px] text-[#3c3c43]">{field.label}</span>
+                      <span className="text-[12px] text-[#3c3c43]">{t(field.label)}</span>
                       <span className="font-mono text-[12px] text-[#8e8e93]">
                         {field.type === 'password' ? '••••••••' : '—'}
                       </span>
