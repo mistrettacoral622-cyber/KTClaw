@@ -36,6 +36,7 @@ interface UpdateState {
   progress: ProgressInfo | null;
   error: string | null;
   isInitialized: boolean;
+  _cleanup: (() => void) | null;
   /** Seconds remaining before auto-install, or null if inactive. */
   autoInstallCountdown: number | null;
 
@@ -57,6 +58,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
   progress: null,
   error: null,
   isInitialized: false,
+  _cleanup: null,
   autoInstallCountdown: null,
 
   init: async () => {
@@ -91,7 +93,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     // Listen for update events
     // Single source of truth: listen only to update:status-changed
     // (sent by AppUpdater.updateStatus() in the main process)
-    window.electron.ipcRenderer.on('update:status-changed', (data) => {
+    const onStatusChanged = (data: unknown) => {
       const status = data as {
         status: UpdateStatus;
         info?: UpdateInfo;
@@ -104,14 +106,22 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
         progress: status.progress || null,
         error: status.error || null,
       });
-    });
+    };
+    window.electron.ipcRenderer.on('update:status-changed', onStatusChanged);
 
-    window.electron.ipcRenderer.on('update:auto-install-countdown', (data) => {
+    const onCountdown = (data: unknown) => {
       const { seconds, cancelled } = data as { seconds: number; cancelled?: boolean };
       set({ autoInstallCountdown: cancelled ? null : seconds });
-    });
+    };
+    window.electron.ipcRenderer.on('update:auto-install-countdown', onCountdown);
 
-    set({ isInitialized: true });
+    set({
+      isInitialized: true,
+      _cleanup: () => {
+        window.electron.ipcRenderer.off('update:status-changed', onStatusChanged);
+        window.electron.ipcRenderer.off('update:auto-install-countdown', onCountdown);
+      },
+    });
 
     // Apply persisted settings from the settings store
     const { autoCheckUpdate, autoDownloadUpdate } = useSettingsStore.getState();

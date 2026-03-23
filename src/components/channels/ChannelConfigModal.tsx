@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useChannelsStore } from '@/stores/channels';
 
 import { hostApiFetch } from '@/lib/host-api';
+import { invokeIpc } from '@/lib/api-client';
 import { subscribeHostEvent } from '@/lib/host-events';
 import { cn } from '@/lib/utils';
 import {
@@ -350,15 +351,9 @@ export function ChannelConfigModal({
   const openDocs = () => {
     if (!meta?.docsUrl) return;
     const url = t(meta.docsUrl);
-    try {
-      if (window.electron?.openExternal) {
-        window.electron.openExternal(url);
-      } else {
-        window.open(url, '_blank');
-      }
-    } catch {
+    invokeIpc('shell:openExternal', url).catch(() => {
       window.open(url, '_blank');
-    }
+    });
   };
 
   const isFormValid = () => {
