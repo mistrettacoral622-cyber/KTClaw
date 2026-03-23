@@ -51,7 +51,8 @@ tail -30 continue/progress.txt
 - **颜色系统**：
   - `--bg: #ffffff` / `--bg2: #f2f2f7` / `--bg3: #e5e5ea`
   - `--tx: #000000` / `--tx2: #3c3c43` / `--tx3: #8e8e93`
-  - `--bd: #c6c6c8` / `--ac: #007aff`
+  - `--bd: #c6c6c8` / `--ac: #007aff`（运行时可被 settings store 覆盖）
+  - **Tailwind token**：`bg-clawx-ac`、`text-clawx-ac`、`border-clawx-ac`（支持 `/10`、`/40` 等透明度修饰符）
   - 主色调高亮：`#ff6a00`
 - **字体**：`-apple-system, SF Pro`，正文 13px
 - **Sidebar**：展开 260px / 收起 64px
@@ -60,7 +61,7 @@ tail -30 continue/progress.txt
 
 ---
 
-## 已完成功能清单（截至 2026-03-20）
+## 已完成功能清单（截至 2026-03-23）
 
 ### 页面 & 路由
 | 路由 | 状态 | 说明 |
@@ -166,6 +167,28 @@ tail -30 continue/progress.txt
 12. **图片附件** ✅ 已完成（ChatInput 文件 staging + ChatMessage lightbox 图片预览）
 13. **自动记忆提取** ✅ 已完成 (2026-03-20) — POST /api/memory/extract（启发式，写入 memory/YYYY-MM-DD.md）；Chat 顶栏「🧠 记忆」按钮（≥2条消息时显示）
 
+### Design Polish（2026-03-23 完成）
+- **主题色全局化**：`clawx-ac` Tailwind token + `--ac-rgb` CSS 变量，App.tsx 自动解析 hex→RGB，支持透明度修饰符
+- **全量替换**：26 个文件 100+ 处硬编码 `#007aff` 改为 `bg-clawx-ac`/`text-clawx-ac` 等 token
+- **Empty states 升级**：Activity（📋）、Costs（💸）页空状态加图标
+- **Debug 清理**：ChatInput、Skills 所有 `console.log/warn/error` 已移除
+- **链接 hover 颜色**：MarkdownContent 链接 hover 改用 `text-clawx-ac/80`（跟随主题色）
+
+### 待实现（下一步重点）
+
+#### 前端
+- [ ] **Costs 大盘监控 Tab**：折线图/柱状图（用量趋势）、按 Agent/模型分组
+- [ ] **Costs 告警策略 Tab**：阈值配置表单、告警规则 CRUD
+- [ ] **Settings 应用自动更新 UI**：接入 update store（checkForUpdates/downloadUpdate/installUpdate）
+- [ ] **TeamMap 层级图**：真实 Agent 树形结构渲染（目前是静态占位）
+- [ ] **Channels 频道测试**：发送测试消息按钮 + 结果反馈
+
+#### 后端
+- [ ] **`electron/api/routes/costs.ts`**：GET /api/costs/summary（按天/周/月聚合）、GET /api/costs/by-agent、GET /api/costs/by-model
+- [ ] **`electron/api/routes/alerts.ts`**：告警规则 CRUD，写入 `~/.openclaw/alerts.json`
+- [ ] **`electron/api/routes/channels.ts`** 测试接口：POST /api/channels/:id/test（发送测试消息）
+- [ ] **`electron/api/routes/update.ts`**：接入 electron-updater，暴露 check/download/install 端点
+
 ---
 
 ## LobsterAI 参考价值总结
@@ -191,7 +214,7 @@ tail -30 continue/progress.txt
 - [ ] API 调用走 `hostApiFetch<T>()` / `invokeIpc`，不直接 fetch
 - [ ] 复用已有 store/hook，不重复实现
 - [ ] 错误边界处理（loading / error / empty state）
-- [ ] 与设计稿颜色/间距一致（`#007aff` 主色、`#f2f2f7` 背景）
+- [ ] 与设计稿颜色/间距一致（`clawx-ac` 主色 token / `var(--ac)` CSS 变量、`#f2f2f7` 背景）
 - [ ] 无 `console.log` 遗留
 - [ ] 无 `require()` 混用（electron 端用 import）
 
@@ -218,13 +241,13 @@ tail -40 continue/progress.txt
 
 ---
 
-## 最近提交记录（截至 2026-03-20 session-2）
+## 最近提交记录（截至 2026-03-23）
 
 ```
+3ddda7b feat: design polish — accent color token system + empty states + debug cleanup
+5b17915 feat: P2全量完成 — 记忆提取、主题色自定义
+61c5df1 feat: P0剩余 + P1全量完成 — MCP管理、Cron历史、头像持久化、批量管理、快捷操作
+8cd9d5f chore: 更新 Prompt.md + progress.txt (P0 session-2 完成记录)
 fbaf344 feat: P0 Chat升级 — Markdown渲染、AskUserQuestion Wizard、工作目录选择器
 433141c feat: full memory dashboard page + enhanced backend + sidebar entry
-a9b14f6 refactor: consolidate duplicate pages — merge monitoring into /costs, memory into settings
-2ff36e8 feat: memory browser + costs page + notification panel (P0 complete)
-e82bc23 feat: notifications store + Bell panel + Activity page + health route
-11814a1 feat: approvals backend route + store + kanban integration
 ```
