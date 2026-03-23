@@ -152,9 +152,12 @@ export async function launchGatewayProcess(options: {
     };
 
     child.on('error', (error) => {
-      logger.error('Gateway process spawn error:', error);
-      options.onError(error);
-      rejectOnce(error);
+      const normalizedError = typeof error === 'object' && error !== null && 'message' in error
+        ? new Error(String((error as { message?: unknown }).message ?? error))
+        : new Error(String(error));
+      logger.error('Gateway process spawn error:', normalizedError);
+      options.onError(normalizedError);
+      rejectOnce(normalizedError);
     });
 
     child.on('exit', (code: number) => {

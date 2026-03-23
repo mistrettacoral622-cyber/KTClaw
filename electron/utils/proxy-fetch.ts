@@ -8,10 +8,12 @@ export async function proxyAwareFetch(
   input: string | URL,
   init?: RequestInit
 ): Promise<Response> {
+  const inputUrl = typeof input === 'string' ? input : input.toString();
+
   if (process.versions.electron) {
     try {
       const { net } = await import('electron');
-      return await net.fetch(input, init);
+      return await net.fetch(inputUrl, init);
     } catch {
       // Fall through to the global fetch.
     }

@@ -107,7 +107,7 @@ describe('chat target routing', () => {
       showThinking: true,
     });
 
-    await useChatStore.getState().sendMessage('Hello direct agent', undefined, 'research');
+    await useChatStore.getState().sendMessage('Hello direct agent', undefined, 'research', '/tmp/workspace');
 
     const state = useChatStore.getState();
     expect(state.currentSessionKey).toBe('agent:research:desk');
@@ -123,6 +123,7 @@ describe('chat target routing', () => {
       sessionKey: 'agent:research:desk',
       message: 'Hello direct agent',
       deliver: false,
+      cwd: '/tmp/workspace',
     });
     expect(typeof (sendCall?.[1] as { idempotencyKey?: unknown })?.idempotencyKey).toBe('string');
   });
@@ -163,6 +164,7 @@ describe('chat target routing', () => {
         },
       ],
       'research',
+      '/tmp/workspace-media',
     );
 
     expect(useChatStore.getState().currentSessionKey).toBe('agent:research:desk');
@@ -180,11 +182,13 @@ describe('chat target routing', () => {
     ) as {
       sessionKey: string;
       message: string;
+      cwd?: string;
       media: Array<{ filePath: string }>;
     };
 
     expect(payload.sessionKey).toBe('agent:research:desk');
     expect(payload.message).toBe('Process the attached file(s).');
+    expect(payload.cwd).toBe('/tmp/workspace-media');
     expect(payload.media[0]?.filePath).toBe('/tmp/design.png');
   });
 });

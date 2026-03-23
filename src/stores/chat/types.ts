@@ -104,6 +104,7 @@ export interface ChatState {
       preview: string | null;
     }>,
     targetAgentId?: string | null,
+    workingDir?: string | null,
   ) => Promise<void>;
   abortRun: () => Promise<void>;
   handleChatEvent: (event: Record<string, unknown>) => void;

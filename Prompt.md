@@ -141,8 +141,9 @@ tail -30 continue/progress.txt
 
 ### P1 — 下一周期
 
-#### 6. 自动记忆提取（Memory Extractor）
-- **目标**：对话结束后自动判断是否有值得写入记忆的内容
+#### 6. 记忆提取增强（规则 + LLM judge）
+- **当前状态**：启发式 `POST /api/memory/extract` 已完成，能写入 `memory/YYYY-MM-DD.md`
+- **下一步目标**：补全规则引擎 + LLM 判定，降低误提取和漏提取
 - **参考**：`reference/LobsterAI-main/src/main/libs/coworkMemoryExtractor.ts`（规则引擎）
   + `reference/LobsterAI-main/src/main/libs/coworkMemoryJudge.ts`（LLM 判断）
 - **实现位置**：`electron/api/routes/memory.ts` 新增 POST /api/memory/extract
@@ -163,7 +164,7 @@ tail -30 continue/progress.txt
 ### P2 — 后续
 
 10. **主题色自定义** ✅ 已完成 (2026-03-20) — settings store `accentColor` + CSS `--ac` 变量 + 6色预设 + 自定义色轮；App.tsx 统一注入 CSS 变量
-11. **应用自动更新** — update store 已完整（checkForUpdates/downloadUpdate/installUpdate），Settings UI 已有 autoCheckUpdate/autoDownloadUpdate toggle
+11. **应用自动更新（链路一致性待补）** — update store + Settings UI 已有 `check/download/install/progress`；仍需统一 `updateChannel` 持久化、feed URL 切换语义，并决定是否补 Host API update route
 12. **图片附件** ✅ 已完成（ChatInput 文件 staging + ChatMessage lightbox 图片预览）
 13. **自动记忆提取** ✅ 已完成 (2026-03-20) — POST /api/memory/extract（启发式，写入 memory/YYYY-MM-DD.md）；Chat 顶栏「🧠 记忆」按钮（≥2条消息时显示）
 
@@ -181,61 +182,96 @@ tail -30 continue/progress.txt
 - **反馈按钮**：「提交 Issue」打开 GitHub；「复制本机运行环境清单」写入剪贴板
 - **settings store**：新增 defaultModel（默认 claude-sonnet-4-6）+ contextLimit（默认 32000）
 
-### 待实现 & 已知问题（全量审查 2026-03-23）
+### 待实现 & 已知问题（全量审计刷新 2026-03-23）
 
-> 按优先级排序，P0 = 功能缺失/崩溃级，P1 = 明显 bug，P2 = 体验/清理
+> 审计基线：`pnpm run typecheck` ✅；`pnpm exec tsc -p tsconfig.node.json --noEmit` ❌（fresh run = 22 个 TS 错误，分布在 `electron/api/routes/skills.ts`、`electron/gateway/clawhub.ts`、`electron/gateway/manager.ts`、`electron/gateway/process-launcher.ts`、`electron/main/index.ts`、`electron/main/proxy.ts`、`electron/utils/device-identity.ts`、`electron/utils/openclaw-doctor.ts`、`electron/utils/proxy-fetch.ts`、`electron/utils/secure-storage.ts`、`electron/utils/store.ts` 等）；`pnpm run build:vite` ✅（renderer 主 chunk 2.24 MB，dynamic import 切包未生效）；`pnpm test` ❌（15 个失败文件 / 31 个失败用例，其中相当一部分是测试环境假红）
 
 ---
 
-#### P0 — 功能缺失（必须修）
+#### P0 — 安全 / 持久化 / 验证基线（必须先修）
 
-| # | 文件 | 问题 | 说明 |
+| # | 范围 | 问题 | 说明 / 后续动作 |
 |---|------|------|------|
-| 1 | `electron/api/routes/update.ts` | **文件不存在** | 需新建，接入 electron-updater，暴露 GET /api/update/check、POST /api/update/download、POST /api/update/install；在 server.ts 注册 |
-| 2 | `src/pages/Settings/index.tsx` L897 | **`<select>` 无 value/onChange** | TeamRoleSection「当前默认架构方案」下拉无绑定，选择无效；需接入 settings store 新字段 `orgTemplate` |
-| 3 | `src/pages/Settings/index.tsx` L948 | **`<select>` 无 value/onChange** | ChannelAdvancedSection「默认群聊行为模式」下拉无绑定；需接入 settings store 新字段 `groupChatMode` |
-| 4 | `src/pages/TaskKanban/index.tsx` L235 | **乱码文本** | `拖拽到此\uFFFD` — UTF-8 编码损坏，应为「拖拽到此处」 |
-| 5 | `src/pages/TaskKanban/index.tsx` L368 | **乱码文本** | `简短描述任务目\uFFFD..` — 应为「简短描述任务目标...」 |
-| 6 | `src/pages/Channels/index.tsx` L304 | **硬编码模型名** | `GLM-5` 写死，应读取 `useSettingsStore().defaultModel` |
+| 1 | `electron/api/server.ts` / `electron/api/route-utils.ts` / 多个 `electron/api/routes/*` | **Host API 对 `127.0.0.1:3210` 全开放** | 当前统一 `Access-Control-Allow-Origin: *`，且无 token/origin/session 校验，任意网页都可跨站调用本地高权限接口。需收紧 CORS，仅允许受信 renderer，并为 Host API 加主进程下发的会话密钥或 nonce。 |
+| 2 | `electron/api/routes/providers.ts` / `electron/api/routes/gateway.ts` / `electron/api/routes/app.ts` / `electron/api/event-bus.ts` | **Host API / SSE 暴露敏感数据** | 当前可读到原始 provider API key、gateway token / control UI token URL、OAuth code、WhatsApp QR 等敏感 payload。需移除原始 secret 返回，SSE 增加鉴权与事件白名单。 |
+| 3 | `continue/task.json` / `Prompt.md` | **持久化任务文件已损坏** | `continue/task.json` 当前不是合法 JSON，且存在重复根字段；`Prompt.md` 恢复上下文命令依赖它，导致持久化开发主链路失效。需先重建合法 JSON，并加 schema / 校验防止再次损坏。 |
+| 4 | `vitest.config.ts` / `tests/unit/*(agent-config|channel-config|openclaw-auth|openclaw-doctor|token-usage-scan)*` | **Vitest 环境配置错误，红测被假红淹没** | Node/Electron util 测试被强制跑在 `jsdom`，import 阶段就炸在 `__vite-browser-external:os|node:fs`。需拆分 `node` / `jsdom` test project，先恢复可信测试信号。 |
 
 ---
 
-#### P1 — 非功能按钮（点击无效）
+#### P1 — 后端 / 架构 / 数据正确性
 
-| # | 文件 | 行号 | 按钮 | 修复方案 |
-|---|------|------|------|---------|
-| 7 | `src/pages/Settings/index.tsx` | L962 | `+ 添加路由规则` | 暂无后端支持，改为 toast 提示「功能开发中」或隐藏 |
-| 8 | `src/pages/Settings/index.tsx` | L1342 | `◎ 路径白名单` | 弹出 modal 编辑白名单路径列表，持久化到 settings store |
-| 9 | `src/pages/Settings/index.tsx` | L1360 | `◎ 编辑黑名单` | 弹出 modal 编辑终端命令黑名单，持久化到 settings store |
-| 10 | `src/pages/Settings/index.tsx` | L1386 | `+ 添加工具许可` | 弹出 modal 添加自定义工具授权，持久化到 settings store |
-| 11 | `src/pages/Settings/index.tsx` | L1397-1405 | 快速授权模版 4 个 pill | 点击后预填工具授权表单，或直接 toast 提示「已添加」 |
-| 12 | `src/pages/Channels/index.tsx` | L299 | `🎤` 语音按钮 | 暂无语音功能，改为 disabled + tooltip「语音功能即将上线」 |
-
----
-
-#### P1 — Settings 自动更新 UI 未接入
-
-| # | 文件 | 问题 |
-|---|------|------|
-| 13 | `src/pages/Settings/index.tsx` AutoUpdateSection | update store 已完整（checkForUpdates/downloadUpdate/installUpdate），但 UI 只有 toggle，缺少「检查更新」「下载」「安装」操作按钮及进度条 |
-
----
-
-#### P2 — console.log 清理（后端路由）
-
-| # | 文件 | 行号 | 内容 |
+| # | 范围 | 问题 | 说明 / 后续动作 |
 |---|------|------|------|
-| 14 | `electron/api/routes/agents.ts` | L45, L97 | `[agents] Triggering/completed Gateway restart` |
-| 15 | `electron/api/routes/channels.ts` | L81 | channel debug log |
-| 16 | `electron/api/routes/cron.ts` | L45, L97 | cron debug logs |
+| 5 | `src/lib/api-client.ts` / `src/main.tsx` | **传输策略漂移，renderer 自己掌控 `gateway:rpc`** | 现在默认是 IPC-only，诊断模式才切 `WS -> HTTP -> IPC`，且由 renderer + `localStorage` 控制；这和 AGENTS.md 的 “Main-owned 固定 fallback” 不一致。需把传输顺序、backoff、诊断开关迁回 Main/preload。 |
+| 6 | `src/lib/host-api.ts` / `src/lib/host-events.ts` | **renderer 仍保留 localhost `fetch` / `EventSource` 回退** | 一旦本地 flag 打开，renderer 会绕过 Main 直接访问 Host API/SSE，继续放大 CORS / 环境漂移风险。需把这类 fallback 限制到 browser-preview shim 或彻底移除。 |
+| 7 | `src/pages/Settings/index.tsx` / `electron/main/ipc-handlers.ts` / `electron/api/routes/app.ts` | **Settings 的 `Run Doctor` 调用形态错误** | `runDoctor()` 直接 `invokeIpc('hostapi:fetch', { route, init })`，但主进程只接受 `{ path, method, headers, body }`。需改成标准 `hostApiFetch('/api/app/openclaw-doctor', ...)`。 |
+| 8 | `electron/services/providers/provider-runtime-sync.ts` / `electron/utils/openclaw-auth.ts` | **删除 API key 会误删整个 provider runtime 配置** | `syncDeletedProviderApiKeyToRuntime()` 当前走的是 `removeProviderFromOpenClaw()`，会连 models / auth profiles / provider config 一起删。需改为仅删除 key，不拆 provider。 |
+| 9 | `electron/utils/secure-storage.ts` / `electron/utils/openclaw-auth.ts` | **provider 列表读取存在副作用** | `getAllProvidersWithKeyInfo()` 会在读取阶段删除 non-builtin provider；而 `getActiveOpenClawProviders()` 读配置失败时返回空集合，可能把瞬时错误当成“配置不存在”。列表接口必须无副作用。 |
+| 10 | `electron/services/providers/store-instance.ts` / `electron/services/secrets/secret-store.ts` / `electron/utils/secure-storage.ts` | **README 宣称 keychain，但 secret 实际仍落在 `electron-store`** | API key / OAuth token 仍存 JSON。需迁移到 OS keychain / `keytar` 或至少 `safeStorage` 包裹；`electron-store` 仅留元数据。 |
+| 11 | `electron/gateway/manager.ts` | **Gateway 重连 cooldown 代码无效** | `scheduleReconnect()` 引用了不存在的 `GatewayManager.RESTART_COOLDOWN_MS` 和 `this.lastRestartAt`，运行时会退化成近似立即重试。需修掉 cooldown 逻辑，并把 Electron 后端纳入正式 typecheck。 |
+| 12 | `electron/api/routes/agents.ts` | **删除 agent 可能误杀非 Gateway 进程，且失败被吞** | 拿不到 PID 时会按端口直接 `lsof` / `taskkill`；即使重启失败，API 仍可能返回成功。需校验进程身份并向上抛出 partial failure。 |
+| 13 | `electron/utils/channel-config.ts` | **删除 default account 后可能残留顶层镜像 credential** | 当前仅在 default account 仍存在时才重镜像；default 被删时，顶层旧字段可能保留，插件继续按旧 bot 启动。需显式清理顶层镜像键。 |
+| 14 | `electron/utils/channel-config.ts` / `electron/utils/openclaw-doctor.ts` | **channel 校验仍依赖 shell doctor，且存在假阳性** | 当前仍 shell `node openclaw.mjs doctor`，失败时甚至会因为“配置存在”直接判 `valid=true`。需统一走 `runOpenClawDoctor()` / `runOpenClawDoctorFix()`，并在失败时返回失败。 |
+| 15 | `electron/main/updater.ts` / `electron/utils/store.ts` | **更新通道语义和 feed URL 切换不一致** | 设置暴露的是 `stable|beta|dev`，内部却用 `latest`，`setChannel()` 只改 `autoUpdater.channel` 不重算 feed URL，也不回放持久化值。需统一 channel 命名并在启动时读取 persisted channel。 |
+| 16 | `tsconfig.json` / `tsconfig.node.json` / `package.json` | **默认 typecheck 只覆盖前端，Electron 侧已有真实编译错误堆积** | 现在 `pnpm run typecheck` 通过并不代表 Electron 后端可编译；fresh run 的 `tsconfig.node.json` 有 22 个 TS 错误，已覆盖 skills route、clawhub、gateway manager、process launcher、proxy、device identity、secure storage、store include 等多个模块。需把 root + `tsconfig.node.json` 都纳入标准验证，并把 Electron 编译恢复到可回归状态。 |
 
 ---
 
-#### P2 — TeamMap 层级图优化
+#### P1 — 前端 / 交互 / 可用性
 
-| # | 文件 | 问题 |
-|---|------|------|
-| 17 | `src/pages/TeamMap/index.tsx` | 当前已读取 `useAgentsStore`，但所有 agent 平铺为「root + children」两层，无真实父子层级。`AgentSummary` 类型无 `parentId` 字段，需在 agent 类型和后端 agents 路由中补充 `parentId`，前端按 parentId 构建多层树 |
+| # | 范围 | 问题 | 说明 / 后续动作 |
+|---|------|------|------|
+| 17 | `src/pages/Chat/ChatInput.tsx` / `src/pages/Chat/index.tsx` | **工作目录选择器是死功能** | UI 已能选目录并显示绿色 chip，但 `Chat` 把第 4 个 `workingDirectory` 参数直接丢弃，发送后仍按默认目录执行。需把 `workingDir` 接到 chat store / RPC payload。 |
+| 18 | `src/components/workbench/context-rail.tsx` | **`📄 文件` 面板仍是静态占位** | 现在永远显示“当前会话暂无文件”，不读取当前 session 的附件 / tool 产物。需聚合当前会话文件列表，真正无数据时再显示空态。 |
+| 19 | `src/pages/Channels/index.tsx` / `src/stores/channels.ts` | **频道页发送与加载都有明显 UX bug** | 发送前先清空 composer，失败会丢稿；Enter 没有 IME guard；初始加载异常被吞掉并伪装成“空配置”。需保留 error state、发送成功后再清空、补 composition guard。 |
+| 20 | `src/pages/Settings/index.tsx` | **两个 `<select>` 未绑定 + 多个按钮未接线** | `当前默认架构方案` / `默认群聊行为模式` 仍无 `value/onChange`；`添加路由规则`、`路径白名单`、`编辑黑名单`、`添加工具许可`、快速授权模版仍是死按钮。 |
+| 21 | `src/pages/TaskKanban/index.tsx` | **乱码与文案/i18n 清理未完成** | 仍有 `拖拽到此�`、`简短描述任务目�..` 等乱码；审批区“回答问题”按钮也乱码，且混有 `Reject/Approve/Cancel` 等硬编码英文；标题输入 Enter 也缺 IME guard。 |
+| 22 | `src/pages/Channels/index.tsx` / `src/pages/Chat/ChatInput.tsx` | **模型 fallback 仍硬编码 `GLM-5`** | Channels 页与 Chat composer 都有 `GLM-5` fallback；应读取 `useSettingsStore().defaultModel` 或在 agent 未就绪时隐藏。 |
+| 23 | `src/i18n/index.ts` / `src/pages/Settings/index.tsx` | **日语资源实际不可达** | 仓库里已有 `ja` 资源，`shared/language.ts` 也支持 `ja`，但 i18n 暴露层和 Settings 下拉只剩 `zh/en`。需把 `ja` 接回 `supportedLngs` 和语言设置 UI。 |
+| 24 | `src/pages/Chat/MarkdownContent.tsx` / `src/components/channels/ChannelConfigModal.tsx` | **少数 renderer 仍绕过统一适配层** | 页面直接调用 `window.electron.shell.openPath/openExternal` 或 `window.electron.openExternal`。需统一收口到 `invokeIpc('shell:*')`。 |
+| 25 | `src/pages/TeamMap/index.tsx` / `src/types/agent.ts` / `electron/api/routes/agents.ts` | **TeamMap 仍停留在 demo 级别** | 当前只有 `root + children` 两层平铺，无 `parentId`；节点给了 `cursor-pointer` 却没有详情行为；底部 `Teams/Hierarchy` 也未接 i18n。需补真实层级、详情行为和文案国际化。 |
+| 26 | `src/stores/update.ts` | **update 事件订阅没有 guard / cleanup** | `useUpdateStore.init()` 没有 in-flight guard，也没有释放 `ipcRenderer.on()` 监听；StrictMode / HMR 下容易重复订阅。需引入模块级 `initPromise + unsubscribe` 或统一走 `subscribeHostEvent`。 |
+| 27 | `src/App.tsx` / `vite.config.ts` / `src/pages/Cron/index.tsx` / `src/stores/gateway.ts` | **打包与懒加载策略需要重构** | 路由全量静态导入，renderer 主 chunk 已到 2.24 MB；同时 `host-api/chat/channels/store` 的动态导入又被静态导入抵消，Vite 明确提示不会切包。需做 route-level lazy、真实分层，而不是假懒加载。 |
+
+---
+
+#### P1 — 测试债务 / 假红修复
+
+| # | 范围 | 问题 | 说明 / 后续动作 |
+|---|------|------|------|
+| 28 | `tests/unit/chat-input.test.tsx` | **签名断言已过时** | 现在组件会传第 4 个 `workingDirectory` 参数，测试仍按 3 参数断言。修测试时要同时决定 working dir 功能是正式接通还是删掉。 |
+| 29 | `tests/unit/chat-message.test.tsx` | **把视觉细节当长期契约** | 仍硬编码旧类名 `bg-[#0a84ff]` / `bg-white/95`。应改为断言语义或稳定 token，而不是锁死颜色实现。 |
+| 30 | `tests/unit/workbench-*.test.tsx` / `src/stores/settings.ts` | **Workbench 测试和状态契约双双过时** | 测试仍围绕 `contextRailCollapsed`、`article` role、旧文案 `快速配置`；实现已切到 `rightPanelMode`。还要决定 `contextRailCollapsed` 是删除还是桥接。 |
+| 31 | `tests/unit/settings-*.test.tsx` | **Settings 测试仍锁定旧 IA / 静态 mock / 英文步骤名** | 当前实现已换成新导航结构和中文向导，测试应按现状重写，并把真实 API / 静态占位区分开。 |
+| 32 | `tests/unit/settings-memory-browser.test.tsx` | **缺测试 seam，也缺稳定无障碍标识** | 组件一挂载就真实 `hostApiFetch('/api/memory')`，测试却假设有静态 seed data；DOM 也没有明确 region/aria-label。需统一 mock `hostApiFetch`，必要时补 landmark。 |
+| 33 | `tests/unit/workbench-sidebar-density.test.tsx` | **通过但隔离不足** | mount 时真实触发 `fetchAgents/fetchChannels`，日志已有 `hostapi.fetch_error` 噪声。需把 Sidebar 依赖全部 mock 掉，避免偶发失败。 |
+
+---
+
+#### P2 — 文档 / 脚本 / 清理
+
+| # | 范围 | 问题 | 说明 / 后续动作 |
+|---|------|------|------|
+| 34 | `package.json` / `README*.md` | **`pnpm lint` 实际会改文件** | 当前脚本是 `eslint . --fix`，但文档把它当检查命令。需新增 `lint:check`，把当前命令改为 `lint:fix`，避免只读审计误改工作树。 |
+| 35 | `package.json` / `README*.md` / `Prompt.md` | **包管理器与命令文档未统一** | 仓库精确钉死 `pnpm@10.31.0`，但 README 仍写 `pnpm 9+ 或 npm`，`Prompt.md` 也还有 `npm run build:vite`。需统一到 `pnpm + corepack`。 |
+| 36 | `package.json` / `README*.md` / `AGENTS.md` | **文档宣称有 E2E，但脚本入口缺失** | 依赖里有 Playwright，AGENTS 也提 `pnpm run test:e2e`，但当前 scripts 没有一条一等公民 E2E 命令。需补 `test:e2e` / `test:e2e:headed`。 |
+| 37 | `continue/progress.txt` / `continue/task.json` | **持久化记录已不再可信** | 多处声称“tests pass / remain green / 全部真实 API”，但 fresh run 仍有 31 个失败测试，且部分 Settings 模块仍是静态/demo。后续完成声明必须绑定验证证据。 |
+| 38 | `electron/api/routes/agents.ts` / `electron/api/routes/channels.ts` / `electron/utils/*` / `electron/main/ipc-handlers.ts` | **后端 `console.*` 清理范围要扩大** | 已不止 Prompt 旧清单点名的几个 route，`openclaw-auth`、`channel-config`、`secure-storage`、`ipc-handlers` 等仍有大量调试输出。需统一走 `logger` 并做敏感字段脱敏。 |
+| 39 | `Prompt.md` | **旧 backlog 需要持续纠偏** | `AutoUpdateSection 未接入` 已过时；`electron/api/routes/update.ts` 缺失应降级为“可选 HTTP route”，不该再表述成“更新功能未完成”。 |
+
+---
+
+#### 持久化开发分桶（后续任务组织方式）
+
+- `Persistence / Session Integrity`：只处理 `continue/task.json`、`continue/progress.txt`、编码/结构校验、单一 `current_focus`、恢复命令可执行性。
+- `Verification Hygiene`：统一标准验证命令，新增非破坏性 `lint:check`，明确哪些任务必须跑 full test / targeted test / build / comms compare。
+- `Test Harness Repair`：拆分 Vitest `node` / `jsdom` 环境，修复 Electron/Node util 测试归位问题。
+- `UI Test Refresh`：重写 Chat / Workbench / Settings 的陈旧断言，避免硬编码视觉类名、过时文案、旧 IA。
+- `Static vs Live Contracts`：逐页标注“真实 API”“静态占位”“过渡态 mock”，防止继续误报“已全量接真实数据”。
+- `Accessibility & Test Seams`：补 `aria-label` / landmark / 可访问角色，并为 `hostApiFetch`、store 注入点等建立稳定 mock seam。
+- `Docs & Script Safety Sync`：README / Prompt / continue 三处同步规则、命令副作用、已完成声明的更新责任。
+- `E2E / Release Verification`：补 Playwright 命令、关键流程 smoke、更新链路 / 打包链路验证。
 
 ---
 
@@ -271,11 +307,17 @@ tail -30 continue/progress.txt
 ## 快速参考命令
 
 ```bash
-# 类型检查（必须零报错）
-npx tsc --noEmit
+# 类型检查（renderer）
+pnpm run typecheck
+
+# 类型检查（Electron / main / preload）
+pnpm exec tsc -p tsconfig.node.json --noEmit
 
 # 构建前端
-npm run build:vite
+pnpm run build:vite
+
+# 单测全量
+pnpm test
 
 # 查看最近提交
 git log --oneline -8

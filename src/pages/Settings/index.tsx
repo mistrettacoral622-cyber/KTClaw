@@ -130,17 +130,14 @@ export function Settings() {
   const runDoctor = async (mode: 'diagnose' | 'fix') => {
     setDoctorRunning(mode);
     try {
-      const result = await invokeIpc<{
+      const result = await hostApiFetch<{
         success: boolean;
         exitCode?: number;
         stderr?: string;
         stdout?: string;
-      }>('hostapi:fetch', {
-        route: '/api/app/openclaw-doctor',
-        init: {
-          method: 'POST',
-          body: JSON.stringify({ mode }),
-        },
+      }>('/api/app/openclaw-doctor', {
+        method: 'POST',
+        body: JSON.stringify({ mode }),
       });
       const summary = result?.success
         ? `${mode}: success (exit=${result.exitCode ?? 0})`
@@ -886,7 +883,7 @@ function ModelProviderSection({
 /* ─── Section: Team & Role Strategy (08.1) ─── */
 
 function TeamRoleSection() {
-  const { autoSpawn, setAutoSpawn, modelInherit, setModelInherit, strictIsolation, setStrictIsolation } = useSettingsStore();
+  const { autoSpawn, setAutoSpawn, modelInherit, setModelInherit, strictIsolation, setStrictIsolation, orgTemplate, setOrgTemplate } = useSettingsStore();
 
   return (
     <>
@@ -894,10 +891,10 @@ function TeamRoleSection() {
       <SettingsCard title="组织运行模板">
         <div className="py-3">
           <p className="mb-2 text-[13px] font-medium text-[#000000]">当前默认架构方案</p>
-          <select className="w-full appearance-none rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac">
-            <option>三省六部制（主脑调度，专业分身执行）</option>
-            <option>单脑独立（主脑全权处理所有任务）</option>
-            <option>扁平协作（所有 Agent 平级并行）</option>
+          <select value={orgTemplate} onChange={(e) => setOrgTemplate(e.target.value)} className="w-full appearance-none rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac">
+            <option value="three-six">三省六部制（主脑调度，专业分身执行）</option>
+            <option value="single-brain">单脑独立（主脑全权处理所有任务）</option>
+            <option value="flat">扁平协作（所有 Agent 平级并行）</option>
           </select>
           <p className="mt-2 text-[12px] text-[#8e8e93]">
             在"团队 Map"面板中直观可视化当前激活的子智能体。
@@ -937,7 +934,7 @@ function TeamRoleSection() {
 /* ─── Section: Channel Advanced Config (08.2) ─── */
 
 function ChannelAdvancedSection() {
-  const { groupRate, setGroupRate } = useSettingsStore();
+  const { groupRate, setGroupRate, groupChatMode, setGroupChatMode } = useSettingsStore();
 
   return (
     <>
@@ -945,10 +942,10 @@ function ChannelAdvancedSection() {
       <SettingsCard title="群聊发言默认策略">
         <div className="py-3">
           <p className="mb-2 text-[13px] font-medium text-[#000000]">默认群聊行为模式</p>
-          <select className="w-full appearance-none rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac">
-            <option>@触发（仅被 @ 时回复）</option>
-            <option>全量监听（所有消息都响应）</option>
-            <option>静默（不主动发言）</option>
+          <select value={groupChatMode} onChange={(e) => setGroupChatMode(e.target.value)} className="w-full appearance-none rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac">
+            <option value="at-trigger">@触发（仅被 @ 时回复）</option>
+            <option value="all-listen">全量监听（所有消息都响应）</option>
+            <option value="silent">静默（不主动发言）</option>
           </select>
         </div>
       </SettingsCard>

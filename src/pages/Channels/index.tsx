@@ -2,10 +2,11 @@
  * Channels Page — Frame 04
  * IM 频道配置与状态管理
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useChannelsStore } from '@/stores/channels';
+import { useSettingsStore } from '@/stores/settings';
 import { hostApiFetch } from '@/lib/host-api';
 import { CHANNEL_ICONS, CHANNEL_NAMES, CHANNEL_META, type ChannelType } from '@/types/channel';
 
@@ -46,6 +47,8 @@ export function Channels() {
   const [addName, setAddName] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
+  const isComposingRef = useRef(false);
+  const defaultModel = useSettingsStore((s) => s.defaultModel);
 
   const { channels, loading, error, fetchChannels, connectChannel, disconnectChannel, deleteChannel, addChannel } =
     useChannelsStore();
@@ -89,12 +92,12 @@ export function Channels() {
   const handleSend = async () => {
     if (!composerValue.trim() || !selected) return;
     const text = composerValue.trim();
-    setComposerValue('');
     try {
       await hostApiFetch(`/api/channels/${encodeURIComponent(selected.id)}/send`, {
         method: 'POST',
         body: JSON.stringify({ text }),
       });
+      setComposerValue('');
       setTestResult({ id: selected.id, ok: true, msg: `已发送：${text}` });
     } catch (e) {
       setTestResult({ id: selected.id, ok: false, msg: String(e) });
@@ -301,13 +304,32 @@ export function Channels() {
                 </button>
                 <div className="flex shrink-0 items-center gap-1 rounded-full border border-black/10 bg-[#f2f2f7] px-2 py-0.5 text-[12px] text-[#3c3c43]">
                   <span className="h-[6px] w-[6px] rounded-full bg-[#10b981]" />
-                  <span className="font-medium">GLM-5</span>
+                  <span className="font-medium">{defaultModel || 'Not configured'}</span>
                   <span className="text-[#8e8e93]">▾</span>
                 </div>
                 <input
                   value={composerValue}
                   onChange={(e) => setComposerValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
+                  onCompositionStart={() => {
+                    isComposingRef.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    isComposingRef.current = false;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      const nativeEvent = e.nativeEvent as KeyboardEvent;
+                      if (
+                        isComposingRef.current
+                        || nativeEvent.isComposing
+                        || nativeEvent.keyCode === 229
+                      ) {
+                        return;
+                      }
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
                   placeholder={`在 ${selected.name} 发送消息...`}
                   className="flex-1 bg-transparent text-[14px] text-[#000000] outline-none placeholder:text-[#8e8e93]"
                 />

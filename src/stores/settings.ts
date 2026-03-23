@@ -59,11 +59,13 @@ interface SettingsState {
   minimizeToTray: boolean;
 
   // Team & Role Strategy
+  orgTemplate: string;
   autoSpawn: boolean;
   modelInherit: boolean;
   strictIsolation: boolean;
 
   // Channel Advanced
+  groupChatMode: string;
   groupRate: string;
 
   // Automation Defaults
@@ -119,6 +121,8 @@ interface SettingsState {
   setAutoSpawn: (value: boolean) => void;
   setModelInherit: (value: boolean) => void;
   setStrictIsolation: (value: boolean) => void;
+  setOrgTemplate: (value: string) => void;
+  setGroupChatMode: (value: string) => void;
   setGroupRate: (value: string) => void;
   setWorkerSlots: (value: string) => void;
   setMaxDailyRuns: (value: string) => void;
@@ -170,6 +174,8 @@ const defaultSettings = {
   autoSpawn: true,
   modelInherit: true,
   strictIsolation: true,
+  orgTemplate: 'three-six',
+  groupChatMode: 'at-trigger',
   groupRate: '5',
   workerSlots: '4',
   maxDailyRuns: '200',
@@ -281,6 +287,8 @@ export const useSettingsStore = create<SettingsState>()(
       setAutoSpawn: (autoSpawn) => set({ autoSpawn }),
       setModelInherit: (modelInherit) => set({ modelInherit }),
       setStrictIsolation: (strictIsolation) => set({ strictIsolation }),
+      setOrgTemplate: (orgTemplate) => set({ orgTemplate }),
+      setGroupChatMode: (groupChatMode) => set({ groupChatMode }),
       setGroupRate: (groupRate) => set({ groupRate }),
       setWorkerSlots: (workerSlots) => set({ workerSlots }),
       setMaxDailyRuns: (maxDailyRuns) => set({ maxDailyRuns }),

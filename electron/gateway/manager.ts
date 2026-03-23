@@ -841,9 +841,8 @@ export class GatewayManager extends EventEmitter {
       return;
     }
 
-    const cooldownRemaining = Math.max(0, GatewayManager.RESTART_COOLDOWN_MS - (Date.now() - this.lastRestartAt));
     const { delay, nextAttempt, maxAttempts } = decision;
-    const effectiveDelay = Math.max(delay, cooldownRemaining);
+    const effectiveDelay = delay;
     this.reconnectAttempts = nextAttempt;
     logger.warn(`Scheduling Gateway reconnect attempt ${nextAttempt}/${maxAttempts} in ${effectiveDelay}ms`);
 

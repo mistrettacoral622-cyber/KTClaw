@@ -82,6 +82,7 @@ export async function handleGatewayRoutes(
       const body = await parseJsonBody<{
         sessionKey: string;
         message: string;
+        cwd?: string;
         deliver?: boolean;
         idempotencyKey: string;
         media?: Array<{ filePath: string; mimeType: string; fileName: string }>;
@@ -109,11 +110,13 @@ export async function handleGatewayRoutes(
       const message = fileReferences.length > 0
         ? [body.message, ...fileReferences].filter(Boolean).join('\n')
         : body.message;
+      const normalizedCwd = typeof body.cwd === 'string' ? body.cwd.trim() : '';
       const rpcParams: Record<string, unknown> = {
         sessionKey: body.sessionKey,
         message,
         deliver: body.deliver ?? false,
         idempotencyKey: body.idempotencyKey,
+        ...(normalizedCwd ? { cwd: normalizedCwd } : {}),
       };
       if (imageAttachments.length > 0) {
         rpcParams.attachments = imageAttachments;

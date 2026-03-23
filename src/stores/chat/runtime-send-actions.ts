@@ -45,9 +45,11 @@ export function createRuntimeSendActions(set: ChatSet, get: ChatGet): Pick<Runti
       text: string,
       attachments?: Array<{ fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null }>,
       targetAgentId?: string | null,
+      workingDir?: string | null,
     ) => {
       const trimmed = text.trim();
       if (!trimmed && (!attachments || attachments.length === 0)) return;
+      const normalizedWorkingDir = workingDir?.trim() || undefined;
 
       const targetSessionKey = resolveMainSessionKeyForAgent(targetAgentId) ?? get().currentSessionKey;
       if (targetSessionKey !== get().currentSessionKey) {
@@ -196,6 +198,7 @@ export function createRuntimeSendActions(set: ChatSet, get: ChatGet): Pick<Runti
               message: trimmed || 'Process the attached file(s).',
               deliver: false,
               idempotencyKey,
+              ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
               media: attachments.map((a) => ({
                 filePath: a.stagedPath,
                 mimeType: a.mimeType,
@@ -212,6 +215,7 @@ export function createRuntimeSendActions(set: ChatSet, get: ChatGet): Pick<Runti
               message: trimmed,
               deliver: false,
               idempotencyKey,
+              ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
             },
             CHAT_SEND_TIMEOUT_MS,
           ) as { success: boolean; result?: { runId?: string }; error?: string };

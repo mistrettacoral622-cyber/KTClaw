@@ -1,5 +1,5 @@
 /**
- * Task Kanban Page �?Frame 05
+ * Task Kanban Page / Frame 05
  * 任务看板 / 自动化工作流：拖拽式任务管理
  */
 import { useEffect, useRef, useState } from 'react';
@@ -232,7 +232,7 @@ export function TaskKanban() {
                 )}>
                   {colTickets.length === 0 ? (
                     <div className="flex items-center justify-center py-8 text-[13px] text-[#c6c6c8]">
-                      拖拽到此�?                    </div>
+                      拖拽到此处                    </div>
                   ) : (
                     colTickets.map((ticket) => (
                       <TicketCard
@@ -346,6 +346,7 @@ function CreateModal({
   const [priority, setPriority] = useState<TicketPriority>('medium');
   const [assigneeId, setAssigneeId] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const isComposingRef = useRef(false);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -364,8 +365,20 @@ function CreateModal({
             ref={inputRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-            placeholder="简短描述任务目�?.."
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              const nativeEvent = e.nativeEvent as KeyboardEvent;
+              if (isComposingRef.current || nativeEvent.isComposing || nativeEvent.keyCode === 229) return;
+              e.preventDefault();
+              handleSubmit();
+            }}
+            placeholder="简短描述任务目标..."
             className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] outline-none focus:border-clawx-ac"
           />
         </div>
@@ -602,7 +615,7 @@ function ApprovalsSection({
                     onClick={() => setWizard(item)}
                     className="rounded-lg bg-clawx-ac px-2.5 py-1 text-[12px] font-medium text-white hover:bg-[#005fd6]"
                   >
-                    �ش�����
+                    回答问题
                   </button>
                 ) : rejectingId === item.id ? (
                   <>
@@ -610,7 +623,7 @@ function ApprovalsSection({
                       autoFocus
                       value={rejectReason}
                       onChange={(e) => setRejectReason(e.target.value)}
-                      placeholder="Reject reason..."
+                      placeholder="拒绝原因..."
                       className="w-[140px] rounded-lg border border-black/10 px-2 py-1 text-[12px] outline-none focus:border-clawx-ac"
                     />
                     <button
@@ -624,7 +637,7 @@ function ApprovalsSection({
                       }}
                       className="rounded-lg bg-[#ef4444] px-2.5 py-1 text-[12px] font-medium text-white hover:bg-[#dc2626]"
                     >
-                      Confirm
+                      确认
                     </button>
                     <button
                       type="button"

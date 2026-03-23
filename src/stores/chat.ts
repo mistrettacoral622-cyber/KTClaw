@@ -111,6 +111,7 @@ interface ChatState {
     text: string,
     attachments?: Array<{ fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null }>,
     targetAgentId?: string | null,
+    workingDir?: string | null,
   ) => Promise<void>;
   abortRun: () => Promise<void>;
   handleChatEvent: (event: Record<string, unknown>) => void;
@@ -1529,6 +1530,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     text: string,
     attachments?: Array<{ fileName: string; mimeType: string; fileSize: number; stagedPath: string; preview: string | null }>,
     targetAgentId?: string | null,
+    workingDir?: string | null,
   ) => {
     const trimmed = text.trim();
     if (!trimmed && (!attachments || attachments.length === 0)) return;
@@ -1541,6 +1543,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     const currentSessionKey = targetSessionKey;
+    const normalizedWorkingDir = workingDir?.trim() || undefined;
 
     // Add user message optimistically (with local file metadata for UI display)
     const nowMs = Date.now();
@@ -1664,6 +1667,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               message: trimmed || 'Process the attached file(s).',
               deliver: false,
               idempotencyKey,
+              ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
               media: attachments.map((a) => ({
                 filePath: a.stagedPath,
                 mimeType: a.mimeType,
@@ -1680,6 +1684,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             message: trimmed,
             deliver: false,
             idempotencyKey,
+            ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
           },
           CHAT_SEND_TIMEOUT_MS,
         );

@@ -125,10 +125,10 @@ export function Chat() {
     text: string,
     attachments?: Parameters<typeof sendMessage>[1],
     targetAgentId?: Parameters<typeof sendMessage>[2],
-    _workingDir?: string | null,
+    workingDir?: Parameters<typeof sendMessage>[3],
   ) => {
     setStreamingTimestamp(Date.now() / 1000);
-    sendMessage(text, attachments, targetAgentId);
+    sendMessage(text, attachments, targetAgentId, workingDir);
   };
 
   return (

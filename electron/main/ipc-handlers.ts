@@ -1209,6 +1209,7 @@ function registerGatewayHandlers(
   ipcMain.handle('chat:sendWithMedia', async (_, params: {
     sessionKey: string;
     message: string;
+    cwd?: string;
     deliver?: boolean;
     idempotencyKey: string;
     media?: Array<{ filePath: string; mimeType: string; fileName: string }>;
@@ -1258,12 +1259,14 @@ function registerGatewayHandlers(
         const refs = fileReferences.join('\n');
         message = message ? `${message}\n\n${refs}` : refs;
       }
+      const normalizedCwd = typeof params.cwd === 'string' ? params.cwd.trim() : '';
 
       const rpcParams: Record<string, unknown> = {
         sessionKey: params.sessionKey,
         message,
         deliver: params.deliver ?? false,
         idempotencyKey: params.idempotencyKey,
+        ...(normalizedCwd ? { cwd: normalizedCwd } : {}),
       };
 
       if (imageAttachments.length > 0) {

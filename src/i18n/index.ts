@@ -41,13 +41,15 @@ import jaSetup from './locales/ja/setup.json';
 export const SUPPORTED_LANGUAGES = [
     { code: 'zh', label: '中文' },
     { code: 'en', label: 'English' },
+    { code: 'ja', label: '日本語' },
 ] as const satisfies ReadonlyArray<{ code: LanguageCode; label: string }>;
 
-const EXPOSED_LANGUAGE_CODES = ['zh', 'en'] as const;
+const EXPOSED_LANGUAGE_CODES = ['zh', 'en', 'ja'] as const;
 type ExposedLanguageCode = (typeof EXPOSED_LANGUAGE_CODES)[number];
 
 function resolveExposedLanguage(language: string | undefined): ExposedLanguageCode {
     const resolved = resolveSupportedLanguage(language);
+    if (resolved === 'ja') return 'ja';
     if (resolved === 'en') return 'en';
     return 'zh';
 }

@@ -167,6 +167,9 @@ async function runDoctorCommandWithArgs(
     child.on('error', (error) => {
       clearTimeout(timeout);
       logger.error('Failed to spawn OpenClaw doctor process:', error);
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: unknown }).message ?? error)
+        : String(error);
       finish({
         mode,
         success: false,
@@ -175,7 +178,7 @@ async function runDoctorCommandWithArgs(
         stderr,
         command,
         cwd: openclawDir,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       });
     });
 

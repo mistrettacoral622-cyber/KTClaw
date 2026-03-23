@@ -15,6 +15,7 @@ import { invokeIpc } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { useAgentsStore } from '@/stores/agents';
 import { useChatStore } from '@/stores/chat';
+import { useSettingsStore } from '@/stores/settings';
 import type { AgentSummary } from '@/types/agent';
 import { useTranslation } from 'react-i18next';
 import { FolderSelectorPopover } from './FolderSelectorPopover';
@@ -102,8 +103,9 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     () => agents.find((agent) => agent.id === currentAgentId) ?? null,
     [agents, currentAgentId],
   );
+  const defaultModel = useSettingsStore((s) => s.defaultModel);
   const currentAgentName = currentAgent?.name ?? 'KTClaw';
-  const currentModelDisplay = currentAgent?.modelDisplay ?? 'GLM-5';
+  const currentModelDisplay = currentAgent?.modelDisplay ?? defaultModel ?? 'Not configured';
   const mentionableAgents = useMemo(
     () => agents.filter((agent) => agent.id !== currentAgentId),
     [agents, currentAgentId],
@@ -300,7 +302,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     setTargetAgentId(null);
     setPickerOpen(false);
     setWorkingDirectory(null);
-  }, [input, attachments, canSend, onSend, targetAgentId]);
+  }, [input, attachments, canSend, onSend, targetAgentId, workingDirectory]);
 
   const handleStop = useCallback(() => {
     if (!canStop) return;

@@ -120,12 +120,24 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
 
         set({ channels, loading: false });
       } else {
-        // Gateway not available - try to show channels from local config
-        set({ channels: [], loading: false });
+        set((state) => ({
+          channels: state.channels,
+          loading: false,
+          error: 'Gateway returned empty channel status',
+        }));
       }
-    } catch {
-      // Gateway not connected, show empty
-      set({ channels: [], loading: false });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+            ? error
+            : 'Failed to load channels';
+      set((state) => ({
+        channels: state.channels,
+        loading: false,
+        error: message,
+      }));
     }
   },
 

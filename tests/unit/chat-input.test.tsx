@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ChatInput } from '@/pages/Chat/ChatInput';
 
-const { agentsState, chatState, gatewayState } = vi.hoisted(() => ({
+const { agentsState, chatState, gatewayState, settingsState } = vi.hoisted(() => ({
   agentsState: {
     agents: [] as Array<Record<string, unknown>>,
   },
@@ -11,6 +11,9 @@ const { agentsState, chatState, gatewayState } = vi.hoisted(() => ({
   },
   gatewayState: {
     status: { state: 'running', port: 18789 },
+  },
+  settingsState: {
+    defaultModel: 'claude-sonnet-4-6',
   },
 }));
 
@@ -24,6 +27,10 @@ vi.mock('@/stores/chat', () => ({
 
 vi.mock('@/stores/gateway', () => ({
   useGatewayStore: (selector: (state: typeof gatewayState) => unknown) => selector(gatewayState),
+}));
+
+vi.mock('@/stores/settings', () => ({
+  useSettingsStore: (selector: (state: typeof settingsState) => unknown) => selector(settingsState),
 }));
 
 vi.mock('@/lib/host-api', () => ({
@@ -74,6 +81,7 @@ describe('ChatInput agent targeting', () => {
     agentsState.agents = [];
     chatState.currentAgentId = 'main';
     gatewayState.status = { state: 'running', port: 18789 };
+    settingsState.defaultModel = 'claude-sonnet-4-6';
   });
 
   it('renders the updated composer shell regions and model pill', () => {
@@ -169,6 +177,26 @@ describe('ChatInput agent targeting', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello direct agent' } });
     fireEvent.click(screen.getByTitle('Send'));
 
-    expect(onSend).toHaveBeenCalledWith('Hello direct agent', undefined, 'research');
+    expect(onSend).toHaveBeenCalledWith('Hello direct agent', undefined, 'research', null);
+  });
+
+  it('falls back to the default model from settings when current agent has no modelDisplay', () => {
+    agentsState.agents = [
+      {
+        id: 'main',
+        name: 'Main',
+        isDefault: true,
+        inheritedModel: true,
+        workspace: '~/.openclaw/workspace',
+        agentDir: '~/.openclaw/agents/main/agent',
+        mainSessionKey: 'agent:main:main',
+        channelTypes: [],
+      },
+    ];
+    settingsState.defaultModel = 'gpt-5.2';
+
+    render(<ChatInput onSend={vi.fn()} />);
+
+    expect(screen.getByTestId('chat-composer-model-pill')).toHaveTextContent('gpt-5.2');
   });
 });
