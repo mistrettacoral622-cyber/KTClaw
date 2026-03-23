@@ -54,6 +54,27 @@ interface SettingsState {
   hideAvatarBg: boolean;
   minimizeToTray: boolean;
 
+  // Team & Role Strategy
+  autoSpawn: boolean;
+  modelInherit: boolean;
+  strictIsolation: boolean;
+
+  // Channel Advanced
+  groupRate: string;
+
+  // Automation Defaults
+  workerSlots: string;
+  maxDailyRuns: string;
+  exponentialBackoff: boolean;
+  agentSelfHeal: boolean;
+  suspendOnFail: boolean;
+  mobileAlert: boolean;
+
+  // Tool Permissions
+  fileAcl: boolean;
+  terminalAcl: boolean;
+  networkAcl: boolean;
+
   // Setup
   setupComplete: boolean;
 
@@ -89,6 +110,19 @@ interface SettingsState {
   setEmojiAvatar: (value: boolean) => void;
   setHideAvatarBg: (value: boolean) => void;
   setMinimizeToTray: (value: boolean) => void;
+  setAutoSpawn: (value: boolean) => void;
+  setModelInherit: (value: boolean) => void;
+  setStrictIsolation: (value: boolean) => void;
+  setGroupRate: (value: string) => void;
+  setWorkerSlots: (value: string) => void;
+  setMaxDailyRuns: (value: string) => void;
+  setExponentialBackoff: (value: boolean) => void;
+  setAgentSelfHeal: (value: boolean) => void;
+  setSuspendOnFail: (value: boolean) => void;
+  setMobileAlert: (value: boolean) => void;
+  setFileAcl: (value: boolean) => void;
+  setTerminalAcl: (value: boolean) => void;
+  setNetworkAcl: (value: boolean) => void;
   markSetupComplete: () => void;
   resetSettings: () => void;
 }
@@ -125,6 +159,19 @@ const defaultSettings = {
   emojiAvatar: true,
   hideAvatarBg: false,
   minimizeToTray: true,
+  autoSpawn: true,
+  modelInherit: true,
+  strictIsolation: true,
+  groupRate: '5',
+  workerSlots: '4',
+  maxDailyRuns: '200',
+  exponentialBackoff: true,
+  agentSelfHeal: true,
+  suspendOnFail: true,
+  mobileAlert: true,
+  fileAcl: true,
+  terminalAcl: true,
+  networkAcl: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -221,6 +268,19 @@ export const useSettingsStore = create<SettingsState>()(
       setEmojiAvatar: (emojiAvatar) => set({ emojiAvatar }),
       setHideAvatarBg: (hideAvatarBg) => set({ hideAvatarBg }),
       setMinimizeToTray: (minimizeToTray) => set({ minimizeToTray }),
+      setAutoSpawn: (autoSpawn) => set({ autoSpawn }),
+      setModelInherit: (modelInherit) => set({ modelInherit }),
+      setStrictIsolation: (strictIsolation) => set({ strictIsolation }),
+      setGroupRate: (groupRate) => set({ groupRate }),
+      setWorkerSlots: (workerSlots) => set({ workerSlots }),
+      setMaxDailyRuns: (maxDailyRuns) => set({ maxDailyRuns }),
+      setExponentialBackoff: (exponentialBackoff) => set({ exponentialBackoff }),
+      setAgentSelfHeal: (agentSelfHeal) => set({ agentSelfHeal }),
+      setSuspendOnFail: (suspendOnFail) => set({ suspendOnFail }),
+      setMobileAlert: (mobileAlert) => set({ mobileAlert }),
+      setFileAcl: (fileAcl) => set({ fileAcl }),
+      setTerminalAcl: (terminalAcl) => set({ terminalAcl }),
+      setNetworkAcl: (networkAcl) => set({ networkAcl }),
       resetSettings: () => set(defaultSettings),
     }),
     {

@@ -216,53 +216,6 @@ export function Costs() {
   );
 }
 
-/* ─── Static data (Dashboard / Usage tabs) ─── */
-
-const KPI_CARDS = [
-  { label: '总预估花费', value: '$142.50', meta: '↗ 27% (+$30)', tone: 'text-rose-500' },
-  { label: '本周花费', value: '$34.12', meta: '上周 $28.00', tone: 'text-[#667085]' },
-  { label: '缓存节省', value: '$89.40', meta: 'Hit Rate: 68%', tone: 'text-emerald-600' },
-  { label: '异常情况', value: '0', meta: '全部服务正常运行', tone: 'text-[#667085]' },
-] as const;
-
-const COST_SPIKES = [
-  { name: 'x-radar-collect', value: '$45.20', meta: '60 次执行 · 均价 $0.75/次', borderColor: 'border-rose-500' },
-  { name: 'daily-digest-news', value: '$28.90', meta: '30 次执行 · 均价 $0.96/次', borderColor: 'border-amber-500' },
-  { name: 'github-issue-triage', value: '$15.40', meta: '120 次执行 · 均价 $0.12/次', borderColor: 'border-sky-500' },
-] as const;
-
-const DAILY_COST = [
-  { day: 'Mon', value: 80 }, { day: 'Tue', value: 60 }, { day: 'Wed', value: 140 },
-  { day: 'Thu', value: 92 }, { day: 'Fri', value: 112 }, { day: 'Sat', value: 42 }, { day: 'Sun', value: 52 },
-] as const;
-
-const TOKEN_SPLIT = [
-  { label: 'Input', value: '15% (1.8M)', color: '#0a7aff' },
-  { label: 'Output', value: '20% (2.4M)', color: '#10b981' },
-  { label: 'Cache Hit', value: '65% (7.8M)', color: '#dbe2ea' },
-] as const;
-
-// RECENT_TASKS kept for future reference
-const _RECENT_TASKS = [
-  { name: 'x-radar-collect', runs: '60', input: '240k', output: '120k', cache: '1.2M', cost: '$45.20' },
-  { name: 'daily-digest-news', runs: '30', input: '180k', output: '80k', cache: '800k', cost: '$28.90' },
-  { name: 'github-issue-triage', runs: '120', input: '80k', output: '40k', cache: '300k', cost: '$15.40' },
-] as const;
-void _RECENT_TASKS;
-
-const USAGE_ROWS = [
-  { name: 'x-radar-collect', value: '32.48% (924.5k)', color: '#ef4444' },
-  { name: 'daily-digest-news', value: '16.58% (471.8k)', color: '#f59e0b' },
-  { name: 'github-issue-triage', value: '13.20% (375.6k)', color: '#10b981' },
-  { name: 'auth-watchman', value: '8.60% (244.7k)', color: '#3b82f6' },
-  { name: 'monkey-discovery', value: '6.40% (182.1k)', color: '#8b5cf6' },
-  { name: 'vault-snapshot', value: '5.30% (150.8k)', color: '#ec4899' },
-  { name: 'builder-briefing', value: '4.30% (122.3k)', color: '#6366f1' },
-  { name: 'outpost-mirror', value: '3.70% (105.2k)', color: '#14b8a6' },
-  { name: 'robin-weekly-brief', value: '3.30% (93.9k)', color: '#0ea5e9' },
-  { name: '其他 (32 个任务)', value: '6.14% (174.6k)', color: '#64748b' },
-] as const;
-
 /* ─── Realtime Tab ─── */
 
 function RealtimeTab({
@@ -381,7 +334,7 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
         { label: '缓存节省', value: formatTokens(totals.cacheTokens), meta: `Hit Rate: ${totals.totalTokens > 0 ? Math.round(totals.cacheTokens / totals.totalTokens * 100) : 0}%`, tone: 'text-emerald-600' },
         { label: '预估花费 (USD)', value: formatCost(totals.costUsd), meta: '30 天累计', tone: 'text-[#ff6a00]' },
       ]
-    : KPI_CARDS;
+    : null;
 
   // Bar chart: last 7 days from timeline
   const last7 = timeline.slice(-7);
@@ -393,15 +346,27 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 xl:grid-cols-4">
-        {kpiCards.map((item) => (
-          <div key={item.label} className="rounded-[18px] border border-black/[0.06] bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-            <div className="text-[13px] text-[#8e8e93]">{item.label}</div>
-            <div className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
-            <div className={cn('mt-2 text-[12px] font-medium', item.tone)}>{item.meta}</div>
-          </div>
-        ))}
-      </div>
+      {kpiCards ? (
+        <div className="grid gap-4 xl:grid-cols-4">
+          {kpiCards.map((item) => (
+            <div key={item.label} className="rounded-[18px] border border-black/[0.06] bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+              <div className="text-[13px] text-[#8e8e93]">{item.label}</div>
+              <div className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
+              <div className={cn('mt-2 text-[12px] font-medium', item.tone)}>{item.meta}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-4">
+          {['总 Token 用量', '输入 Token', '缓存节省', '预估花费 (USD)'].map((label) => (
+            <div key={label} className="rounded-[18px] border border-black/[0.06] bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+              <div className="text-[13px] text-[#8e8e93]">{label}</div>
+              <div className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#c6c6c8]">—</div>
+              <div className="mt-2 text-[12px] text-[#c6c6c8]">暂无数据</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
@@ -420,12 +385,9 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
                   <span className="text-[10px] text-[#8e8e93]">{bar.date.slice(5)}</span>
                 </div>
               );
-            }) : DAILY_COST.map((bar) => (
-              <div key={bar.day} className="relative z-[1] flex flex-1 flex-col items-center justify-end gap-2">
-                <div className="w-7 rounded-t-[6px] bg-[#0a7aff]/85" style={{ height: `${bar.value}px` }} />
-                <span className="text-[10px] text-[#8e8e93]">{bar.day}</span>
-              </div>
-            ))}
+            }) : (
+              <div className="flex flex-1 items-center justify-center text-[13px] text-[#c6c6c8]">暂无数据</div>
+            )}
           </div>
         </div>
 
@@ -465,24 +427,9 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-5">
-              <div className="relative h-32 w-32 rounded-full" style={{ background: 'conic-gradient(#0a7aff 0% 15%, #10b981 15% 35%, #dbe2ea 35% 100%)' }}>
-                <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white">
-                  <span className="text-[20px] font-bold text-[#111827]">12M</span>
-                  <span className="text-[10px] text-[#8e8e93]">Tokens</span>
-                </div>
-              </div>
-              <div className="w-full space-y-3">
-                {TOKEN_SPLIT.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-4 text-[12px]">
-                    <span className="flex items-center gap-2 text-[#667085]">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                      {item.label}
-                    </span>
-                    <span className="font-semibold text-[#111827]">{item.value}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <span className="text-[28px] opacity-30">📊</span>
+              <span className="text-[13px] text-[#8e8e93]">暂无 Token 分布数据</span>
             </div>
           )}
         </div>
@@ -532,15 +479,11 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
 
       {topAgents.length === 0 && (
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-          <p className="mb-4 text-[14px] font-semibold text-[#334155]">消耗最高定时任务 (30 Days)</p>
-          <div className="grid gap-4 xl:grid-cols-3">
-            {COST_SPIKES.map((item) => (
-              <div key={item.name} className={cn('rounded-[18px] border-2 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]', item.borderColor)}>
-                <div className="text-[15px] font-semibold text-[#111827]">{item.name}</div>
-                <div className="mt-2 text-[24px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
-                <div className="mt-2 text-[12px] text-[#8e8e93]">{item.meta}</div>
-              </div>
-            ))}
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Agent 用量排行</p>
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <span className="text-[28px] opacity-30">🤖</span>
+            <span className="text-[13px] text-[#8e8e93]">暂无 Agent 用量数据</span>
+            <span className="text-[12px] text-[#c6c6c8]">开始对话后将在此显示各 Agent 的 Token 消耗</span>
           </div>
         </div>
       )}
@@ -556,24 +499,10 @@ function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
   if (agentRows.length === 0) {
     return (
       <div className="rounded-xl border border-[#c6c6c8] bg-white p-6">
-        <p className="text-[12px] text-[#8e8e93]">统计范围: 定时任务会话累计 (15 Days)</p>
-        <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">2,845,910 Total Tokens</div>
-        <div className="mt-6 grid gap-8 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="relative mx-auto h-[280px] w-[280px] rounded-full" style={{ background: 'conic-gradient(#ef4444 0% 32.5%, #f59e0b 32.5% 49%, #10b981 49% 62.2%, #3b82f6 62.2% 70.8%, #8b5cf6 70.8% 77.2%, #ec4899 77.2% 82.5%, #6366f1 82.5% 86.8%, #14b8a6 86.8% 90.5%, #0ea5e9 90.5% 93.8%, #64748b 93.8% 100%)' }}>
-            <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
-              <span className="text-[14px] font-semibold text-[#667085]">定时任务</span>
-              <span className="mt-1 text-[20px] font-bold text-[#111827]">2.84M</span>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            {USAGE_ROWS.map((item) => (
-              <div key={item.name} className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-[#f8fafc]">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className={cn('flex-1', item.name.startsWith('其他') ? 'text-[#8e8e93]' : 'font-medium text-[#111827]')}>{item.name}</span>
-                <span className="text-[#8e8e93]">{item.value}</span>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-col items-center gap-2 py-12 text-center">
+          <span className="text-[40px] opacity-30">📊</span>
+          <p className="text-[14px] text-[#8e8e93]">暂无用量分析数据</p>
+          <p className="text-[12px] text-[#c6c6c8]">开始对话后将在此显示各 Agent 的 Token 用量分布</p>
         </div>
       </div>
     );
