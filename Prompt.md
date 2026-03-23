@@ -181,14 +181,61 @@ tail -30 continue/progress.txt
 - **反馈按钮**：「提交 Issue」打开 GitHub；「复制本机运行环境清单」写入剪贴板
 - **settings store**：新增 defaultModel（默认 claude-sonnet-4-6）+ contextLimit（默认 32000）
 
-### 待实现（下一步重点）
+### 待实现 & 已知问题（全量审查 2026-03-23）
 
-#### 前端
-- [ ] **Settings 应用自动更新 UI**：接入 update store（checkForUpdates/downloadUpdate/installUpdate）；Settings 已有 autoCheckUpdate/autoDownloadUpdate toggle，需补充「检查更新」「下载」「安装」按钮
-- [ ] **TeamMap 层级图**：真实 Agent 树形结构渲染（目前是静态占位，需从 useAgentsStore 读取 parentId 构建树）
+> 按优先级排序，P0 = 功能缺失/崩溃级，P1 = 明显 bug，P2 = 体验/清理
 
-#### 后端
-- [ ] **`electron/api/routes/update.ts`**：接入 electron-updater，暴露 GET /api/update/check、POST /api/update/download、POST /api/update/install 端点；在 server.ts 注册
+---
+
+#### P0 — 功能缺失（必须修）
+
+| # | 文件 | 问题 | 说明 |
+|---|------|------|------|
+| 1 | `electron/api/routes/update.ts` | **文件不存在** | 需新建，接入 electron-updater，暴露 GET /api/update/check、POST /api/update/download、POST /api/update/install；在 server.ts 注册 |
+| 2 | `src/pages/Settings/index.tsx` L897 | **`<select>` 无 value/onChange** | TeamRoleSection「当前默认架构方案」下拉无绑定，选择无效；需接入 settings store 新字段 `orgTemplate` |
+| 3 | `src/pages/Settings/index.tsx` L948 | **`<select>` 无 value/onChange** | ChannelAdvancedSection「默认群聊行为模式」下拉无绑定；需接入 settings store 新字段 `groupChatMode` |
+| 4 | `src/pages/TaskKanban/index.tsx` L235 | **乱码文本** | `拖拽到此\uFFFD` — UTF-8 编码损坏，应为「拖拽到此处」 |
+| 5 | `src/pages/TaskKanban/index.tsx` L368 | **乱码文本** | `简短描述任务目\uFFFD..` — 应为「简短描述任务目标...」 |
+| 6 | `src/pages/Channels/index.tsx` L304 | **硬编码模型名** | `GLM-5` 写死，应读取 `useSettingsStore().defaultModel` |
+
+---
+
+#### P1 — 非功能按钮（点击无效）
+
+| # | 文件 | 行号 | 按钮 | 修复方案 |
+|---|------|------|------|---------|
+| 7 | `src/pages/Settings/index.tsx` | L962 | `+ 添加路由规则` | 暂无后端支持，改为 toast 提示「功能开发中」或隐藏 |
+| 8 | `src/pages/Settings/index.tsx` | L1342 | `◎ 路径白名单` | 弹出 modal 编辑白名单路径列表，持久化到 settings store |
+| 9 | `src/pages/Settings/index.tsx` | L1360 | `◎ 编辑黑名单` | 弹出 modal 编辑终端命令黑名单，持久化到 settings store |
+| 10 | `src/pages/Settings/index.tsx` | L1386 | `+ 添加工具许可` | 弹出 modal 添加自定义工具授权，持久化到 settings store |
+| 11 | `src/pages/Settings/index.tsx` | L1397-1405 | 快速授权模版 4 个 pill | 点击后预填工具授权表单，或直接 toast 提示「已添加」 |
+| 12 | `src/pages/Channels/index.tsx` | L299 | `🎤` 语音按钮 | 暂无语音功能，改为 disabled + tooltip「语音功能即将上线」 |
+
+---
+
+#### P1 — Settings 自动更新 UI 未接入
+
+| # | 文件 | 问题 |
+|---|------|------|
+| 13 | `src/pages/Settings/index.tsx` AutoUpdateSection | update store 已完整（checkForUpdates/downloadUpdate/installUpdate），但 UI 只有 toggle，缺少「检查更新」「下载」「安装」操作按钮及进度条 |
+
+---
+
+#### P2 — console.log 清理（后端路由）
+
+| # | 文件 | 行号 | 内容 |
+|---|------|------|------|
+| 14 | `electron/api/routes/agents.ts` | L45, L97 | `[agents] Triggering/completed Gateway restart` |
+| 15 | `electron/api/routes/channels.ts` | L81 | channel debug log |
+| 16 | `electron/api/routes/cron.ts` | L45, L97 | cron debug logs |
+
+---
+
+#### P2 — TeamMap 层级图优化
+
+| # | 文件 | 问题 |
+|---|------|------|
+| 17 | `src/pages/TeamMap/index.tsx` | 当前已读取 `useAgentsStore`，但所有 agent 平铺为「root + children」两层，无真实父子层级。`AgentSummary` 类型无 `parentId` 字段，需在 agent 类型和后端 agents 路由中补充 `parentId`，前端按 parentId 构建多层树 |
 
 ---
 
