@@ -39,17 +39,23 @@ function AgentNode({
   idx,
   isRoot,
   isActive,
+  onClick,
 }: {
   agent: AgentSummary;
   idx: number;
   isRoot: boolean;
   isActive: boolean;
+  onClick?: () => void;
 }) {
   const gradient = isRoot ? 'linear-gradient(135deg, #10b981, #059669)' : agentGradient(idx);
   const icon = isRoot ? '✦' : agentIcon(idx);
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
       className={cn(
         'rounded-2xl bg-white p-5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.06)] cursor-pointer transition-all hover:-translate-y-0.5',
         isRoot
@@ -143,6 +149,7 @@ function EmptyState() {
 export function TeamMap() {
   const [activeTab, setActiveTab] = useState<'Teams' | 'Hierarchy'>('Hierarchy');
   const [scale, setScale] = useState(1);
+  const [selectedAgent, setSelectedAgent] = useState<AgentSummary | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { agents, loading, fetchAgents, defaultAgentId } = useAgentsStore();
@@ -198,6 +205,7 @@ export function TeamMap() {
                     idx={0}
                     isRoot
                     isActive={isRecentlyActive(sessionLastActivity[rootAgent.mainSessionKey])}
+                    onClick={() => setSelectedAgent(rootAgent)}
                   />
                 )}
                 {childAgents.length > 0 && rootAgent && (
@@ -212,6 +220,7 @@ export function TeamMap() {
                         idx={idx}
                         isRoot={false}
                         isActive={isRecentlyActive(sessionLastActivity[agent.mainSessionKey])}
+                        onClick={() => setSelectedAgent(agent)}
                       />
                     ))}
                   </div>
@@ -220,7 +229,7 @@ export function TeamMap() {
             </div>
           )
         ) : (
-          <TeamsView agents={agents} loading={loading} sessionLastActivity={sessionLastActivity} />
+          <TeamsView agents={agents} loading={loading} sessionLastActivity={sessionLastActivity} onSelectAgent={setSelectedAgent} />
         )}
 
         {/* Zoom controls (bottom-left) */}
@@ -245,7 +254,7 @@ export function TeamMap() {
         {/* Tab switcher (bottom-center) */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
           <div className="flex rounded-lg border border-black/10 bg-white p-0.5 shadow-sm">
-            {(['Teams', 'Hierarchy'] as const).map((tab) => (
+            {([['Teams', '团队视图'], ['Hierarchy', '层级图']] as const).map(([tab, label]) => (
               <button
                 key={tab}
                 type="button"
@@ -257,12 +266,17 @@ export function TeamMap() {
                     : 'text-[#3c3c43] hover:bg-[#f2f2f7]',
                 )}
               >
-                {tab}
+                {label}
               </button>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Agent detail drawer */}
+      {selectedAgent && (
+        <AgentDetailDrawer agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
+      )}
     </div>
   );
 }
@@ -273,10 +287,12 @@ function TeamsView({
   agents,
   loading,
   sessionLastActivity,
+  onSelectAgent,
 }: {
   agents: AgentSummary[];
   loading: boolean;
   sessionLastActivity: Record<string, number>;
+  onSelectAgent: (agent: AgentSummary) => void;
 }) {
   if (loading) {
     return <div className="flex flex-1 items-center justify-center text-[13px] text-[#8e8e93]">加载中...</div>;
@@ -315,11 +331,78 @@ function TeamsView({
                   idx={idx}
                   isRoot={false}
                   isActive={isRecentlyActive(sessionLastActivity[agent.mainSessionKey])}
+                  onClick={() => onSelectAgent(agent)}
                 />
               ))}
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Agent detail drawer ─── */
+
+function AgentDetailDrawer({ agent, onClose }: { agent: AgentSummary; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-end"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex h-full w-[320px] flex-col overflow-y-auto bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.08)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
+          <span className="text-[14px] font-semibold text-[#000000]">Agent 详情</span>
+          <button
+            type="button"
+            aria-label="关闭"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7]"
+          >
+            ✕
+          </button>
+        </header>
+        <div className="flex flex-col items-center px-5 py-6">
+          <div className="mb-3 flex h-[64px] w-[64px] items-center justify-center rounded-2xl bg-clawx-ac text-[28px] text-white">
+            🤖
+          </div>
+          <p className="text-[16px] font-semibold text-[#000000]">{agent.name}</p>
+          <p className="mt-0.5 text-[12px] text-[#8e8e93]">{agent.id}</p>
+          {agent.isDefault && (
+            <span className="mt-2 rounded-full bg-clawx-ac/10 px-2.5 py-0.5 text-[11px] font-medium text-clawx-ac">
+              默认 Agent
+            </span>
+          )}
+        </div>
+        <div className="border-t border-black/[0.06] px-5 py-4 space-y-3">
+          <div className="flex justify-between text-[13px]">
+            <span className="text-[#8e8e93]">模型</span>
+            <span className="text-[#000000]">{agent.modelDisplay || '—'}</span>
+          </div>
+          <div className="flex justify-between text-[13px]">
+            <span className="text-[#8e8e93]">工作区</span>
+            <span className="max-w-[180px] truncate text-right text-[#000000]">{agent.workspace || '—'}</span>
+          </div>
+          <div className="flex justify-between text-[13px]">
+            <span className="text-[#8e8e93]">会话 Key</span>
+            <span className="max-w-[180px] truncate text-right text-[#000000]">{agent.mainSessionKey || '—'}</span>
+          </div>
+          {agent.channelTypes.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[13px] text-[#8e8e93]">频道</p>
+              <div className="flex flex-wrap gap-1.5">
+                {agent.channelTypes.map((ch) => (
+                  <span key={ch} className="rounded-md bg-[#f2f2f7] px-2 py-0.5 text-[12px] text-[#3c3c43]">
+                    {ch}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

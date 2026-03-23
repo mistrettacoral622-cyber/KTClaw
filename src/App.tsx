@@ -3,26 +3,28 @@
  * Handles routing and global providers
  */
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Component, useEffect } from 'react';
+import { Component, lazy, Suspense, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import i18n from './i18n';
 import { MainLayout } from './components/layout/MainLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Models } from './pages/Models';
-import { Chat } from './pages/Chat';
-import { Agents } from './pages/Agents';
-import { Channels } from './pages/Channels';
-import { Skills } from './pages/Skills';
-import { Cron } from './pages/Cron';
-import { Settings } from './pages/Settings';
-import { TeamOverview } from './pages/TeamOverview';
-import { TeamMap } from './pages/TeamMap';
-import { TaskKanban } from './pages/TaskKanban';
-import { Activity } from './pages/Activity';
-import { Memory } from './pages/Memory';
-import { Costs } from './pages/Costs';
-import { Setup } from './pages/Setup';
+
+// Route-level lazy imports — each page becomes its own chunk
+const Models = lazy(() => import('./pages/Models').then((m) => ({ default: m.Models })));
+const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })));
+const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })));
+const Channels = lazy(() => import('./pages/Channels').then((m) => ({ default: m.Channels })));
+const Skills = lazy(() => import('./pages/Skills').then((m) => ({ default: m.Skills })));
+const Cron = lazy(() => import('./pages/Cron').then((m) => ({ default: m.Cron })));
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+const TeamOverview = lazy(() => import('./pages/TeamOverview').then((m) => ({ default: m.TeamOverview })));
+const TeamMap = lazy(() => import('./pages/TeamMap').then((m) => ({ default: m.TeamMap })));
+const TaskKanban = lazy(() => import('./pages/TaskKanban').then((m) => ({ default: m.TaskKanban })));
+const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
+const Memory = lazy(() => import('./pages/Memory').then((m) => ({ default: m.Memory })));
+const Costs = lazy(() => import('./pages/Costs').then((m) => ({ default: m.Costs })));
+const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })));
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { applyGatewayTransportPreference } from './lib/api-client';
@@ -186,6 +188,7 @@ function App() {
   return (
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center text-[13px] text-[#8e8e93]">加载中...</div>}>
         <Routes>
           {/* Setup wizard (shown on first launch) */}
           <Route path="/setup/*" element={<Setup />} />
@@ -208,6 +211,7 @@ function App() {
             <Route path="/settings/*" element={<Settings />} />
           </Route>
         </Routes>
+        </Suspense>
 
         {/* Global toast notifications */}
         <Toaster

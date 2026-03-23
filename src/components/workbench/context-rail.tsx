@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
 import { useAgentsStore } from '@/stores/agents';
 import { useChatStore } from '@/stores/chat';
 import { CHANNEL_ICONS } from '@/types/channel';
+import type { AttachedFileMeta } from '@/stores/chat';
 
 export function ContextRail() {
   const rightPanelMode = useSettingsStore((state) => state.rightPanelMode);
@@ -19,6 +20,23 @@ export function ContextRail() {
   const agents = useAgentsStore((s) => s.agents);
   const defaultAgentId = useAgentsStore((s) => s.defaultAgentId);
   const currentAgent = agents.find((a) => a.id === (currentAgentId ?? defaultAgentId)) ?? agents[0] ?? null;
+
+  // Aggregate all attached files from current session messages
+  const messages = useChatStore((s) => s.messages);
+  const sessionFiles = useMemo<AttachedFileMeta[]>(() => {
+    const seen = new Set<string>();
+    const files: AttachedFileMeta[] = [];
+    for (const msg of messages) {
+      for (const f of msg._attachedFiles ?? []) {
+        const key = f.filePath ?? f.fileName;
+        if (!seen.has(key)) {
+          seen.add(key);
+          files.push(f);
+        }
+      }
+    }
+    return files;
+  }, [messages]);
 
   const toggleModule = (key: keyof typeof openModules) => {
     setOpenModules((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -40,10 +58,19 @@ export function ContextRail() {
             ✕
           </button>
         </header>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
-          <span className="text-[40px]">📂</span>
-          <p className="text-[13px] text-[#8e8e93]">当前会话暂无文件</p>
-        </div>
+        {sessionFiles.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
+            <span className="text-[40px]">📂</span>
+            <p className="text-[13px] text-[#8e8e93]">当前会话暂无文件</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-0 px-4 py-3">
+            <p className="mb-2 text-[12px] text-[#8e8e93]">{sessionFiles.length} 个文件</p>
+            {sessionFiles.map((f, i) => (
+              <FileRow key={f.filePath ?? f.fileName ?? i} file={f} />
+            ))}
+          </div>
+        )}
       </aside>
     );
   }
@@ -180,6 +207,32 @@ function KVRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between py-0.5">
       <span className="text-[12px] text-[#8e8e93]">{label}</span>
       <span className="text-[12px] text-[#3c3c43]">{value}</span>
+    </div>
+  );
+}
+
+function fileIcon(mimeType: string): string {
+  if (mimeType.startsWith('image/')) return '🖼️';
+  if (mimeType === 'application/pdf') return '📄';
+  if (mimeType.startsWith('text/')) return '📝';
+  return '📎';
+}
+
+function FileRow({ file }: { file: AttachedFileMeta }) {
+  const name = file.fileName || file.filePath?.split(/[\\/]/).pop() || '未知文件';
+  const icon = fileIcon(file.mimeType);
+  const sizeKb = file.fileSize > 0 ? `${(file.fileSize / 1024).toFixed(1)} KB` : '';
+  return (
+    <div className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-[#f2f2f7]">
+      {file.preview ? (
+        <img src={file.preview} alt={name} className="h-8 w-8 rounded object-cover" />
+      ) : (
+        <span className="flex h-8 w-8 items-center justify-center rounded bg-[#f2f2f7] text-[18px]">{icon}</span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12px] font-medium text-[#000000]">{name}</p>
+        {sizeKb && <p className="text-[11px] text-[#8e8e93]">{sizeKb}</p>}
+      </div>
     </div>
   );
 }

@@ -374,7 +374,15 @@ function CreateModal({
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return;
               const nativeEvent = e.nativeEvent as KeyboardEvent;
-              if (isComposingRef.current || nativeEvent.isComposing || nativeEvent.keyCode === 229) return;
+              const syntheticIsComposing = (e as unknown as { isComposing?: boolean }).isComposing === true;
+              if (
+                isComposingRef.current
+                || syntheticIsComposing
+                || nativeEvent.isComposing
+                || nativeEvent.keyCode === 229
+              ) {
+                return;
+              }
               e.preventDefault();
               handleSubmit();
             }}
@@ -615,7 +623,7 @@ function ApprovalsSection({
                     onClick={() => setWizard(item)}
                     className="rounded-lg bg-clawx-ac px-2.5 py-1 text-[12px] font-medium text-white hover:bg-[#005fd6]"
                   >
-                    回答问题
+                    Respond
                   </button>
                 ) : rejectingId === item.id ? (
                   <>
