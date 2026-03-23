@@ -57,6 +57,14 @@ export function Settings() {
   const { status: gatewayStatus, restart: restartGateway } = useGatewayStore();
   const currentVersion = useUpdateStore((state) => state.currentVersion);
   const updateSetAutoDownload = useUpdateStore((state) => state.setAutoDownload);
+  const updateStatus = useUpdateStore((state) => state.status);
+  const updateInfo = useUpdateStore((state) => state.updateInfo);
+  const updateProgress = useUpdateStore((state) => state.progress);
+  const updateError = useUpdateStore((state) => state.error);
+  const checkForUpdates = useUpdateStore((state) => state.checkForUpdates);
+  const downloadUpdate = useUpdateStore((state) => state.downloadUpdate);
+  const installUpdate = useUpdateStore((state) => state.installUpdate);
+  const initUpdate = useUpdateStore((state) => state.init);
 
   const [activeSection, setActiveSection] = useState<SettingsSectionId>(DEFAULT_SETTINGS_SECTION);
   const [proxyEnabledDraft, setProxyEnabledDraft] = useState(proxyEnabled);
@@ -221,6 +229,14 @@ export function Settings() {
                 runDoctor,
                 doctorSummary,
                 openMigrationWizard: () => setMigrationWizardOpen(true),
+                updateStatus,
+                updateInfo,
+                updateProgress,
+                updateError,
+                checkForUpdates,
+                downloadUpdate,
+                installUpdate,
+                initUpdate,
                 t,
               })}
             </div>
@@ -273,6 +289,14 @@ type RenderSectionArgs = {
   runDoctor: (mode: 'diagnose' | 'fix') => Promise<void>;
   doctorSummary: string;
   openMigrationWizard: () => void;
+  updateStatus: import('@/stores/update').UpdateStatus;
+  updateInfo: import('@/stores/update').UpdateInfo | null;
+  updateProgress: import('@/stores/update').ProgressInfo | null;
+  updateError: string | null;
+  checkForUpdates: () => Promise<void>;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => void;
+  initUpdate: () => Promise<void>;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
@@ -304,6 +328,26 @@ function renderActiveSection(args: RenderSectionArgs) {
 
     case 'migration-backup':
       return <SettingsMigrationPanel onLaunchWizard={args.openMigrationWizard} />;
+
+    case 'auto-update':
+      return (
+        <AutoUpdateSection
+          currentVersion={args.currentVersion}
+          autoCheckUpdate={args.autoCheckUpdate}
+          setAutoCheckUpdate={args.setAutoCheckUpdate}
+          autoDownloadUpdate={args.autoDownloadUpdate}
+          setAutoDownloadUpdate={args.setAutoDownloadUpdate}
+          updateSetAutoDownload={args.updateSetAutoDownload}
+          updateStatus={args.updateStatus}
+          updateInfo={args.updateInfo}
+          updateProgress={args.updateProgress}
+          updateError={args.updateError}
+          checkForUpdates={args.checkForUpdates}
+          downloadUpdate={args.downloadUpdate}
+          installUpdate={args.installUpdate}
+          initUpdate={args.initUpdate}
+        />
+      );
 
     case 'feedback-developer':
       return (
@@ -1407,5 +1451,141 @@ function ToolPermissionsSection() {
   );
 }
 
+/* ─── AutoUpdateSection ─── */
 
+import type { UpdateStatus, UpdateInfo, ProgressInfo } from '@/stores/update';
+
+function AutoUpdateSection({
+  currentVersion,
+  autoCheckUpdate,
+  setAutoCheckUpdate,
+  autoDownloadUpdate,
+  setAutoDownloadUpdate,
+  updateSetAutoDownload,
+  updateStatus,
+  updateInfo,
+  updateProgress,
+  updateError,
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate,
+  initUpdate,
+}: {
+  currentVersion: string;
+  autoCheckUpdate: boolean;
+  setAutoCheckUpdate: (v: boolean) => void;
+  autoDownloadUpdate: boolean;
+  setAutoDownloadUpdate: (v: boolean) => void;
+  updateSetAutoDownload: (v: boolean) => void;
+  updateStatus: UpdateStatus;
+  updateInfo: UpdateInfo | null;
+  updateProgress: ProgressInfo | null;
+  updateError: string | null;
+  checkForUpdates: () => Promise<void>;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => void;
+  initUpdate: () => Promise<void>;
+}) {
+  useEffect(() => { void initUpdate(); }, [initUpdate]);
+
+  const statusLabel: Record<UpdateStatus, string> = {
+    idle: '空闲',
+    checking: '检查中...',
+    available: '有新版本',
+    'not-available': '已是最新',
+    downloading: '下载中...',
+    downloaded: '已下载，可安装',
+    error: '出错',
+  };
+
+  return (
+    <>
+      <SettingsSectionCard title="当前版本" description="">
+        <div className="flex items-center justify-between rounded-xl bg-[#f2f2f7] px-4 py-3">
+          <div>
+            <p className="text-[13px] font-semibold text-[#000000]">ClawX v{currentVersion}</p>
+            <p className="mt-0.5 text-[12px] text-[#8e8e93]">
+              状态：{statusLabel[updateStatus]}
+              {updateInfo ? ` — 新版本 v${updateInfo.version}` : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {updateStatus === 'available' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg text-[12px]"
+                onClick={() => void downloadUpdate()}
+              >
+                下载更新
+              </Button>
+            )}
+            {updateStatus === 'downloaded' && (
+              <Button
+                size="sm"
+                className="rounded-lg bg-clawx-ac text-[12px] text-white hover:bg-[#0056b3]"
+                onClick={installUpdate}
+              >
+                立即安装
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg text-[12px]"
+              onClick={() => void checkForUpdates()}
+              disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+            >
+              {updateStatus === 'checking' ? '检查中...' : '检查更新'}
+            </Button>
+          </div>
+        </div>
+
+        {updateStatus === 'downloading' && updateProgress && (
+          <div className="mt-3">
+            <div className="mb-1 flex justify-between text-[12px] text-[#8e8e93]">
+              <span>下载进度</span>
+              <span>{Math.round(updateProgress.percent)}%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#f2f2f7]">
+              <div
+                className="h-full rounded-full bg-clawx-ac transition-all"
+                style={{ width: `${updateProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {updateError && (
+          <p className="mt-2 text-[12px] text-[#ef4444]">{updateError}</p>
+        )}
+
+        {updateInfo?.releaseNotes && (
+          <div className="mt-3 rounded-xl bg-[#f2f2f7] px-4 py-3">
+            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">更新说明</p>
+            <p className="text-[12px] text-[#8e8e93]">{String(updateInfo.releaseNotes)}</p>
+          </div>
+        )}
+      </SettingsSectionCard>
+
+      <SettingsSectionCard title="自动更新策略" description="">
+        <ToggleRow
+          label="自动检查更新"
+          desc="启动时自动检查是否有新版本可用。"
+          checked={autoCheckUpdate}
+          onCheckedChange={setAutoCheckUpdate}
+        />
+        <ToggleRow
+          label="自动下载更新"
+          desc="发现新版本后自动在后台下载，下载完成后提示安装。"
+          checked={autoDownloadUpdate}
+          onCheckedChange={(v) => {
+            setAutoDownloadUpdate(v);
+            void updateSetAutoDownload(v);
+          }}
+        />
+      </SettingsSectionCard>
+    </>
+  );
+}
 export default Settings;

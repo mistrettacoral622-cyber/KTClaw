@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useChannelsStore } from '@/stores/channels';
+import { hostApiFetch } from '@/lib/host-api';
 import { CHANNEL_ICONS, CHANNEL_NAMES, CHANNEL_META, type ChannelType } from '@/types/channel';
 
 /* ─── Static channel type tabs ─── */
@@ -76,6 +77,7 @@ export function Channels() {
   const [addType, setAddType] = useState<ChannelType>('feishu');
   const [addName, setAddName] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
 
   const { channels, loading, error, fetchChannels, connectChannel, disconnectChannel, deleteChannel, addChannel } =
     useChannelsStore();
@@ -103,6 +105,17 @@ export function Channels() {
   const handleDelete = async (id: string) => {
     await deleteChannel(id);
     if (activeChannelId === id) setActiveChannelId(null);
+  };
+
+  const handleTest = async (id: string) => {
+    setTestResult(null);
+    try {
+      await hostApiFetch(`/api/channels/${encodeURIComponent(id)}/test`, { method: 'POST' });
+      setTestResult({ id, ok: true, msg: '测试消息已发送' });
+    } catch (e) {
+      setTestResult({ id, ok: false, msg: String(e) });
+    }
+    setTimeout(() => setTestResult(null), 4000);
   };
 
   return (
@@ -246,6 +259,13 @@ export function Channels() {
                 )}
                 <button
                   type="button"
+                  onClick={() => void handleTest(selected.id)}
+                  className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+                >
+                  发送测试
+                </button>
+                <button
+                  type="button"
                   onClick={() => void handleDelete(selected.id)}
                   className="rounded-md border border-[#ef4444]/30 px-2.5 py-1 text-[12px] text-[#ef4444] hover:bg-[#fef2f2]"
                 >
@@ -253,6 +273,16 @@ export function Channels() {
                 </button>
               </div>
             </div>
+
+            {/* Test result feedback */}
+            {testResult?.id === selected.id && (
+              <div className={cn(
+                'mx-5 mt-2 rounded-lg px-3 py-2 text-[12px]',
+                testResult.ok ? 'bg-[#dcfce7] text-[#059669]' : 'bg-[#fee2e2] text-[#ef4444]',
+              )}>
+                {testResult.ok ? '✅ ' : '❌ '}{testResult.msg}
+              </div>
+            )}
 
             {/* Config fields (read-only) */}
             {meta.configFields.length > 0 && (

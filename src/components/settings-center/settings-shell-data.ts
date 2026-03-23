@@ -10,6 +10,7 @@ export type SettingsSectionId =
   | 'skills-mcp'
   | 'tool-permissions'
   | 'migration-backup'
+  | 'auto-update'
   | 'feedback-developer';
 
 export type SettingsNavItem = {
@@ -56,6 +57,7 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
     label: '治理',
     items: [
       { id: 'migration-backup', label: '迁移与备份', summary: '' },
+      { id: 'auto-update', label: '应用更新', summary: '' },
       { id: 'feedback-developer', label: '反馈与开发者', summary: '' },
     ],
   },
@@ -111,6 +113,11 @@ export const SETTINGS_SECTION_META: Record<
     title: '迁移与备份',
     subtitle: '防止配置迷失、意外损毁并支持在主副工作计算机间的转移。',
     kicker: '配置同步、回滚、系统迁移',
+  },
+  'auto-update': {
+    title: '应用更新',
+    subtitle: '管理自动检查与下载更新策略，查看当前版本与更新进度。',
+    kicker: '版本管理、自动更新',
   },
   'feedback-developer': {
     title: '反馈与开发者',

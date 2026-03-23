@@ -321,6 +321,37 @@ export async function handleChannelRoutes(
     return true;
   }
 
+  // POST /api/channels/:id/test — send a test message via the gateway
+  const testMatch = url.pathname.match(/^\/api\/channels\/([^/]+)\/test$/);
+  if (testMatch && req.method === 'POST') {
+    const channelId = decodeURIComponent(testMatch[1]);
+    try {
+      const status = ctx.gatewayManager.getStatus();
+      if (status.state !== 'running') {
+        sendJson(res, 503, { success: false, error: 'Gateway is not running' });
+        return true;
+      }
+      // Attempt to send a test message via the gateway HTTP API
+      const port = status.port ?? 3000;
+      const http = await import('node:http');
+      const payload = JSON.stringify({ channelId, text: '✅ ClawX 测试消息 — 连接正常' });
+      await new Promise<void>((resolve, reject) => {
+        const req2 = http.request(
+          { hostname: '127.0.0.1', port, path: '/api/channel/test', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } },
+          (r) => { r.resume(); r.on('end', resolve); },
+        );
+        req2.on('error', reject);
+        req2.write(payload);
+        req2.end();
+      });
+      sendJson(res, 200, { success: true, message: '测试消息已发送' });
+    } catch (error) {
+      sendJson(res, 500, { success: false, error: String(error) });
+    }
+    return true;
+  }
+
   void ctx;
   return false;
 }

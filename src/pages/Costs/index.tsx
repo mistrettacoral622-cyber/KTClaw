@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { hostApiFetch } from '@/lib/host-api';
-import { RefreshCw, TrendingUp, Zap, DollarSign, BarChart3 } from 'lucide-react';
+import { RefreshCw, TrendingUp, Zap, DollarSign, BarChart3, Plus, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
 /* ─── Types ─── */
@@ -22,6 +22,39 @@ interface TokenUsageEntry {
   cacheWriteTokens: number;
   totalTokens: number;
   costUsd?: number;
+}
+
+interface DaySummary {
+  date: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  sessions: number;
+}
+
+interface CostsSummary {
+  timeline: DaySummary[];
+  totals: { inputTokens: number; outputTokens: number; cacheTokens: number; totalTokens: number; costUsd: number; sessions: number };
+}
+
+interface AgentSummary {
+  agentId: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  sessions: number;
+}
+
+interface AlertRule {
+  id: string;
+  name: string;
+  type: 'daily_token' | 'cost_usd' | 'session_count';
+  threshold: number;
+  enabled: boolean;
+  createdAt: string;
 }
 
 type TabId = 'realtime' | 'dashboard' | 'usage' | 'alerts';
@@ -63,6 +96,8 @@ export function Costs() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(200);
+  const [summary, setSummary] = useState<CostsSummary | null>(null);
+  const [agentRows, setAgentRows] = useState<AgentSummary[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -79,7 +114,21 @@ export function Costs() {
     }
   }, [limit]);
 
+  const fetchSummary = useCallback(async () => {
+    try {
+      const [s, a] = await Promise.all([
+        hostApiFetch<CostsSummary>('/api/costs/summary?days=30'),
+        hostApiFetch<AgentSummary[]>('/api/costs/by-agent'),
+      ]);
+      setSummary(s);
+      setAgentRows(Array.isArray(a) ? a : []);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
   useEffect(() => { void fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchSummary(); }, [fetchSummary]);
 
   const totalInput = entries.reduce((s, e) => s + e.inputTokens, 0);
   const totalOutput = entries.reduce((s, e) => s + e.outputTokens, 0);
@@ -113,7 +162,7 @@ export function Costs() {
           )}
           <button
             type="button"
-            onClick={() => void fetchData()}
+            onClick={() => { void fetchData(); void fetchSummary(); }}
             disabled={loading}
             className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] text-[#3c3c43] transition-colors hover:bg-[#f2f2f7] disabled:opacity-50"
           >
@@ -159,8 +208,8 @@ export function Costs() {
             modelRows={modelRows}
           />
         )}
-        {activeTab === 'dashboard' && <DashboardTab />}
-        {activeTab === 'usage' && <UsageTab />}
+        {activeTab === 'dashboard' && <DashboardTab summary={summary} agentRows={agentRows} />}
+        {activeTab === 'usage' && <UsageTab agentRows={agentRows} />}
         {activeTab === 'alerts' && <AlertsTab />}
       </div>
     </div>
@@ -193,11 +242,13 @@ const TOKEN_SPLIT = [
   { label: 'Cache Hit', value: '65% (7.8M)', color: '#dbe2ea' },
 ] as const;
 
-const RECENT_TASKS = [
+// RECENT_TASKS kept for future reference
+const _RECENT_TASKS = [
   { name: 'x-radar-collect', runs: '60', input: '240k', output: '120k', cache: '1.2M', cost: '$45.20' },
   { name: 'daily-digest-news', runs: '30', input: '180k', output: '80k', cache: '800k', cost: '$28.90' },
   { name: 'github-issue-triage', runs: '120', input: '80k', output: '40k', cache: '300k', cost: '$15.40' },
 ] as const;
+void _RECENT_TASKS;
 
 const USAGE_ROWS = [
   { name: 'x-radar-collect', value: '32.48% (924.5k)', color: '#ef4444' },
@@ -318,11 +369,32 @@ function RealtimeTab({
 
 /* ─── Dashboard Tab ─── */
 
-function DashboardTab() {
+function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; agentRows: AgentSummary[] }) {
+  const timeline = summary?.timeline ?? [];
+  const totals = summary?.totals;
+
+  // Build KPI cards from real data when available
+  const kpiCards = totals
+    ? [
+        { label: '总 Token 用量', value: formatTokens(totals.totalTokens), meta: `${totals.sessions} 次会话`, tone: 'text-[#667085]' },
+        { label: '输入 Token', value: formatTokens(totals.inputTokens), meta: `占比 ${totals.totalTokens > 0 ? Math.round(totals.inputTokens / totals.totalTokens * 100) : 0}%`, tone: 'text-[#667085]' },
+        { label: '缓存节省', value: formatTokens(totals.cacheTokens), meta: `Hit Rate: ${totals.totalTokens > 0 ? Math.round(totals.cacheTokens / totals.totalTokens * 100) : 0}%`, tone: 'text-emerald-600' },
+        { label: '预估花费 (USD)', value: formatCost(totals.costUsd), meta: '30 天累计', tone: 'text-[#ff6a00]' },
+      ]
+    : KPI_CARDS;
+
+  // Bar chart: last 7 days from timeline
+  const last7 = timeline.slice(-7);
+  const maxTokens = Math.max(...last7.map((d) => d.totalTokens), 1);
+
+  // Top agents
+  const topAgents = agentRows.slice(0, 5);
+  const totalAgentTokens = agentRows.reduce((s, a) => s + a.totalTokens, 0);
+
   return (
     <div className="space-y-5">
       <div className="grid gap-4 xl:grid-cols-4">
-        {KPI_CARDS.map((item) => (
+        {kpiCards.map((item) => (
           <div key={item.label} className="rounded-[18px] border border-black/[0.06] bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             <div className="text-[13px] text-[#8e8e93]">{item.label}</div>
             <div className="mt-2 text-[28px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
@@ -331,27 +403,24 @@ function DashboardTab() {
         ))}
       </div>
 
-      <div>
-        <div className="mb-3 text-[14px] font-semibold text-[#334155]">消耗最高定时任务 (30 Days)</div>
-        <div className="grid gap-4 xl:grid-cols-3">
-          {COST_SPIKES.map((item) => (
-            <div key={item.name} className={cn('rounded-[18px] border-2 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]', item.borderColor)}>
-              <div className="text-[15px] font-semibold text-[#111827]">{item.name}</div>
-              <div className="mt-2 text-[24px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
-              <div className="mt-2 text-[12px] text-[#8e8e93]">{item.meta}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-          <p className="mb-4 text-[14px] font-semibold text-[#334155]">每日预估花费 (7 Days)</p>
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">
+            每日 Token 用量 {last7.length > 0 ? `(最近 ${last7.length} 天)` : '(7 Days)'}
+          </p>
           <div className="relative flex h-48 items-end gap-4 border-b border-[#eef2f6] pb-4">
             {[32, 72, 112, 152].map((offset) => (
               <div key={offset} className="absolute inset-x-0 border-t border-dashed border-[#eef2f6]" style={{ top: `${offset}px` }} />
             ))}
-            {DAILY_COST.map((bar) => (
+            {last7.length > 0 ? last7.map((bar) => {
+              const h = Math.max(4, Math.round((bar.totalTokens / maxTokens) * 152));
+              return (
+                <div key={bar.date} className="relative z-[1] flex flex-1 flex-col items-center justify-end gap-2">
+                  <div className="w-7 rounded-t-[6px] bg-clawx-ac/85" style={{ height: `${h}px` }} />
+                  <span className="text-[10px] text-[#8e8e93]">{bar.date.slice(5)}</span>
+                </div>
+              );
+            }) : DAILY_COST.map((bar) => (
               <div key={bar.day} className="relative z-[1] flex flex-1 flex-col items-center justify-end gap-2">
                 <div className="w-7 rounded-t-[6px] bg-[#0a7aff]/85" style={{ height: `${bar.value}px` }} />
                 <span className="text-[10px] text-[#8e8e93]">{bar.day}</span>
@@ -362,83 +431,188 @@ function DashboardTab() {
 
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
           <p className="mb-4 text-[14px] font-semibold text-[#334155]">Token 分布</p>
-          <div className="flex flex-col items-center gap-5">
-            <div className="relative h-32 w-32 rounded-full" style={{ background: 'conic-gradient(#0a7aff 0% 15%, #10b981 15% 35%, #dbe2ea 35% 100%)' }}>
-              <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white">
-                <span className="text-[20px] font-bold text-[#111827]">12M</span>
-                <span className="text-[10px] text-[#8e8e93]">Tokens</span>
+          {totals && totals.totalTokens > 0 ? (
+            <div className="flex flex-col items-center gap-5">
+              <div
+                className="relative h-32 w-32 rounded-full"
+                style={{
+                  background: `conic-gradient(
+                    #0a7aff 0% ${Math.round(totals.inputTokens / totals.totalTokens * 100)}%,
+                    #10b981 ${Math.round(totals.inputTokens / totals.totalTokens * 100)}% ${Math.round((totals.inputTokens + totals.outputTokens) / totals.totalTokens * 100)}%,
+                    #dbe2ea ${Math.round((totals.inputTokens + totals.outputTokens) / totals.totalTokens * 100)}% 100%
+                  )`,
+                }}
+              >
+                <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white">
+                  <span className="text-[20px] font-bold text-[#111827]">{formatTokens(totals.totalTokens)}</span>
+                  <span className="text-[10px] text-[#8e8e93]">Tokens</span>
+                </div>
+              </div>
+              <div className="w-full space-y-3">
+                {[
+                  { label: 'Input', value: `${Math.round(totals.inputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.inputTokens)})`, color: '#0a7aff' },
+                  { label: 'Output', value: `${Math.round(totals.outputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.outputTokens)})`, color: '#10b981' },
+                  { label: 'Cache', value: `${Math.round(totals.cacheTokens / totals.totalTokens * 100)}% (${formatTokens(totals.cacheTokens)})`, color: '#dbe2ea' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-4 text-[12px]">
+                    <span className="flex items-center gap-2 text-[#667085]">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      {item.label}
+                    </span>
+                    <span className="font-semibold text-[#111827]">{item.value}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="w-full space-y-3">
-              {TOKEN_SPLIT.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-4 text-[12px]">
-                  <span className="flex items-center gap-2 text-[#667085]">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    {item.label}
-                  </span>
-                  <span className="font-semibold text-[#111827]">{item.value}</span>
+          ) : (
+            <div className="flex flex-col items-center gap-5">
+              <div className="relative h-32 w-32 rounded-full" style={{ background: 'conic-gradient(#0a7aff 0% 15%, #10b981 15% 35%, #dbe2ea 35% 100%)' }}>
+                <div className="absolute inset-5 flex flex-col items-center justify-center rounded-full bg-white">
+                  <span className="text-[20px] font-bold text-[#111827]">12M</span>
+                  <span className="text-[10px] text-[#8e8e93]">Tokens</span>
                 </div>
-              ))}
+              </div>
+              <div className="w-full space-y-3">
+                {TOKEN_SPLIT.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between gap-4 text-[12px]">
+                    <span className="flex items-center gap-2 text-[#667085]">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      {item.label}
+                    </span>
+                    <span className="font-semibold text-[#111827]">{item.value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-        <p className="mb-4 text-[14px] font-semibold text-[#334155]">明细数据 (Recent Tasks)</p>
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-[#eef2f6] text-[#8e8e93]">
-                <th className="px-0 py-3 font-medium">任务名称</th>
-                <th className="px-0 py-3 font-medium">执行次数</th>
-                <th className="px-0 py-3 font-medium">Input</th>
-                <th className="px-0 py-3 font-medium">Output</th>
-                <th className="px-0 py-3 font-medium">Cache Hit</th>
-                <th className="px-0 py-3 text-right font-medium">总消耗 ($)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RECENT_TASKS.map((row) => (
-                <tr key={row.name} className="border-b border-[#f7f8fa] last:border-b-0">
-                  <td className="px-0 py-3 font-medium text-[#111827]">{row.name}</td>
-                  <td className="px-0 py-3 text-[#667085]">{row.runs}</td>
-                  <td className="px-0 py-3 text-[#667085]">{row.input}</td>
-                  <td className="px-0 py-3 text-[#667085]">{row.output}</td>
-                  <td className="px-0 py-3 font-medium text-emerald-600">{row.cache}</td>
-                  <td className="px-0 py-3 text-right font-semibold text-[#111827]">{row.cost}</td>
+      {topAgents.length > 0 && (
+        <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Agent 用量排行</p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border-collapse text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-[#eef2f6] text-[#8e8e93]">
+                  <th className="py-3 font-medium">Agent</th>
+                  <th className="py-3 font-medium">会话数</th>
+                  <th className="py-3 font-medium">Input</th>
+                  <th className="py-3 font-medium">Output</th>
+                  <th className="py-3 font-medium">占比</th>
+                  <th className="py-3 text-right font-medium">费用 ($)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {topAgents.map((row) => {
+                  const pct = totalAgentTokens > 0 ? Math.round(row.totalTokens / totalAgentTokens * 100) : 0;
+                  return (
+                    <tr key={row.agentId} className="border-b border-[#f7f8fa] last:border-b-0">
+                      <td className="py-3 font-medium text-[#111827]">{row.agentId}</td>
+                      <td className="py-3 text-[#667085]">{row.sessions}</td>
+                      <td className="py-3 text-[#667085]">{formatTokens(row.inputTokens)}</td>
+                      <td className="py-3 text-[#667085]">{formatTokens(row.outputTokens)}</td>
+                      <td className="py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#f2f2f7]">
+                            <div className="h-full rounded-full bg-clawx-ac" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-[11px] text-[#8e8e93]">{pct}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-right font-semibold text-[#111827]">{formatCost(row.costUsd)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
+
+      {topAgents.length === 0 && (
+        <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">消耗最高定时任务 (30 Days)</p>
+          <div className="grid gap-4 xl:grid-cols-3">
+            {COST_SPIKES.map((item) => (
+              <div key={item.name} className={cn('rounded-[18px] border-2 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)]', item.borderColor)}>
+                <div className="text-[15px] font-semibold text-[#111827]">{item.name}</div>
+                <div className="mt-2 text-[24px] font-bold tracking-[-0.03em] text-[#111827]">{item.value}</div>
+                <div className="mt-2 text-[12px] text-[#8e8e93]">{item.meta}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ─── Usage Tab ─── */
 
-function UsageTab() {
+function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
+  const totalTokens = agentRows.reduce((s, a) => s + a.totalTokens, 0);
+
+  if (agentRows.length === 0) {
+    return (
+      <div className="rounded-xl border border-[#c6c6c8] bg-white p-6">
+        <p className="text-[12px] text-[#8e8e93]">统计范围: 定时任务会话累计 (15 Days)</p>
+        <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">2,845,910 Total Tokens</div>
+        <div className="mt-6 grid gap-8 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="relative mx-auto h-[280px] w-[280px] rounded-full" style={{ background: 'conic-gradient(#ef4444 0% 32.5%, #f59e0b 32.5% 49%, #10b981 49% 62.2%, #3b82f6 62.2% 70.8%, #8b5cf6 70.8% 77.2%, #ec4899 77.2% 82.5%, #6366f1 82.5% 86.8%, #14b8a6 86.8% 90.5%, #0ea5e9 90.5% 93.8%, #64748b 93.8% 100%)' }}>
+            <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
+              <span className="text-[14px] font-semibold text-[#667085]">定时任务</span>
+              <span className="mt-1 text-[20px] font-bold text-[#111827]">2.84M</span>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {USAGE_ROWS.map((item) => (
+              <div key={item.name} className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-[#f8fafc]">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className={cn('flex-1', item.name.startsWith('其他') ? 'text-[#8e8e93]' : 'font-medium text-[#111827]')}>{item.name}</span>
+                <span className="text-[#8e8e93]">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#0ea5e9', '#64748b'];
+  let cumPct = 0;
+  const gradientStops = agentRows.slice(0, 10).map((a, i) => {
+    const pct = totalTokens > 0 ? (a.totalTokens / totalTokens) * 100 : 0;
+    const stop = `${COLORS[i % COLORS.length]} ${cumPct.toFixed(1)}% ${(cumPct + pct).toFixed(1)}%`;
+    cumPct += pct;
+    return stop;
+  });
+
   return (
     <div className="rounded-xl border border-[#c6c6c8] bg-white p-6">
-      <p className="text-[12px] text-[#8e8e93]">统计范围: 定时任务会话累计 (15 Days)</p>
-      <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">2,845,910 Total Tokens</div>
+      <p className="text-[12px] text-[#8e8e93]">统计范围: 全部 Agent 累计</p>
+      <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">{formatTokens(totalTokens)} Total Tokens</div>
       <div className="mt-6 grid gap-8 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="relative mx-auto h-[280px] w-[280px] rounded-full" style={{ background: 'conic-gradient(#ef4444 0% 32.5%, #f59e0b 32.5% 49%, #10b981 49% 62.2%, #3b82f6 62.2% 70.8%, #8b5cf6 70.8% 77.2%, #ec4899 77.2% 82.5%, #6366f1 82.5% 86.8%, #14b8a6 86.8% 90.5%, #0ea5e9 90.5% 93.8%, #64748b 93.8% 100%)' }}>
+        <div
+          className="relative mx-auto h-[280px] w-[280px] rounded-full"
+          style={{ background: `conic-gradient(${gradientStops.join(', ')})` }}
+        >
           <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
-            <span className="text-[14px] font-semibold text-[#667085]">定时任务</span>
-            <span className="mt-1 text-[20px] font-bold text-[#111827]">2.84M</span>
+            <span className="text-[14px] font-semibold text-[#667085]">Agent</span>
+            <span className="mt-1 text-[20px] font-bold text-[#111827]">{agentRows.length}</span>
           </div>
         </div>
         <div className="space-y-1.5">
-          {USAGE_ROWS.map((item) => (
-            <div key={item.name} className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-[#f8fafc]">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className={cn('flex-1', item.name.startsWith('其他') ? 'text-[#8e8e93]' : 'font-medium text-[#111827]')}>{item.name}</span>
-              <span className="text-[#8e8e93]">{item.value}</span>
-            </div>
-          ))}
+          {agentRows.slice(0, 10).map((item, i) => {
+            const pct = totalTokens > 0 ? (item.totalTokens / totalTokens * 100).toFixed(1) : '0';
+            return (
+              <div key={item.agentId} className="flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] transition-colors hover:bg-[#f8fafc]">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                <span className="flex-1 font-medium text-[#111827]">{item.agentId}</span>
+                <span className="text-[#8e8e93]">{pct}% ({formatTokens(item.totalTokens)})</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -448,60 +622,141 @@ function UsageTab() {
 /* ─── Alerts Tab ─── */
 
 function AlertsTab() {
-  const [dailyTokenLimit, setDailyTokenLimit] = useState('200,000');
-  const [costLimit, setCostLimit] = useState('$1.50 / Day');
-  const [retentionPolicy, setRetentionPolicy] = useState('30days');
-  const [autoClean, setAutoClean] = useState(true);
+  const [rules, setRules] = useState<AlertRule[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addName, setAddName] = useState('');
+  const [addType, setAddType] = useState<AlertRule['type']>('daily_token');
+  const [addThreshold, setAddThreshold] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const fetchRules = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await hostApiFetch<AlertRule[]>('/api/alerts');
+      setRules(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchRules(); }, [fetchRules]);
+
+  const handleAdd = async () => {
+    if (!addName.trim() || !addThreshold.trim()) return;
+    setAdding(true);
+    try {
+      await hostApiFetch('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify({ name: addName.trim(), type: addType, threshold: Number(addThreshold) }),
+      });
+      setAddName('');
+      setAddThreshold('');
+      await fetchRules();
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleToggle = async (rule: AlertRule) => {
+    await hostApiFetch(`/api/alerts/${encodeURIComponent(rule.id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled: !rule.enabled }),
+    });
+    await fetchRules();
+  };
+
+  const handleDelete = async (id: string) => {
+    await hostApiFetch(`/api/alerts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await fetchRules();
+  };
+
+  const TYPE_LABELS: Record<AlertRule['type'], string> = {
+    daily_token: '日均 Token',
+    cost_usd: '费用 (USD)',
+    session_count: '会话数',
+  };
 
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
-        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">用量告警水位</h3>
-        <div className="space-y-4">
-          <div>
-            <p className="mb-1.5 text-[13px] font-medium text-[#000000]">日均 Token 警戒阈值</p>
+        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">新增告警规则</h3>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">规则名称</p>
             <input
-              value={dailyTokenLimit}
-              onChange={(e) => setDailyTokenLimit(e.target.value)}
-              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
-            />
-            <p className="mt-1.5 text-[12px] text-[#8e8e93]">超过后将拒绝无权 Cron 触发器。</p>
-          </div>
-          <div>
-            <p className="mb-1.5 text-[13px] font-medium text-[#000000]">预估经费提醒限制</p>
-            <input
-              value={costLimit}
-              onChange={(e) => setCostLimit(e.target.value)}
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              placeholder="如：日均 Token 超限"
               className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
             />
           </div>
+          <div className="w-[140px]">
+            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">类型</p>
+            <select
+              value={addType}
+              onChange={(e) => setAddType(e.target.value as AlertRule['type'])}
+              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
+            >
+              <option value="daily_token">日均 Token</option>
+              <option value="cost_usd">费用 (USD)</option>
+              <option value="session_count">会话数</option>
+            </select>
+          </div>
+          <div className="w-[120px]">
+            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">阈值</p>
+            <input
+              value={addThreshold}
+              onChange={(e) => setAddThreshold(e.target.value)}
+              placeholder="200000"
+              type="number"
+              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleAdd()}
+            disabled={adding || !addName.trim() || !addThreshold.trim()}
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-clawx-ac px-3 text-[13px] text-white hover:bg-[#0056b3] disabled:opacity-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            添加
+          </button>
         </div>
       </section>
 
       <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
-        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">数据清洗与下沉</h3>
-        <div className="space-y-4">
-          <div>
-            <p className="mb-1.5 text-[13px] font-medium text-[#000000]">日志及运行时调试包保留策略</p>
-            <select
-              value={retentionPolicy}
-              onChange={(e) => setRetentionPolicy(e.target.value)}
-              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
-            >
-              <option value="30days">保留 30 天后转离线档</option>
-              <option value="7days">保留 7 天后删除</option>
-              <option value="60days">保留 60 天后转离线档</option>
-              <option value="forever">永久保留</option>
-            </select>
+        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">告警规则列表</h3>
+        {loading ? (
+          <p className="text-[13px] text-[#8e8e93]">加载中...</p>
+        ) : rules.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <span className="text-[28px] opacity-30">🔔</span>
+            <p className="text-[13px] text-[#8e8e93]">暂无告警规则</p>
           </div>
-          <div className="flex items-center justify-between gap-6">
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-[#000000]">自动删除孤儿执行物</p>
-              <p className="mt-0.5 text-[12px] text-[#8e8e93]">清空 7 天前的缓存截图、Browser Session Profile 等。</p>
-            </div>
-            <Switch checked={autoClean} onCheckedChange={setAutoClean} />
+        ) : (
+          <div className="divide-y divide-[#f2f2f7]">
+            {rules.map((rule) => (
+              <div key={rule.id} className="flex items-center gap-4 py-3">
+                <Switch checked={rule.enabled} onCheckedChange={() => void handleToggle(rule)} />
+                <div className="flex-1">
+                  <p className="text-[13px] font-medium text-[#000000]">{rule.name}</p>
+                  <p className="mt-0.5 text-[12px] text-[#8e8e93]">
+                    {TYPE_LABELS[rule.type]} &gt; {rule.threshold.toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(rule.id)}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-[#8e8e93] hover:bg-[#fef2f2] hover:text-[#ef4444]"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </section>
     </div>
   );
