@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -18,9 +18,11 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { invokeIpc, toUserMessage } from '@/lib/api-client';
+import { hostApiFetch } from '@/lib/host-api';
 import { cn } from '@/lib/utils';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
+import { useSkillsStore } from '@/stores/skills';
 import { useUpdateStore } from '@/stores/update';
 import type { ReactNode } from 'react';
 
@@ -1126,85 +1128,128 @@ function AutomationDefaultsSection() {
 
 /* ─── Section: Skills & MCP (09.2) ─── */
 
-const NATIVE_SKILLS_DATA = [
-  { id: 'file_system', name: 'file_system', tag: null as string | null, desc: '本地文件的读写、搜索、目录遍历', enabled: true },
-  { id: 'browser_control', name: 'browser_control', tag: '(Playwright)', desc: '控制无头浏览器抓包、截屏与交互点击', enabled: true },
-  { id: 'terminal_session', name: 'terminal_session', tag: '(Node PTY)', desc: '长连接跨平台的控制台执行环境', enabled: true },
+const MCP_QUICK_TEMPLATES = [
+  { label: 'File System', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '.'] },
+  { label: 'Brave Search', command: 'npx', args: ['-y', '@modelcontextprotocol/server-brave-search'] },
+  { label: 'SQLite', command: 'npx', args: ['-y', '@modelcontextprotocol/server-sqlite'] },
+  { label: 'Web Fetch', command: 'npx', args: ['-y', '@modelcontextprotocol/server-fetch'] },
+  { label: 'Puppeteer', command: 'npx', args: ['-y', '@modelcontextprotocol/server-puppeteer'] },
+  { label: 'Memory', command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'] },
 ];
 
-const MCP_QUICK_TEMPLATES = ['File System', 'Brave Search', 'SQLite', 'Web Fetch', 'Puppeteer', 'Memory'];
-
-const MCP_SERVICES_DATA = [
-  { tag: 'CB', tagBg: '#111', name: 'MCP GitHub Service', cmd: 'npx -y @modelcontextprotocol/server-github', status: 'active' },
-  { tag: 'S3', tagBg: '#3b82f6', name: 'MCP Amazon S3 Bridge', cmd: 'stdmcp_amazonS3 --bucket clawx-assets', status: 'idle' },
-];
+interface McpServer { name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean; transport: string; addedAt: string; }
 
 function SkillsMcpSection() {
-  const [activeFilter, setActiveFilter] = useState('全部');
-  const [skills, setSkills] = useState(NATIVE_SKILLS_DATA.map((s) => ({ ...s })));
+  const { skills, loading: skillsLoading, fetchSkills, enableSkill, disableSkill } = useSkillsStore();
+  const { status: gatewayStatus } = useGatewayStore();
+  const isGatewayConnected = gatewayStatus.state === 'running';
 
-  const FILTER_TABS = [
-    { label: '全部', count: 3 },
-    { label: '可用', count: 3 },
-    { label: '已安装', count: 3 },
-    { label: '消耗积分', count: 0 },
-  ];
+  const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
+  const [mcpLoading, setMcpLoading] = useState(false);
+  const [addMcpOpen, setAddMcpOpen] = useState(false);
+  const [addMcpName, setAddMcpName] = useState('');
+  const [addMcpCmd, setAddMcpCmd] = useState('');
+  const [addMcpArgs, setAddMcpArgs] = useState('');
+  const [addMcpSaving, setAddMcpSaving] = useState(false);
+
+  const fetchMcp = useCallback(async () => {
+    setMcpLoading(true);
+    try {
+      const data = await hostApiFetch<{ servers: McpServer[] }>('/api/mcp');
+      setMcpServers(Array.isArray(data.servers) ? data.servers : []);
+    } catch { /* ignore */ } finally { setMcpLoading(false); }
+  }, []);
+
+  useEffect(() => { void fetchSkills(); void fetchMcp(); }, [fetchSkills, fetchMcp]);
+
+  const handleSkillToggle = async (skillId: string, enabled: boolean) => {
+    try {
+      if (enabled) await enableSkill(skillId);
+      else await disableSkill(skillId);
+    } catch { /* ignore */ }
+  };
+
+  const handleMcpToggle = async (name: string) => {
+    await hostApiFetch(`/api/mcp/${encodeURIComponent(name)}/toggle`, { method: 'PATCH' });
+    await fetchMcp();
+  };
+
+  const handleMcpDelete = async (name: string) => {
+    await hostApiFetch(`/api/mcp/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    await fetchMcp();
+  };
+
+  const handleAddMcp = async () => {
+    if (!addMcpName.trim() || !addMcpCmd.trim()) return;
+    setAddMcpSaving(true);
+    try {
+      await hostApiFetch('/api/mcp', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: addMcpName.trim(),
+          command: addMcpCmd.trim(),
+          args: addMcpArgs.trim() ? addMcpArgs.trim().split(/\s+/) : [],
+          env: {},
+          enabled: true,
+          transport: 'stdio',
+        }),
+      });
+      setAddMcpOpen(false);
+      setAddMcpName('');
+      setAddMcpCmd('');
+      setAddMcpArgs('');
+      await fetchMcp();
+    } finally { setAddMcpSaving(false); }
+  };
+
+  const handleQuickTemplate = async (tpl: typeof MCP_QUICK_TEMPLATES[number]) => {
+    await hostApiFetch('/api/mcp', {
+      method: 'POST',
+      body: JSON.stringify({ name: tpl.label, command: tpl.command, args: tpl.args, env: {}, enabled: true, transport: 'stdio' }),
+    });
+    await fetchMcp();
+  };
 
   return (
     <>
       <SettingsCard
         title="已安装内置技能 (Native Skills)"
         headerRight={
-          <button type="button" className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
+          <button type="button" onClick={() => void fetchSkills()} className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
             ↻ 刷新
           </button>
         }
       >
-        <div className="my-2 rounded-lg border border-[#fbbf24]/30 bg-[#fffbeb] px-3 py-2.5">
-          <span className="text-[13px] text-[#92400e]">
-            ⚠ Gateway 未连接。请先连接 Gateway 再管理技能。
-          </span>
-        </div>
-
-        <div className="my-3 flex flex-wrap gap-2">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.label}
-              type="button"
-              onClick={() => setActiveFilter(tab.label)}
-              className={cn(
-                'rounded-full px-3 py-1 text-[12px] font-medium transition-colors',
-                activeFilter === tab.label
-                  ? 'bg-clawx-ac text-white'
-                  : 'border border-black/10 text-[#3c3c43] hover:bg-[#f2f2f7]',
-              )}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </div>
-
-        {skills.map((skill) => (
-          <div key={skill.id} className="flex items-center justify-between gap-4 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-medium text-[#000000]">
-                {skill.name}
-                {skill.tag && (
-                  <span className="ml-1.5 text-[12px] font-normal text-[#8e8e93]">{skill.tag}</span>
-                )}
-              </p>
-              <p className="mt-0.5 text-[12px] text-[#8e8e93]">{skill.desc}</p>
-            </div>
-            <Switch
-              checked={skill.enabled}
-              onCheckedChange={(v) =>
-                setSkills((prev) =>
-                  prev.map((sk) => (sk.id === skill.id ? { ...sk, enabled: v } : sk)),
-                )
-              }
-            />
+        {!isGatewayConnected && (
+          <div className="my-2 rounded-lg border border-[#fbbf24]/30 bg-[#fffbeb] px-3 py-2.5">
+            <span className="text-[13px] text-[#92400e]">⚠ Gateway 未连接。请先连接 Gateway 再管理技能。</span>
           </div>
-        ))}
+        )}
+
+        {skillsLoading ? (
+          <div className="py-6 text-center text-[13px] text-[#8e8e93]">加载中...</div>
+        ) : skills.length === 0 ? (
+          <div className="py-6 text-center text-[13px] text-[#8e8e93]">暂无已安装技能</div>
+        ) : (
+          skills.map((skill) => (
+            <div key={skill.id} className="flex items-center justify-between gap-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-[#000000]">
+                  {skill.icon && <span className="mr-1.5">{skill.icon}</span>}
+                  {skill.name}
+                  {skill.version && <span className="ml-1.5 text-[11px] font-normal text-[#c6c6c8]">v{skill.version}</span>}
+                  {skill.isCore && <span className="ml-1.5 rounded-full bg-[#f2f2f7] px-1.5 py-0.5 text-[10px] text-[#8e8e93]">核心</span>}
+                </p>
+                <p className="mt-0.5 text-[12px] text-[#8e8e93]">{skill.description}</p>
+              </div>
+              <Switch
+                checked={skill.enabled}
+                disabled={skill.isCore}
+                onCheckedChange={(v) => void handleSkillToggle(skill.id, v)}
+              />
+            </div>
+          ))
+        )}
 
         <div className="py-3 text-center">
           <button type="button" className="text-[13px] text-clawx-ac hover:underline">
@@ -1217,11 +1262,12 @@ function SkillsMcpSection() {
         title="Model Context Protocol 接入"
         headerRight={
           <div className="flex gap-2">
-            <button type="button" className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
+            <button type="button" onClick={() => void fetchMcp()} className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
               ↻ 刷新
             </button>
             <button
               type="button"
+              onClick={() => setAddMcpOpen(true)}
               className="rounded-lg bg-clawx-ac px-3 py-1 text-[12px] font-medium text-white hover:bg-[#0056b3]"
             >
               + 添加服务
@@ -1232,55 +1278,86 @@ function SkillsMcpSection() {
         <div className="py-2">
           <p className="mb-2 text-[13px] font-medium text-[#000000]">快速添加模版 (Quick Templates)</p>
           <div className="flex flex-wrap gap-2">
-            {MCP_QUICK_TEMPLATES.map((t) => (
+            {MCP_QUICK_TEMPLATES.map((tpl) => (
               <button
-                key={t}
+                key={tpl.label}
                 type="button"
+                onClick={() => void handleQuickTemplate(tpl)}
                 className="rounded-full border border-black/10 px-3 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
               >
-                + {t}
+                + {tpl.label}
               </button>
             ))}
           </div>
         </div>
 
-        {MCP_SERVICES_DATA.map((svc) => (
-          <div key={svc.name} className="border-t border-black/[0.04] py-3">
-            <div className="mb-1.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span
-                  className="rounded px-1.5 py-0.5 text-[10px] font-bold text-white"
-                  style={{ background: svc.tagBg }}
-                >
-                  {svc.tag}
-                </span>
-                <span className="text-[13px] font-medium text-[#000000]">{svc.name}</span>
-              </div>
-              {svc.status === 'active' ? (
-                <span className="rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[11px] font-medium text-[#059669]">
-                  Active
-                </span>
-              ) : (
+        {mcpLoading ? (
+          <div className="py-4 text-center text-[13px] text-[#8e8e93]">加载中...</div>
+        ) : mcpServers.length === 0 ? (
+          <div className="py-6 text-center text-[13px] text-[#8e8e93]">暂无 MCP 服务，点击「+ 添加服务」或使用快速模版</div>
+        ) : (
+          mcpServers.map((svc) => (
+            <div key={svc.name} className="border-t border-black/[0.04] py-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={cn('h-2 w-2 rounded-full', svc.enabled ? 'bg-[#10b981]' : 'bg-[#d1d5db]')} />
+                  <span className="text-[13px] font-medium text-[#000000]">{svc.name}</span>
+                  <span className="rounded-full bg-[#f2f2f7] px-1.5 py-0.5 text-[10px] text-[#8e8e93]">{svc.transport}</span>
+                </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    onClick={() => void handleMcpToggle(svc.name)}
                     className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
                   >
-                    唤醒
+                    {svc.enabled ? '停用' : '启用'}
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+                    onClick={() => void handleMcpDelete(svc.name)}
+                    className="rounded-md border border-[#ef4444]/20 px-2.5 py-1 text-[12px] text-[#ef4444] hover:bg-[#fef2f2]"
                   >
-                    配置
+                    删除
                   </button>
                 </div>
-              )}
+              </div>
+              <code className="font-mono text-[11px] text-[#8e8e93]">{svc.command} {svc.args.join(' ')}</code>
             </div>
-            <code className="font-mono text-[11px] text-[#8e8e93]">{svc.cmd}</code>
-          </div>
-        ))}
+          ))
+        )}
       </SettingsCard>
+
+      {/* Add MCP modal */}
+      {addMcpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="w-[400px] rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-[16px] font-semibold text-[#000000]">添加 MCP 服务</h2>
+            <div className="mb-3">
+              <p className="mb-1 text-[13px] font-medium text-[#000000]">服务名称</p>
+              <input value={addMcpName} onChange={(e) => setAddMcpName(e.target.value)} placeholder="如：My GitHub MCP"
+                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] outline-none focus:border-clawx-ac" />
+            </div>
+            <div className="mb-3">
+              <p className="mb-1 text-[13px] font-medium text-[#000000]">命令 (Command)</p>
+              <input value={addMcpCmd} onChange={(e) => setAddMcpCmd(e.target.value)} placeholder="npx"
+                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] font-mono outline-none focus:border-clawx-ac" />
+            </div>
+            <div className="mb-5">
+              <p className="mb-1 text-[13px] font-medium text-[#000000]">参数 (Args，空格分隔)</p>
+              <input value={addMcpArgs} onChange={(e) => setAddMcpArgs(e.target.value)} placeholder="-y @modelcontextprotocol/server-github"
+                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] font-mono outline-none focus:border-clawx-ac" />
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setAddMcpOpen(false); setAddMcpName(''); setAddMcpCmd(''); setAddMcpArgs(''); }}
+                className="flex-1 rounded-xl border border-black/10 py-2 text-[13px] text-[#3c3c43] hover:bg-[#f2f2f7]">取消</button>
+              <button type="button" onClick={() => void handleAddMcp()} disabled={addMcpSaving || !addMcpName.trim() || !addMcpCmd.trim()}
+                className="flex-1 rounded-xl bg-clawx-ac py-2 text-[13px] font-medium text-white hover:bg-[#0056b3] disabled:opacity-50">
+                {addMcpSaving ? '添加中...' : '确认添加'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
