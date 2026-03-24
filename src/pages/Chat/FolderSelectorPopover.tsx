@@ -3,6 +3,7 @@
  * 点击弹出，提供"选择文件夹"和"最近文件夹"两个入口。
  */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { FolderPlus, Clock, Folder, ChevronRight } from 'lucide-react';
 import { invokeIpc } from '@/lib/api-client';
 
@@ -55,23 +56,6 @@ export function FolderSelectorPopover({
   }, [onClose]);
 
   const recentFolders = useMemo(() => (showRecent ? loadRecent() : []), [showRecent]);
-
-  // Click-outside closes the popover
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        !popoverRef.current?.contains(target) &&
-        !submenuRef.current?.contains(target) &&
-        !anchorRef.current?.contains(target)
-      ) {
-        handleClose();
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isOpen, handleClose, anchorRef]);
 
   // Escape closes
   useEffect(() => {
@@ -126,12 +110,19 @@ export function FolderSelectorPopover({
 
   if (!isOpen) return null;
 
-  return (
-    <>
+  const anchorRect = anchorRef.current?.getBoundingClientRect();
+  const popoverStyle = anchorRect
+    ? { top: anchorRect.top - 8, left: anchorRect.left, transform: 'translateY(-100%)' }
+    : { top: 0, left: 0 };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[200]" onMouseDown={handleClose}>
       {/* Main popover */}
       <div
         ref={popoverRef}
-        className="absolute bottom-full left-0 z-50 mb-2 w-52 overflow-hidden rounded-xl border border-[#c6c6c8] bg-white shadow-lg"
+        className="fixed z-[201] w-52 overflow-hidden rounded-xl border border-[#c6c6c8] bg-white shadow-lg"
+        style={popoverStyle}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {/* 选择新文件夹 */}
         <button
@@ -165,7 +156,7 @@ export function FolderSelectorPopover({
           {showRecent && (
             <div
               ref={submenuRef}
-              className="absolute bottom-0 left-full z-[60] ml-1 w-64 max-h-72 overflow-y-auto rounded-xl border border-[#c6c6c8] bg-white shadow-lg"
+              className="absolute bottom-0 left-full z-[210] ml-1 w-64 max-h-72 overflow-y-auto rounded-xl border border-[#c6c6c8] bg-white shadow-lg"
               onMouseEnter={handleSubmenuEnter}
               onMouseLeave={handleSubmenuLeave}
             >
@@ -189,7 +180,8 @@ export function FolderSelectorPopover({
           )}
         </div>
       </div>
-    </>
+    </div>,
+    document.body,
   );
 }
 

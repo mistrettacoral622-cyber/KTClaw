@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { SendHorizontal, Square, X, Mic, FileText, Film, Music, FileArchive, File, Loader2, AtSign, Folder } from 'lucide-react';
+import { SendHorizontal, Square, X, Paperclip, FileText, Film, Music, FileArchive, File, Loader2, AtSign, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { hostApiFetch } from '@/lib/host-api';
@@ -454,7 +454,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                   className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[13px] font-medium text-emerald-700 transition-colors hover:bg-emerald-500/15"
                   title={workingDirectory}
                 >
-                  <Folder className="h-3.5 w-3.5" />
+                  <FolderOpen className="h-3.5 w-3.5" />
                   <span className="max-w-[160px] truncate">
                     {workingDirectory.split(/[\\/]/).filter(Boolean).pop() ?? workingDirectory}
                   </span>
@@ -465,7 +465,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
           )}
 
           <div data-testid="chat-composer-toolbar" className="chat-composer-toolbar relative flex items-end gap-2.5 py-2.5 pl-[18px] pr-[14px]">
-            {/* Mic / Attach Button */}
+            {/* Attach Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -474,7 +474,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
               disabled={disabled || sending}
               title={t('composer.attachFiles')}
             >
-              <Mic className="h-4 w-4" />
+              <Paperclip className="h-4 w-4" />
             </Button>
 
             {/* Folder / Working Directory Button */}
@@ -493,7 +493,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                   ? (workingDirectory.split(/[\\/]/).filter(Boolean).pop() ?? workingDirectory)
                   : '选择工作目录'}
               >
-                <Folder className="h-4 w-4" />
+                <FolderOpen className="h-4 w-4" />
               </Button>
               <FolderSelectorPopover
                 isOpen={folderPopoverOpen}
@@ -521,26 +521,20 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
                 >
                   <AtSign className="h-4 w-4" />
                 </Button>
-                {pickerOpen && (
-                  <div className="absolute left-0 bottom-full z-20 mb-2 w-72 overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-card">
-                    <div className="px-3 py-2 text-[11px] font-medium text-muted-foreground/80">
-                      {t('composer.agentPickerTitle', { currentAgent: currentAgentName })}
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {mentionableAgents.map((agent) => (
-                        <AgentPickerItem
-                          key={agent.id}
-                          agent={agent}
-                          selected={agent.id === targetAgentId}
-                          onSelect={() => {
-                            setTargetAgentId(agent.id);
-                            setPickerOpen(false);
-                            textareaRef.current?.focus();
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                {pickerOpen && createPortal(
+                  <AgentPickerDropdown
+                    anchorRef={pickerRef}
+                    agents={mentionableAgents}
+                    targetAgentId={targetAgentId}
+                    title={t('composer.agentPickerTitle', { currentAgent: currentAgentName })}
+                    onSelect={(id) => {
+                      setTargetAgentId(id);
+                      setPickerOpen(false);
+                      textareaRef.current?.focus();
+                    }}
+                    onClose={() => setPickerOpen(false)}
+                  />,
+                  document.body,
                 )}
               </div>
             )}
@@ -788,6 +782,57 @@ function ModelPickerDropdown({
             })}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Agent Picker Dropdown (portal) ──────────────────────────────
+
+function AgentPickerDropdown({
+  anchorRef,
+  agents,
+  targetAgentId,
+  title,
+  onSelect,
+  onClose,
+}: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  agents: AgentSummary[];
+  targetAgentId: string | null;
+  title: string;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setPos({ top: rect.top - 8, left: rect.left });
+  }, [anchorRef]);
+
+  return (
+    <div className="fixed inset-0 z-[200]" onMouseDown={onClose}>
+      <div
+        className="fixed z-[201] w-72 overflow-hidden rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl"
+        style={{ top: pos.top, left: pos.left, transform: 'translateY(-100%)' }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="px-3 py-2 text-[11px] font-medium text-[#8e8e93]">
+          {title}
+        </div>
+        <div className="max-h-64 overflow-y-auto">
+          {agents.map((agent) => (
+            <AgentPickerItem
+              key={agent.id}
+              agent={agent}
+              selected={agent.id === targetAgentId}
+              onSelect={() => onSelect(agent.id)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
