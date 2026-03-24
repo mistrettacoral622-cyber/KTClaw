@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Clock3, Download, Pin, Plus, Trash2 } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settings';
 import { useAgentsStore } from '@/stores/agents';
 import { useChatStore } from '@/stores/chat';
 import { CHANNEL_ICONS } from '@/types/channel';
 import type { AttachedFileMeta } from '@/stores/chat';
+import {
+  buildConversationExportFileName,
+  buildConversationMarkdownExport,
+  encodeUtf8ToBase64,
+} from '@/lib/chat-session-export';
+import { hostApiFetch } from '@/lib/host-api';
+import { usePinnedSessions } from '@/lib/pinned-sessions';
+import { toast } from 'sonner';
 
 export function ContextRail() {
   const rightPanelMode = useSettingsStore((state) => state.rightPanelMode);
@@ -17,9 +25,16 @@ export function ContextRail() {
   });
 
   const currentAgentId = useChatStore((s) => s.currentAgentId);
+  const currentSessionKey = useChatStore((s) => s.currentSessionKey);
+  const sessions = useChatStore((s) => s.sessions);
+  const sessionLabels = useChatStore((s) => s.sessionLabels);
+  const sessionLastActivity = useChatStore((s) => s.sessionLastActivity);
+  const deleteSession = useChatStore((s) => s.deleteSession);
+  const newSession = useChatStore((s) => s.newSession);
   const agents = useAgentsStore((s) => s.agents);
   const defaultAgentId = useAgentsStore((s) => s.defaultAgentId);
   const currentAgent = agents.find((a) => a.id === (currentAgentId ?? defaultAgentId)) ?? agents[0] ?? null;
+  const { pinnedSessionKeySet, toggleSessionPinned } = usePinnedSessions();
 
   // Aggregate all attached files from current session messages
   const messages = useChatStore((s) => s.messages);
@@ -37,6 +52,19 @@ export function ContextRail() {
     }
     return files;
   }, [messages]);
+  const currentSession = useMemo(
+    () => sessions.find((session) => session.key === currentSessionKey) ?? null,
+    [currentSessionKey, sessions],
+  );
+  const currentSessionLabel = sessionLabels[currentSessionKey]
+    ?? currentSession?.label
+    ?? currentSession?.displayName
+    ?? currentSessionKey;
+  const currentSessionActivity = sessionLastActivity[currentSessionKey]
+    ?? currentSession?.updatedAt
+    ?? null;
+  const isPinnedSession = pinnedSessionKeySet.has(currentSessionKey);
+  const isMainSession = currentSessionKey.endsWith(':main');
 
   const toggleModule = (key: keyof typeof openModules) => {
     setOpenModules((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -71,6 +99,162 @@ export function ContextRail() {
             ))}
           </div>
         )}
+      </aside>
+    );
+  }
+
+  if (rightPanelMode === 'session') {
+    const handleExportSession = async () => {
+      if (messages.length === 0) {
+        toast.info('当前会话还没有可导出的消息');
+        return;
+      }
+
+      try {
+        const markdown = buildConversationMarkdownExport(messages, currentSessionKey);
+        const result = await hostApiFetch<{ success?: boolean; savedPath?: string; error?: string }>('/api/files/save-image', {
+          method: 'POST',
+          body: JSON.stringify({
+            base64: encodeUtf8ToBase64(markdown),
+            mimeType: 'text/markdown',
+            defaultFileName: buildConversationExportFileName(currentSessionKey),
+          }),
+        });
+
+        if (result?.success) {
+          toast.success(result.savedPath ? `已导出到 ${result.savedPath}` : '会话导出成功');
+          return;
+        }
+        if (result?.error) {
+          toast.info(`已取消导出：${result.error}`);
+          return;
+        }
+        toast.info('已取消导出');
+      } catch (error) {
+        toast.error(`导出会话失败：${String(error)}`);
+      }
+    };
+
+    const handleDeleteSession = async () => {
+      await deleteSession(currentSessionKey);
+      setRightPanelMode(null);
+    };
+
+    const handleNewSession = () => {
+      newSession();
+      setRightPanelMode(null);
+    };
+
+    return (
+      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+        <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
+          <span className="text-[14px] font-semibold text-[#000000]">会话详情</span>
+          <button
+            type="button"
+            aria-label="关闭会话详情面板"
+            onClick={() => setRightPanelMode(null)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div className="px-5 py-5">
+          <div className="rounded-2xl border border-black/[0.06] bg-[#fafafc] p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-[16px] font-semibold text-[#000000]">{currentSessionLabel}</p>
+                <p className="mt-1 text-[12px] text-[#8e8e93]">{currentAgent?.name ?? 'KTClaw'}</p>
+              </div>
+              {isPinnedSession ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-white px-2 py-1 text-[11px] text-[#3c3c43]">
+                  <Pin className="h-3 w-3" />
+                  已置顶
+                </span>
+              ) : null}
+            </div>
+
+            <div className="space-y-2 text-[12px] text-[#3c3c43]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#8e8e93]">会话 Key</span>
+                <span className="max-w-[180px] truncate font-mono">{currentSessionKey}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#8e8e93]">消息数</span>
+                <span>{messages.length}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[#8e8e93]">最后活跃</span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock3 className="h-3 w-3" />
+                  {formatSessionActivity(currentSessionActivity)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={handleNewSession}
+              aria-label="新建会话"
+              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                新建会话
+              </span>
+              <span className="text-[11px] text-[#8e8e93]">开始新上下文</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleExportSession()}
+              aria-label="导出 Markdown"
+              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                导出 Markdown
+              </span>
+              <span className="text-[11px] text-[#8e8e93]">当前会话</span>
+            </button>
+
+            {!isMainSession ? (
+              <button
+                type="button"
+                onClick={() => toggleSessionPinned(currentSessionKey)}
+                aria-label={isPinnedSession ? '取消置顶会话' : '置顶会话'}
+                className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Pin className="h-4 w-4" />
+                  {isPinnedSession ? '取消置顶会话' : '置顶会话'}
+                </span>
+                <span className="text-[11px] text-[#8e8e93]">同步侧边栏排序</span>
+              </button>
+            ) : (
+              <div className="rounded-xl border border-dashed border-black/[0.08] px-3 py-3 text-[12px] text-[#8e8e93]">
+                主会话会跟随分身固定存在，因此不提供置顶或删除。
+              </div>
+            )}
+
+            {!isMainSession ? (
+              <button
+                type="button"
+                onClick={() => void handleDeleteSession()}
+                aria-label="删除会话"
+                className="flex w-full items-center justify-between rounded-xl border border-[#ef4444]/20 bg-[#fef2f2] px-3 py-3 text-left text-[13px] font-medium text-[#b91c1c] transition-colors hover:bg-[#fee2e2]"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  删除会话
+                </span>
+                <span className="text-[11px] text-[#ef4444]">仅移除当前会话</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
       </aside>
     );
   }
@@ -235,4 +419,9 @@ function FileRow({ file }: { file: AttachedFileMeta }) {
       </div>
     </div>
   );
+}
+
+function formatSessionActivity(value: number | null): string {
+  if (!value || !Number.isFinite(value)) return '暂无记录';
+  return new Date(value).toLocaleString();
 }

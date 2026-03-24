@@ -96,10 +96,17 @@ tail -30 continue/progress.txt
 * **当前状态**：update store + Settings UI 已有 `check/download/install/progress`
 * **剩余工作**：决定是否补 Host API update route，并继续保证更新链路一致性
 
-#### 13. 会话管理增强（置顶 / 更多导出入口待补）
+#### 13. 会话管理增强 ✅ session-13
 
-* **当前状态**：全局搜索（含 chat history）、slash 导出、侧边栏会话/分身右键导出入口、会话置顶、结构化 Activity 与 live 刷新已补齐；按用户反馈已移除聊天页顶部 Export 按钮
-* **剩余工作**：补会话详情里的更多导出入口，以及更完整的会话管理表面
+* **状态**：已完成
+* **实现**：
+  * `src/pages/Chat/index.tsx`：聊天页顶部补 `会话` 抽屉入口，保留 `文件` / `Agent` 双抽屉体系，不重新引入顶部 Export 按钮
+  * `src/components/workbench/context-rail.tsx`：新增会话详情面板，补齐当前会话的导出 Markdown、新建会话、置顶/取消置顶、删除会话与基础元数据展示
+  * `src/lib/pinned-sessions.ts` + `src/components/layout/Sidebar.tsx`：抽离会话置顶状态，保证 Session 抽屉与 Sidebar 的置顶状态实时同步
+* **测试**：
+  * `tests/unit/context-rail-session-panel.test.tsx`
+  * `tests/unit/workbench-context-rail.test.tsx`
+  * `tests/unit/workbench-shell.test.tsx`
 
 #### 14. QuickAction / Markdown 增强 ✅ session-12
 
@@ -240,7 +247,7 @@ tail -40 continue/progress.txt
 
 - 【已实现】Slash 命令：session-10 已补 `/` 解析、候选下拉、Arrow/Tab/Enter 键盘交互、本地命令执行与导出链路。
 - 【已实现】会话搜索 / 全局搜索：session-10 已补 Sidebar 搜索入口、`Ctrl/Cmd+K`，并支持 sessions / agents / pages / chat history 搜索。
-- 【部分完成】会话置顶 / 导出：session-11 已补侧栏会话置顶、会话/分身右键导出；聊天详情里的更多导出入口仍未补齐。
+- 【已实现】会话置顶 / 导出 / 会话详情：session-11/13 已补侧栏会话置顶、会话/分身右键导出，以及聊天页 `会话` 抽屉中的导出/新建/置顶/删除入口。
 - 【部分完成】QuickAction bar：session-12 已把空态快捷入口升级为更接近持久 QuickAction bar 的结构，但二级 prompt panel / 更深的技能映射仍未补齐。
 - 【不完善】思维链展示：当前 `src/pages/Chat/ChatMessage.tsx` 仅静态折叠；参考 `reference/LobsterAI-main/src/renderer/components/cowork/CoworkSessionDetail.tsx` 的流式 reasoning 展示。
 - 【不完善】AskUserQuestion / 工具确认 / 文件变更预览：当前 `src/pages/TaskKanban/AskUserQuestionWizard.tsx` 与 `src/pages/TaskKanban/index.tsx` 只覆盖简化审批流；参考 `CoworkQuestionWizard.tsx` 与 `CoworkPermissionModal.tsx`。
@@ -306,7 +313,6 @@ tail -40 continue/progress.txt
 
 ### Cross-Project Priority Candidates
 
-- P0：继续补会话详情里的更多导出入口，并继续打磨已落地的会话置顶 / Slash commands / 全局搜索 / 会话搜索。
 - P0：补齐 MCP runtime 生命周期、per-server 日志与工具可见性。
 - P0：继续深化 Activity 和 Cron 运行详情视图（Activity 结构化卡片已落地），补 delivery / error context。
 - P0：补真实 Playwright E2E、CI 深度门禁、release / install smoke。

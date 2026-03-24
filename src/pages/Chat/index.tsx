@@ -195,6 +195,18 @@ export function Chat() {
             </button>
             <button
               type="button"
+              onClick={() => setRightPanelMode(rightPanelMode === 'session' ? null : 'session')}
+              className={cn(
+                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                rightPanelMode === 'session'
+                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
+                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
+              )}
+            >
+              🗂 {t('common:workbench.session')}
+            </button>
+            <button
+              type="button"
               onClick={() => setRightPanelMode(rightPanelMode === 'agent' ? null : 'agent')}
               className={cn(
                 'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',

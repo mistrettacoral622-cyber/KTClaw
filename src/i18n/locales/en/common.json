@@ -62,6 +62,7 @@
         "imChannel": "IM Channel",
         "cronTasks": "Cron Tasks",
         "files": "Files",
+        "session": "Session",
         "agent": "Agent"
     }
 }

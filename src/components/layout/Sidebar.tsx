@@ -40,6 +40,7 @@ import {
 } from '@/components/search/GlobalSearchModal';
 import { useTranslation } from 'react-i18next';
 import { AccordionGroup } from '@/components/workbench/accordion-group';
+import { usePinnedSessions } from '@/lib/pinned-sessions';
 import { toast } from 'sonner';
 
 type SidebarMetaItem = {
@@ -50,7 +51,6 @@ type SidebarMetaItem = {
 
 const NOTIFICATION_REFRESH_INTERVAL_MS = 60_000;
 const INITIAL_NOTIFICATION_TIME = Date.now();
-const PINNED_SESSIONS_STORAGE_KEY = 'clawx-sidebar-pinned-sessions';
 
 export function Sidebar() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed);
@@ -120,29 +120,7 @@ export function Sidebar() {
   const [batchMode, setBatchMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ key: string; label: string; x: number; y: number } | null>(null);
-  const [pinnedSessionKeys, setPinnedSessionKeys] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem(PINNED_SESSIONS_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-    } catch {
-      return [];
-    }
-  });
-  const pinnedSessionKeySet = useMemo(() => new Set(pinnedSessionKeys), [pinnedSessionKeys]);
-
-  useEffect(() => {
-    localStorage.setItem(PINNED_SESSIONS_STORAGE_KEY, JSON.stringify(pinnedSessionKeys));
-  }, [pinnedSessionKeys]);
-
-  const toggleSessionPinned = useCallback((sessionKey: string) => {
-    setPinnedSessionKeys((prev) => (
-      prev.includes(sessionKey)
-        ? prev.filter((key) => key !== sessionKey)
-        : [...prev, sessionKey]
-    ));
-  }, []);
+  const { pinnedSessionKeySet, toggleSessionPinned } = usePinnedSessions();
 
   const toggleSelect = useCallback((key: string) => {
     setSelectedKeys((prev) => {

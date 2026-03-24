@@ -62,6 +62,7 @@
         "imChannel": "IM チャンネル",
         "cronTasks": "定期タスク",
         "files": "ファイル",
+        "session": "会話",
         "agent": "Agent"
     }
 }

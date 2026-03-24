@@ -62,6 +62,7 @@
         "imChannel": "IM 频道",
         "cronTasks": "定时任务",
         "files": "文件",
+        "session": "会话",
         "agent": "Agent"
     }
 }

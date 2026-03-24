@@ -1466,6 +1466,55 @@ Focus: Honor the latest user feedback by disabling Docs / Help for now and remov
 
 ### 下一步
 - 继续 `PLAN-2026-03-24-SESSION-MANAGEMENT`，优先补会话详情里的更多导出与管理入口；完成后再切到平台级 P0（MCP runtime closure 或 E2E / release gates）
+[2026-03-24 22:29 +08:00] Session: Session-13 current-session drawer + shared pin state
+Focus: Close the remaining session-management gap by adding a real session-detail surface instead of reintroducing a top Export button
+
+### 完成内容
+1. **聊天页补会话详情抽屉**
+   - `src/pages/Chat/index.tsx` 顶部工具区新增 `会话` 入口，沿用现有右侧抽屉模式
+   - 明确保持顶部不出现独立 `Export` 按钮，继续遵守用户最新交互要求
+2. **补会话详情管理表面**
+   - `src/components/workbench/context-rail.tsx` 新增 `session` 模式
+   - 会话详情面板补齐：
+     - 当前会话标题 / session key / 消息数 / 最后活跃时间
+     - `新建会话`
+     - `导出 Markdown`
+     - `置顶会话 / 取消置顶会话`
+     - `删除会话`
+   - 主会话（`...:main`）不暴露置顶/删除，避免无意义或危险操作
+3. **抽离会话置顶共享状态**
+   - 新增 `src/lib/pinned-sessions.ts`
+   - Sidebar 与 Session 抽屉现在共用同一套 pinned-session 读写逻辑，并通过浏览器事件保证同页即时同步
+4. **i18n 与测试**
+   - `src/i18n/locales/en/common.json`、`zh/common.json`、`ja/common.json` 新增 `workbench.session`
+   - 新增 `tests/unit/context-rail-session-panel.test.tsx`
+   - 更新 `tests/unit/workbench-context-rail.test.tsx`
+   - 更新 `tests/unit/workbench-shell.test.tsx`
+
+### TDD / 验证
+- 红阶段：
+  - `pnpm test -- tests/unit/workbench-shell.test.tsx` → 因聊天页不存在 `会话` 入口而失败
+  - `pnpm test -- tests/unit/workbench-context-rail.test.tsx` → 因 `session` 模式仍落到 Agent 抽屉而失败
+  - `pnpm test -- tests/unit/context-rail-session-panel.test.tsx` → 因不存在会话详情面板与动作而失败
+- 绿阶段 targeted：
+  - `pnpm test -- tests/unit/workbench-shell.test.tsx` → 通过
+  - `pnpm test -- tests/unit/workbench-context-rail.test.tsx` → 通过
+  - `pnpm test -- tests/unit/context-rail-session-panel.test.tsx` → 通过
+  - `pnpm test -- tests/unit/sidebar-session-pinning.test.tsx` → 通过
+- 全量验证：
+  - `pnpm run typecheck` → 通过
+  - `pnpm exec tsc -p tsconfig.node.json --noEmit` → 通过
+  - `pnpm run lint` → 通过
+  - `pnpm run build:vite` → 通过
+  - `pnpm test` → `81/81` files, `384/384` tests passed
+
+### 决策
+- 会话详情入口采用 `会话` 抽屉，而不是把导出重新塞回聊天头部
+- 置顶状态不再只由 Sidebar 私有维护，而是提升为可复用 UI 能力
+- `PLAN-2026-03-24-SESSION-MANAGEMENT` 到此收口，下一焦点切到 `PLAN-2026-03-24-PLATFORM-CLOSURE`
+
+### 下一步
+- 从平台级 P0 中二选一继续推进：`MCP runtime closure` 或 `E2E / release verification gates`
 [2026-03-24 20:50 +08:00] Session: Session-10c agent context export entry
 Focus: Make export discoverable from clone context menus
 

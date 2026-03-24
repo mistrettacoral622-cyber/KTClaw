@@ -6,6 +6,9 @@ import { useSettingsStore } from '@/stores/settings';
 const chatState = {
   messages: [] as Array<Record<string, unknown>>,
   currentSessionKey: 'agent:main:main',
+  sessions: [{ key: 'agent:main:main', label: 'Main Session', updatedAt: 1711111111111 }],
+  sessionLabels: { 'agent:main:main': 'Main Session' },
+  sessionLastActivity: { 'agent:main:main': 1711111111111 },
   loading: false,
   sending: false,
   error: null as string | null,
@@ -19,6 +22,8 @@ const chatState = {
   clearError: vi.fn(),
   cleanupEmptySession: vi.fn(),
   switchSession: vi.fn(),
+  deleteSession: vi.fn(),
+  newSession: vi.fn(),
 };
 
 const gatewayState = {
@@ -75,6 +80,7 @@ vi.mock('@/pages/Chat/ChatInput', () => ({
 function translate(key: string, vars?: Record<string, unknown>): string {
   const map: Record<string, string> = {
     'common:workbench.files': '文件',
+    'common:workbench.session': '会话',
     'common:workbench.agent': 'Agent',
     'chat:workbench.quickConfig': '快速配置',
     'workbench.quickConfig': '快速配置',
@@ -117,12 +123,16 @@ describe('Chat workbench shell', () => {
     render(<Chat />);
 
     expect(screen.getByRole('button', { name: /文件/ })).toBeInTheDocument();
+    const sessionButton = screen.getByRole('button', { name: /会话/ });
     const agentButton = screen.getByRole('button', { name: /Agent/ });
+    expect(sessionButton).toBeInTheDocument();
     expect(agentButton).toBeInTheDocument();
     expect(screen.getAllByText('KaiTianClaw').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: '有什么我可以帮你的？' })).toBeInTheDocument();
     expect(screen.getByText('代码重构方案')).toBeInTheDocument();
     expect(screen.getByText('检查系统健康度')).toBeInTheDocument();
+    fireEvent.click(sessionButton);
+    expect(useSettingsStore.getState().rightPanelMode).toBe('session');
     fireEvent.click(agentButton);
     expect(useSettingsStore.getState().rightPanelMode).toBe('agent');
     expect(screen.getByTestId('chat-input')).toBeInTheDocument();

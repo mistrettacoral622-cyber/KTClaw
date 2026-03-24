@@ -39,7 +39,7 @@ interface SettingsState {
   // UI State
   sidebarCollapsed: boolean;
   contextRailCollapsed: boolean;
-  rightPanelMode: 'agent' | 'files' | null;
+  rightPanelMode: 'agent' | 'files' | 'session' | null;
   devModeUnlocked: boolean;
   remoteRpcEnabled: boolean;
   p2pSyncEnabled: boolean;
@@ -111,7 +111,7 @@ interface SettingsState {
   setAutoDownloadUpdate: (value: boolean) => void;
   setSidebarCollapsed: (value: boolean) => void;
   setContextRailCollapsed: (value: boolean) => void;
-  setRightPanelMode: (mode: 'agent' | 'files' | null) => void;
+  setRightPanelMode: (mode: 'agent' | 'files' | 'session' | null) => void;
   setDevModeUnlocked: (value: boolean) => void;
   setRemoteRpcEnabled: (value: boolean) => void;
   setP2pSyncEnabled: (value: boolean) => void;
@@ -189,7 +189,7 @@ const defaultSettings = {
   autoDownloadUpdate: false,
   sidebarCollapsed: false,
   contextRailCollapsed: true,
-  rightPanelMode: null as 'agent' | 'files' | null,
+  rightPanelMode: null as 'agent' | 'files' | 'session' | null,
   devModeUnlocked: false,
   remoteRpcEnabled: false,
   p2pSyncEnabled: false,

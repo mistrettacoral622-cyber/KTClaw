@@ -31,4 +31,17 @@ describe('ContextRail', () => {
     expect(useSettingsStore.getState().rightPanelMode).toBe(null);
     expect(screen.queryByText('会话文件')).not.toBeInTheDocument();
   });
+
+  it('renders session mode and closes via the close button', () => {
+    useSettingsStore.setState({ rightPanelMode: 'session' as never });
+    render(<ContextRail />);
+
+    expect(screen.getByText('会话详情')).toBeInTheDocument();
+
+    const closeButton = screen.getByRole('button', { name: '关闭会话详情面板' });
+    fireEvent.click(closeButton);
+
+    expect(useSettingsStore.getState().rightPanelMode).toBe(null);
+    expect(screen.queryByText('会话详情')).not.toBeInTheDocument();
+  });
 });
