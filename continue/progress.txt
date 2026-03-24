@@ -1235,3 +1235,30 @@ Focus: 清除所有静态假数据，接入真实 store/API
 ### 剩余待办
 - P1 Feature #6 记忆提取：规则引擎 + LLM judge 已完成 → 关闭
 - P2 Feature #11 应用自动更新链路一致性：决定是否补 Host API update route
+
+---
+## 2026-03-24 Session-8: Sidebar Agent CRUD + Provider Expansion + Model Config
+
+### 完成内容
+1. **侧边栏分身管理**：
+   - "+" 按钮改为打开 AddAgentDialog 创建分身
+   - 分身列表显示在"分身"手风琴下，点击切换对话，右键菜单支持"设置"和"删除"
+   - 提取 AddAgentDialog 和 AgentSettingsModal 为共享组件
+
+2. **Provider 注册表扩展**：
+   - 新增 DeepSeek（deepseek-chat, deepseek-reasoner）
+   - 新增 Zhipu GLM（glm-4-plus, glm-4-flash）
+   - 新增 Baichuan（Baichuan4, Baichuan3-Turbo）
+   - 三处同步：types.ts, registry.ts, providers.ts
+
+3. **分身独立模型选择**：
+   - 后端 updateAgentProfile 支持 model 参数
+   - AgentSummary 新增 model 字段（原始值）
+   - AgentSettingsModal 新增模型下拉框，从已配置 provider 账户构建选项
+   - 支持"继承默认"选项清除分身专属模型
+
+### 验证结果
+- pnpm test → 74/74 files, 343/343 tests passed
+- pnpm run typecheck → 通过
+- pnpm exec tsc -p tsconfig.node.json --noEmit → 通过
+- pnpm run build:vite → 通过
