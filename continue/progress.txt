@@ -1192,3 +1192,46 @@ Focus: 清除所有静态假数据，接入真实 store/API
 ### 最新全量结果
 - `pnpm test` → `73/73` files, `326/326` tests passed
 - `Prompt.md` 已追加“功能验证快照”，按用户点名的 6 个功能域列出状态与证据
+
+---
+## 2026-03-24 Session-7: Security Hardening + Memory Extraction Enhancement
+
+### 完成内容
+1. **P0 CORS 安全加固**：
+   - 新增 `applyCorsOrigin()` 在 `route-utils.ts`，仅对受信 Electron renderer origin (`app://.`, `null`) 设置 `Access-Control-Allow-Origin`
+   - 在 `server.ts` 请求入口处统一调用，所有响应自动继承 CORS 限制
+   - 新增 4 条 CORS 安全测试（`route-utils-security.test.ts`）
+
+2. **P1 记忆提取增强（规则 + LLM judge）**：
+   - 重构 `scoreImplicitCandidate` 为加减分模型（profile +0.28, ownership +0.22, preference +0.18, style +0.14, request -0.14, transient -0.18, procedural -0.4, non-durable -0.2）
+   - 新增 `REQUEST_STYLE_RE` 检测请求式文本
+   - 新增长度调整（短文本 -0.2，中等 +0.06，超长 -0.08），profile/ownership 豁免短文本惩罚
+   - LLM judge 新增 TTL 缓存（10min, max 256 entries）
+   - 收紧 borderline margin 从 0.12 到 0.08
+   - LLM 输入截断到 280 字符
+   - LLM prompt 传递更丰富上下文（rule_score, threshold, rule_reason）
+   - 新增 `clearLlmJudgeCache()` 导出
+   - 新增 13 条评分引擎单测（`memory-extract-scoring.test.ts`）
+
+3. **Backlog 全量验证与关闭**：
+   - P0 #1: session token auth 已就位 + CORS 已加固 → 关闭
+   - P0 #2: API key 已 mask、SSE 已在 auth 后、control UI URL 已剥离 token → 关闭
+   - P1 #5: transport 已固定 IPC-only，无 localStorage 控制 → 关闭
+   - P1 #6: renderer fetch fallback 仅在 browserPreviewMode → 关闭
+   - P1 #10: secret-store 已用 safeStorage 加密 → 关闭
+   - P1 #12: delete agent 已有 PID 安全门 → 关闭
+   - P1 #13: clearTopLevelChannelMirror 已处理 default 删除 → 关闭
+   - P1 #14: validateChannelConfig 已正确使用 runOpenClawDoctor → 关闭
+   - P1 #28: chat-input test 已有 4 参数断言 → 关闭
+   - P1 #33: sidebar test 已正确 mock fetchAgents/fetchChannels → 关闭
+   - P2 #38: 后端 console.* 已全部走 logger → 关闭
+
+### 验证结果
+- pnpm test → 74/74 files, 343/343 tests passed
+- pnpm run typecheck → 通过
+- pnpm exec tsc -p tsconfig.node.json --noEmit → 通过
+- pnpm run build:vite → 通过
+
+### 剩余待办
+- P1 Feature #6 记忆提取：规则引擎 + LLM judge 已完成 → 关闭
+- P2 Feature #11 应用自动更新链路一致性：决定是否补 Host API update route

@@ -14,6 +14,25 @@ export async function parseJsonBody<T>(req: IncomingMessage): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+/**
+ * Trusted origins that may call the Host API.
+ * Electron custom protocol origins and null (file:// sends Origin: null).
+ */
+const TRUSTED_ORIGINS = new Set(['app://.', 'null']);
+
+/**
+ * Apply CORS origin restriction early in the request lifecycle.
+ * Only trusted renderer origins receive `Access-Control-Allow-Origin`.
+ * Untrusted origins are silently denied by the browser's CORS policy,
+ * adding defense-in-depth on top of session-token auth.
+ */
+export function applyCorsOrigin(req: IncomingMessage, res: ServerResponse): void {
+  const origin = req.headers.origin;
+  if (origin && TRUSTED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+}
+
 export function setCorsHeaders(res: ServerResponse): void {
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');

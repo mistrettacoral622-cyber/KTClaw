@@ -5,6 +5,7 @@ const QUESTION_SUFFIX_RE = /(吗|么|呢|是否|是不是|可不可以|能不能
 const PROCEDURAL_RE = /(run\s+(?:the\s+)?following\s+command|\b(?:cd|npm|pnpm|yarn|node|python|bash|sh|git|curl|wget)\b|\$[A-Z_][A-Z0-9_]*|&&|--[a-z0-9-]+|\/tmp\/|\.sh\b|\.bat\b|\.ps1\b|报错|错误|修复|排查|帮我|请帮|命令|安装依赖)/i;
 const TRANSIENT_RE = /(今天|昨天|刚刚|刚才|这周|本周|本月|临时|暂时|today|yesterday|this\s+week|this\s+month|temporary|for\s+now)/i;
 const NON_DURABLE_RE = /(我有个问题|有个问题|报错|错误|exception|stack\s*trace|todo|临时任务|一次性)/i;
+const REQUEST_STYLE_RE = /^(?:请|麻烦|帮我|请你|帮忙|请帮我|use|please|can you|could you|would you)/i;
 
 const PROFILE_RE = /(我叫|我的名字是|我是|我住在|我来自|我在.*工作|my\s+name\s+is|i\s+am|i['’]m|i\s+live\s+in|i['’]m\s+from|i\s+work\s+as)/i;
 const OWNERSHIP_RE = /(我有(?!\s*(?:个|一个)\s*问题)|我养了|我家有|i\s+have|i\s+own|my\s+(?:dog|cat|child|daughter|son))/i;
@@ -59,6 +60,47 @@ interface LlmJudgeDecision {
   confidence: number;
 }
 
+// ── LLM Judge Cache ──────────────────────────────────────────────
+
+const LLM_CACHE_MAX_SIZE = 256;
+const LLM_CACHE_TTL_MS = 10 * 60 * 1000;
+const LLM_INPUT_MAX_CHARS = 280;
+const LLM_BORDERLINE_MARGIN = 0.08;
+
+interface CachedJudgeResult {
+  decision: LlmJudgeDecision;
+  createdAt: number;
+}
+
+const llmJudgeCache = new Map<string, CachedJudgeResult>();
+
+function buildCacheKey(candidate: MemoryCandidate, guardLevel: MemoryGuardLevel): string {
+  return `${guardLevel}|${candidate.explicit ? 1 : 0}|${normalizeText(candidate.text)}`;
+}
+
+function getCachedJudge(key: string): LlmJudgeDecision | null {
+  const cached = llmJudgeCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.createdAt > LLM_CACHE_TTL_MS) {
+    llmJudgeCache.delete(key);
+    return null;
+  }
+  return cached.decision;
+}
+
+function setCachedJudge(key: string, decision: LlmJudgeDecision): void {
+  llmJudgeCache.set(key, { decision, createdAt: Date.now() });
+  while (llmJudgeCache.size > LLM_CACHE_MAX_SIZE) {
+    const oldestKey = llmJudgeCache.keys().next().value;
+    if (!oldestKey || typeof oldestKey !== 'string') break;
+    llmJudgeCache.delete(oldestKey);
+  }
+}
+
+export function clearLlmJudgeCache(): void {
+  llmJudgeCache.clear();
+}
+
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
@@ -95,28 +137,66 @@ function shouldKeepCandidate(value: string, allowShort = false): boolean {
 }
 
 function scoreImplicitCandidate(text: string): { confidence: number; reason: string } | null {
-  const isProfile = PROFILE_RE.test(text);
-  const isOwnership = OWNERSHIP_RE.test(text);
-  const isPreference = PREFERENCE_RE.test(text);
-  const isStylePreference = STYLE_INTRO_RE.test(text) && STYLE_TARGET_RE.test(text);
-  if (!shouldKeepCandidate(text, isProfile || isOwnership)) return null;
-  if (NON_DURABLE_RE.test(text)) return null;
-  if (TRANSIENT_RE.test(text) && !isStylePreference) return null;
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  if (isQuestionLike(normalized)) return null;
+  if (SMALL_TALK_RE.test(normalized)) return null;
+
+  let score = 0.5;
+  let strongestReason = 'neutral';
+
+  const isProfile = PROFILE_RE.test(normalized);
+  const isOwnership = OWNERSHIP_RE.test(normalized);
+  const isPreference = PREFERENCE_RE.test(normalized);
+  const isStylePreference = STYLE_INTRO_RE.test(normalized) && STYLE_TARGET_RE.test(normalized);
 
   if (isProfile) {
-    return { confidence: 0.92, reason: 'implicit:profile' };
+    score += 0.28;
+    strongestReason = 'implicit:profile';
   }
   if (isOwnership) {
-    return { confidence: 0.84, reason: 'implicit:ownership' };
+    score += 0.22;
+    if (strongestReason === 'neutral') strongestReason = 'implicit:ownership';
   }
   if (isPreference) {
-    return { confidence: 0.78, reason: 'implicit:preference' };
+    score += 0.18;
+    if (strongestReason === 'neutral') strongestReason = 'implicit:preference';
   }
   if (isStylePreference) {
-    return { confidence: 0.74, reason: 'implicit:assistant-style' };
+    score += 0.14;
+    if (strongestReason === 'neutral') strongestReason = 'implicit:assistant-style';
   }
 
-  return null;
+  if (REQUEST_STYLE_RE.test(normalized)) {
+    score -= 0.14;
+    if (strongestReason === 'neutral') strongestReason = 'request-like';
+  }
+  if (TRANSIENT_RE.test(normalized)) {
+    score -= 0.18;
+    if (strongestReason === 'neutral') strongestReason = 'transient-like';
+  }
+  if (PROCEDURAL_RE.test(normalized)) {
+    score -= 0.4;
+    strongestReason = 'procedural-like';
+  }
+  if (NON_DURABLE_RE.test(normalized)) {
+    score -= 0.2;
+    if (strongestReason === 'neutral') strongestReason = 'non-durable';
+  }
+
+  // Length-based adjustments (profile/ownership exempt from short-text penalty)
+  if (normalized.length < 6 && !isProfile && !isOwnership) {
+    score -= 0.2;
+  } else if (normalized.length <= 120) {
+    score += 0.06;
+  } else if (normalized.length > 240) {
+    score -= 0.08;
+  }
+
+  const clampedScore = Math.max(0, Math.min(1, score));
+  if (strongestReason === 'neutral') return null;
+
+  return { confidence: clampedScore, reason: strongestReason };
 }
 
 function thresholdFor(guardLevel: MemoryGuardLevel, explicit: boolean): number {
@@ -132,8 +212,9 @@ function thresholdFor(guardLevel: MemoryGuardLevel, explicit: boolean): number {
 
 function shouldRunJudge(candidate: MemoryCandidate, guardLevel: MemoryGuardLevel): boolean {
   if (candidate.action !== 'add' || candidate.explicit) return false;
+  if (candidate.reason === 'procedural-like') return false;
   const threshold = thresholdFor(guardLevel, false);
-  return Math.abs(candidate.confidence - threshold) <= 0.12;
+  return Math.abs(candidate.confidence - threshold) <= LLM_BORDERLINE_MARGIN;
 }
 
 function dedupeCandidates(candidates: MemoryCandidate[], maxCandidates: number): MemoryCandidate[] {
@@ -257,16 +338,34 @@ function parseJudgeDecision(text: string): LlmJudgeDecision | null {
   }
 }
 
-async function runLlmJudge(candidate: MemoryCandidate, options: MemoryJudgeOptions): Promise<LlmJudgeDecision | null> {
+async function runLlmJudge(
+  candidate: MemoryCandidate,
+  options: MemoryJudgeOptions,
+  guardLevel: MemoryGuardLevel,
+): Promise<LlmJudgeDecision | null> {
   if (!options.enabled) return null;
   const endpoint = typeof options.endpoint === 'string' ? options.endpoint.trim() : '';
   const model = typeof options.model === 'string' ? options.model.trim() : '';
   const apiKey = typeof options.apiKey === 'string' ? options.apiKey.trim() : '';
   if (!endpoint || !model || !apiKey) return null;
 
+  const cacheKey = buildCacheKey(candidate, guardLevel);
+  const cached = getCachedJudge(cacheKey);
+  if (cached) return cached;
+
+  const normalizedText = normalizeText(candidate.text).slice(0, LLM_INPUT_MAX_CHARS);
+  if (!normalizedText) return null;
+
   const timeoutMs = Math.max(300, Math.min(10_000, options.timeoutMs ?? 5000));
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const systemPrompt = [
+    'You classify whether a sentence is durable long-term user memory.',
+    'Accept only stable personal facts or stable assistant preferences.',
+    'Reject questions, temporary context, one-off tasks, and procedural command text.',
+    'Return JSON only: {"accepted":boolean,"confidence":number,"reason":string}',
+  ].join(' ');
 
   try {
     const response = await fetch(endpoint, {
@@ -280,15 +379,17 @@ async function runLlmJudge(candidate: MemoryCandidate, options: MemoryJudgeOptio
         model,
         max_tokens: 120,
         temperature: 0,
-        system: 'Decide if text is durable long-term memory. Return JSON only: {"accepted":boolean,"confidence":number}.',
+        system: systemPrompt,
         messages: [
           {
             role: 'user',
             content: JSON.stringify({
-              text: candidate.text,
+              text: normalizedText,
               action: candidate.action,
-              explicit: candidate.explicit,
-              confidence: candidate.confidence,
+              is_explicit: candidate.explicit,
+              rule_score: Number(candidate.confidence.toFixed(3)),
+              threshold: Number(thresholdFor(guardLevel, candidate.explicit).toFixed(3)),
+              rule_reason: candidate.reason,
             }),
           },
         ],
@@ -299,7 +400,11 @@ async function runLlmJudge(candidate: MemoryCandidate, options: MemoryJudgeOptio
     if (!response.ok) return null;
     const payload = await response.json();
     const text = extractResponseText(payload);
-    return parseJudgeDecision(text);
+    const decision = parseJudgeDecision(text);
+    if (decision) {
+      setCachedJudge(cacheKey, decision);
+    }
+    return decision;
   } catch {
     return null;
   } finally {
@@ -329,7 +434,7 @@ export async function extractMemoryFromMessages(
     const shouldJudge = shouldRunJudge(candidate, guardLevel);
     if (shouldJudge && options.judge?.enabled) {
       attempted += 1;
-      const judged = await runLlmJudge(candidate, options.judge);
+      const judged = await runLlmJudge(candidate, options.judge, guardLevel);
       if (judged) {
         acceptedByFinalDecision = judged.accepted;
       } else {

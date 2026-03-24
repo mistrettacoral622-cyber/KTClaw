@@ -2,96 +2,32 @@
   "project": "ClawX Control Plane",
   "objective": "Build and polish the ClawX Electron + React workbench UI with full backend integration.",
   "current_phase": "in_progress",
-  "current_focus": "session-6-feature-assurance-complete",
-  "last_updated": "2026-03-24T03:20:30+08:00",
+  "current_focus": "session-7-security-and-memory-enhancement-complete",
+  "last_updated": "2026-03-24T19:45:00+08:00",
   "tasks": [
     {
-      "id": "SESSION-4-001",
-      "title": "Fix task.json",
+      "id": "SESSION-7-001",
+      "title": "CORS origin restriction for Host API",
+      "type": "security",
+      "status": "done",
+      "priority": "P0",
+      "description": "Added applyCorsOrigin() to restrict Access-Control-Allow-Origin to trusted Electron renderer origins only. Defense-in-depth on top of session-token auth."
+    },
+    {
+      "id": "SESSION-7-002",
+      "title": "Memory extraction enhancement (rules + LLM judge)",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1",
+      "description": "Upgraded memory-extract.ts: additive/subtractive scoring model, LLM result caching (TTL 10min, max 256), borderline detection (0.08 margin), request-style detection, richer LLM context, length-based scoring adjustments."
+    },
+    {
+      "id": "SESSION-7-003",
+      "title": "Backlog verification and closure",
       "type": "ops",
       "status": "done",
-      "priority": "P0"
-    },
-    {
-      "id": "SESSION-4-002",
-      "title": "Fix Electron 22 TS errors",
-      "type": "bugfix",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-4-003",
-      "title": "Fix Vitest env split",
-      "type": "bugfix",
-      "status": "done",
-      "priority": "P0"
-    },
-    {
-      "id": "SESSION-4-004",
-      "title": "Fix frontend UX issues",
-      "type": "feature",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-5-001",
-      "title": "context-rail file panel real data",
-      "type": "feature",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-5-002",
-      "title": "TeamMap real hierarchy + node detail",
-      "type": "feature",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-5-003",
-      "title": "Route-level lazy loading",
-      "type": "perf",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-5-004",
-      "title": "update store cleanup + shell API unification",
-      "type": "bugfix",
-      "status": "done",
-      "priority": "P1"
-    },
-    {
-      "id": "SESSION-6-001",
-      "title": "Settings Run Doctor fix",
-      "type": "bugfix",
-      "status": "done",
       "priority": "P1",
-      "description": "runDoctor() 改为标准 hostApiFetch 调用"
-    },
-    {
-      "id": "SESSION-6-002",
-      "title": "Delete API key should not remove provider runtime",
-      "type": "bugfix",
-      "status": "done",
-      "priority": "P1",
-      "description": "syncDeletedProviderApiKeyToRuntime 改为仅删 key"
-    },
-    {
-      "id": "SESSION-6-003",
-      "title": "Provider list read side-effect fix",
-      "type": "bugfix",
-      "status": "done",
-      "priority": "P1",
-      "description": "getAllProvidersWithKeyInfo 不应在读取阶段删除 non-builtin provider"
-    },
-    {
-      "id": "SESSION-6-004",
-      "title": "Settings remaining dead buttons",
-      "type": "feature",
-      "status": "done",
-      "priority": "P1",
-      "description": "添加路由规则/路径白名单/编辑黑名单/添加工具许可 接线"
+      "description": "Verified P0 #1/#2, P1 #5/#6/#10/#12/#13/#14, P1 test #28/#33, P2 #38 — all previously resolved. Updated Prompt.md to reflect closures."
     }
   ]
 }

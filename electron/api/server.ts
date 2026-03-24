@@ -20,7 +20,7 @@ import { handleMemoryRoutes } from './routes/memory';
 import { handleMcpRoutes } from './routes/mcp';
 import { handleCostsRoutes } from './routes/costs';
 import { handleAlertsRoutes } from './routes/alerts';
-import { isAuthorizedHostApiRequest, sendJson, sendNoContent, sendUnauthorized } from './route-utils';
+import { isAuthorizedHostApiRequest, applyCorsOrigin, sendJson, sendNoContent, sendUnauthorized } from './route-utils';
 
 type RouteHandler = (
   req: IncomingMessage,
@@ -53,6 +53,8 @@ const routeHandlers: RouteHandler[] = [
 export function startHostApiServer(ctx: HostApiContext, port = PORTS.CLAWX_HOST_API): Server {
   const server = createServer(async (req, res) => {
     try {
+      // Apply CORS origin restriction before any response is sent.
+      applyCorsOrigin(req, res);
       const requestUrl = new URL(req.url || '/', `http://127.0.0.1:${port}`);
       if (req.method === 'OPTIONS') {
         sendNoContent(res);
