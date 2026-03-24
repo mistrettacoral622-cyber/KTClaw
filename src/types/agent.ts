@@ -3,6 +3,7 @@ export interface AgentSummary {
   name: string;
   persona: string;
   isDefault: boolean;
+  model: string;
   modelDisplay: string;
   inheritedModel: boolean;
   workspace: string;

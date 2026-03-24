@@ -81,6 +81,7 @@ export interface AgentSummary {
   name: string;
   persona: string;
   isDefault: boolean;
+  model: string;
   modelDisplay: string;
   inheritedModel: boolean;
   workspace: string;
@@ -472,6 +473,10 @@ async function buildSnapshotFromConfig(config: AgentConfigDocument): Promise<Age
   const agents: AgentSummary[] = entries.map((entry) => {
     const modelLabel = formatModelLabel(entry.model) || defaultModelLabel || 'Not configured';
     const inheritedModel = !formatModelLabel(entry.model) && Boolean(defaultModelLabel);
+    const rawModel = typeof entry.model === 'string' ? entry.model.trim()
+      : (entry.model && typeof (entry.model as AgentModelConfig).primary === 'string')
+        ? (entry.model as AgentModelConfig).primary!.trim()
+        : '';
     const entryIdNorm = normalizeAgentIdForBinding(entry.id);
     const ownedChannels = agentChannelSets.get(entryIdNorm) ?? new Set<string>();
     return {
@@ -479,6 +484,7 @@ async function buildSnapshotFromConfig(config: AgentConfigDocument): Promise<Age
       name: entry.name || (entry.id === MAIN_AGENT_ID ? MAIN_AGENT_NAME : entry.id),
       persona: normalizeAgentPersona(entry.persona),
       isDefault: entry.id === defaultAgentId,
+      model: rawModel,
       modelDisplay: modelLabel,
       inheritedModel,
       workspace: entry.workspace || (entry.id === MAIN_AGENT_ID ? getDefaultWorkspacePath(config) : `~/.openclaw/workspace-${entry.id}`),
@@ -551,7 +557,7 @@ export async function createAgent(name: string, persona?: string): Promise<Agent
 
 export async function updateAgentProfile(
   agentId: string,
-  updates: { name?: string; persona?: string },
+  updates: { name?: string; persona?: string; model?: string },
 ): Promise<AgentsSnapshot> {
   return withConfigLock(async () => {
     const config = await readOpenClawConfig() as AgentConfigDocument;
@@ -569,11 +575,22 @@ export async function updateAgentProfile(
       ? normalizeAgentPersona(updates.persona)
       : normalizeAgentPersona(currentEntry.persona);
 
-    entries[index] = {
+    const updatedEntry: AgentListEntry = {
       ...currentEntry,
       name: normalizedName,
       persona: normalizedPersona,
     };
+
+    if (updates.model !== undefined) {
+      const trimmedModel = updates.model.trim();
+      if (trimmedModel) {
+        updatedEntry.model = trimmedModel;
+      } else {
+        delete updatedEntry.model;
+      }
+    }
+
+    entries[index] = updatedEntry;
 
     config.agents = {
       ...agentsConfig,
@@ -581,7 +598,7 @@ export async function updateAgentProfile(
     };
 
     await writeOpenClawConfig(config);
-    logger.info('Updated agent profile', { agentId, name: normalizedName, persona: normalizedPersona });
+    logger.info('Updated agent profile', { agentId, name: normalizedName, persona: normalizedPersona, model: updates.model });
     return buildSnapshotFromConfig(config);
   });
 }

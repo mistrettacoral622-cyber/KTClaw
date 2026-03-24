@@ -19,8 +19,11 @@ import { useNotificationsStore } from '@/stores/notifications';
 import { type Notification } from '@/stores/notifications';
 import { CHANNEL_ICONS } from '@/types/channel';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AddAgentDialog } from '@/components/agents/AddAgentDialog';
+import { AgentSettingsModal } from '@/components/agents/AgentSettingsModal';
 import { useTranslation } from 'react-i18next';
 import { AccordionGroup } from '@/components/workbench/accordion-group';
+import { toast } from 'sonner';
 
 type SidebarMetaItem = {
   name: string;
@@ -66,8 +69,16 @@ export function Sidebar() {
   }, [isGatewayRunning, loadHistory, loadSessions]);
 
   const fetchAgents = useAgentsStore((s) => s.fetchAgents);
+  const agents = useAgentsStore((s) => s.agents);
+  const createAgent = useAgentsStore((s) => s.createAgent);
+  const deleteAgent = useAgentsStore((s) => s.deleteAgent);
 
   const { channels, fetchChannels } = useChannelsStore();
+
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const [agentSettingsId, setAgentSettingsId] = useState<string | null>(null);
+  const [agentContextMenu, setAgentContextMenu] = useState<{ agentId: string; agentName: string; x: number; y: number } | null>(null);
+  const activeSettingsAgent = useMemo(() => agents.find((a) => a.id === agentSettingsId) ?? null, [agents, agentSettingsId]);
 
   const notifications = useNotificationsStore((s) => s.notifications);
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
@@ -116,11 +127,11 @@ export function Sidebar() {
 
   // Close context menu on outside click
   useEffect(() => {
-    if (!contextMenu) return;
-    const handler = () => setContextMenu(null);
+    if (!contextMenu && !agentContextMenu) return;
+    const handler = () => { setContextMenu(null); setAgentContextMenu(null); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [contextMenu]);
+  }, [contextMenu, agentContextMenu]);
 
   const groupLabels = {
     clones: '分身',
@@ -203,7 +214,7 @@ export function Sidebar() {
                 type="button"
                 aria-label="添加分身"
                 title="添加分身"
-                onClick={() => navigate('/')}
+                onClick={() => setShowAddAgent(true)}
                 className="flex h-5 w-5 items-center justify-center rounded-md text-[14px] text-[#8e8e93] transition-colors hover:bg-[#e5e5ea] hover:text-[#000000]"
               >
                 ＋
@@ -211,6 +222,38 @@ export function Sidebar() {
             ) : undefined
           }
         >
+          {/* Agent list */}
+          {agents.length > 0 && (
+            <div className="mb-2">
+              {agents.map((agent) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onClick={() => {
+                    switchSession(agent.mainSessionKey);
+                    navigate('/');
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setAgentContextMenu({ agentId: agent.id, agentName: agent.name, x: e.clientX, y: e.clientY });
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-[10px] rounded-lg px-[10px] py-2 text-left text-[14px] transition-[background-color] duration-150',
+                    'text-[#000000] hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]',
+                    isOnChat && currentSessionKey === agent.mainSessionKey && 'bg-white font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.04)]',
+                  )}
+                >
+                  <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none">
+                    {agent.isDefault ? '✦' : '🤖'}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{agent.name}</span>
+                  <span className="shrink-0 text-[11px] text-[#8e8e93] truncate max-w-[80px]">{agent.modelDisplay}</span>
+                </button>
+              ))}
+              <div className="mx-2 my-1 border-t border-black/[0.06] dark:border-white/10" />
+            </div>
+          )}
+
           {orderedSessions.length > 0 ? (
             <>
               {/* Batch mode toolbar */}
@@ -515,6 +558,69 @@ export function Sidebar() {
           </button>
         </div>,
         document.body,
+      )}
+
+      {/* Agent right-click context menu */}
+      {agentContextMenu && createPortal(
+        <div
+          className="fixed z-[200] min-w-[148px] overflow-hidden rounded-xl border border-[#c6c6c8] bg-white py-1 shadow-xl"
+          style={{ top: agentContextMenu.y, left: agentContextMenu.x }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-[#000000] hover:bg-[#f2f2f7]"
+            onClick={() => {
+              setAgentSettingsId(agentContextMenu.agentId);
+              setAgentContextMenu(null);
+            }}
+          >
+            ⚙ 设置
+          </button>
+          {!agents.find((a) => a.id === agentContextMenu.agentId)?.isDefault && (
+            <>
+              <div className="mx-3 my-0.5 border-t border-[#f2f2f7]" />
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-[#ef4444] hover:bg-[#fef2f2]"
+                onClick={async () => {
+                  const id = agentContextMenu.agentId;
+                  setAgentContextMenu(null);
+                  try {
+                    await deleteAgent(id);
+                    toast.success('分身已删除');
+                  } catch (error) {
+                    toast.error(String(error));
+                  }
+                }}
+              >
+                🗑 删除
+              </button>
+            </>
+          )}
+        </div>,
+        document.body,
+      )}
+
+      {/* Add agent dialog */}
+      {showAddAgent && (
+        <AddAgentDialog
+          onClose={() => setShowAddAgent(false)}
+          onCreate={async (name, persona) => {
+            await createAgent(name, persona);
+            setShowAddAgent(false);
+            toast.success('分身已创建');
+          }}
+        />
+      )}
+
+      {/* Agent settings modal */}
+      {activeSettingsAgent && (
+        <AgentSettingsModal
+          agent={activeSettingsAgent}
+          channels={channels}
+          onClose={() => setAgentSettingsId(null)}
+        />
       )}
     </aside>
   );
