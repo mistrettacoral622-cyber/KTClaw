@@ -201,6 +201,141 @@ export function extractToolUse(message: RawMessage | unknown): Array<{ id: strin
   return tools;
 }
 
+export interface ExtractedToolGroup {
+  id: string;
+  name: string;
+  input: unknown;
+  resultText?: string;
+  filePath?: string;
+  changeCount?: number;
+  isFileChange?: boolean;
+}
+
+function collectStructuredText(content: unknown, parts: string[]): void {
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (trimmed) parts.push(trimmed);
+    return;
+  }
+
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      collectStructuredText(item, parts);
+    }
+    return;
+  }
+
+  if (!content || typeof content !== 'object') {
+    return;
+  }
+
+  const record = content as Record<string, unknown>;
+  if (typeof record.text === 'string') {
+    const trimmed = record.text.trim();
+    if (trimmed) parts.push(trimmed);
+  }
+  if (typeof record.thinking === 'string') {
+    const trimmed = record.thinking.trim();
+    if (trimmed) parts.push(trimmed);
+  }
+  if ('content' in record) {
+    collectStructuredText(record.content, parts);
+  }
+}
+
+function stringifyToolResult(result: unknown): string | undefined {
+  if (typeof result === 'string') {
+    const trimmed = result.trim();
+    return trimmed || undefined;
+  }
+
+  const parts: string[] = [];
+  collectStructuredText(result, parts);
+  if (parts.length > 0) {
+    return parts.join('\n\n');
+  }
+
+  if (result == null) {
+    return undefined;
+  }
+
+  try {
+    return JSON.stringify(result, null, 2);
+  } catch {
+    return String(result);
+  }
+}
+
+function getToolInputFilePath(input: unknown): string | undefined {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return undefined;
+  }
+  const record = input as Record<string, unknown>;
+  const value = record.file_path ?? record.filePath ?? record.path ?? record.file;
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function getToolChangeCount(name: string, input: unknown): number | undefined {
+  const normalizedName = name.trim().toLowerCase();
+  if (normalizedName === 'edit') return 1;
+  if (normalizedName !== 'multiedit') return undefined;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return undefined;
+  const edits = (input as Record<string, unknown>).edits;
+  return Array.isArray(edits) && edits.length > 0 ? edits.length : undefined;
+}
+
+function isFileChangeTool(name: string): boolean {
+  const normalizedName = name.trim().toLowerCase();
+  return normalizedName === 'edit' || normalizedName === 'write' || normalizedName === 'multiedit';
+}
+
+export function extractToolGroups(message: RawMessage | unknown): ExtractedToolGroup[] {
+  if (!message || typeof message !== 'object') return [];
+
+  const toolUses = extractToolUse(message);
+  if (toolUses.length === 0) return [];
+
+  const msg = message as Record<string, unknown>;
+  const content = msg.content;
+  const resultById = new Map<string, unknown>();
+  const resultByName = new Map<string, unknown[]>();
+
+  if (Array.isArray(content)) {
+    for (const block of content as ContentBlock[]) {
+      if (block.type !== 'tool_result' && block.type !== 'toolResult') continue;
+      const payload = block.content ?? block.text ?? block;
+      const nameKey = typeof block.name === 'string' ? block.name : '';
+      const idKey = typeof block.id === 'string' ? block.id : '';
+      if (idKey) {
+        resultById.set(idKey, payload);
+      }
+      if (nameKey) {
+        const queue = resultByName.get(nameKey) ?? [];
+        queue.push(payload);
+        resultByName.set(nameKey, queue);
+      }
+    }
+  }
+
+  return toolUses.map((tool) => {
+    const matchedById = tool.id ? resultById.get(tool.id) : undefined;
+    const matchedByNameQueue = matchedById ? undefined : resultByName.get(tool.name);
+    const matchedResult = matchedById ?? matchedByNameQueue?.shift();
+    const filePath = getToolInputFilePath(tool.input);
+    const isFileChange = isFileChangeTool(tool.name);
+
+    return {
+      id: tool.id || tool.name,
+      name: tool.name,
+      input: tool.input,
+      resultText: stringifyToolResult(matchedResult),
+      filePath,
+      changeCount: getToolChangeCount(tool.name, tool.input),
+      isFileChange,
+    };
+  });
+}
+
 /**
  * Format a Unix timestamp (seconds) to relative time string.
  */

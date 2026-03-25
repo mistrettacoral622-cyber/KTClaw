@@ -1589,3 +1589,199 @@ Focus: Make export discoverable from clone context menus
 
 ### 下一步
 - 继续 `PLAN-2026-03-24-SESSION-MANAGEMENT`：补会话置顶与更多 session management 入口
+[2026-03-25 01:31 +08:00] Session: Session-16 platform closure MCP + i18n
+Focus: Close MCP runtime P0 and align MCP UI with KTClaw-callable service management
+
+### 完成内容
+1. MCP backend/runtime
+   - `electron/services/mcp/runtime-manager.ts`
+   - 增加并发 `start/connect` 去重，补真实工具重发现 `refreshTools`
+   - 保留 `start/stop/connect/callTool/logs` 生命周期，并修复 Electron 构建中的 alias 解析
+2. MCP routes / tests
+   - `electron/api/routes/mcp.ts`
+   - `/api/mcp/:name/tools` 改为真实 rediscovery
+   - `tests/unit/mcp-runtime-manager.test.ts` 扩到 7 个用例
+   - `tests/unit/mcp-routes.test.ts` 扩到 8 个用例，覆盖 `connect/stop/tools`
+3. MCP / Settings UI
+   - `src/pages/Skills/McpTab.tsx`
+   - MCP 页按“KTClaw 本身可以调用的 MCP 服务”收口，强调 enable/disable，保留 runtime / tool / logs
+   - `src/pages/Settings/index.tsx`
+   - 设置页 `Skills 与 MCP` 拆成两个 tab，`Skills` 与 `MCP` 分开展示
+4. i18n
+   - 新增 `pnpm run i18n:check`
+   - `scripts/i18n/check-parity.mjs` 与 `tests/unit/i18n-parity.test.ts` 持续可用
+   - 本批 MCP / Settings 文案回收到 locale
+
+### 验证结果
+- `pnpm exec vitest run tests/unit/mcp-tab.test.tsx --project jsdom` → 通过
+- `pnpm exec vitest run tests/unit/settings-center.test.tsx --project jsdom` → 通过
+- `pnpm exec vitest run tests/unit/mcp-runtime-manager.test.ts tests/unit/mcp-routes.test.ts --project node` → 通过
+- `pnpm run i18n:check` → 通过
+- `pnpm run typecheck` → 通过
+- `pnpm exec tsc -p tsconfig.node.json --noEmit` → 通过
+- `pnpm run lint` → 通过
+- `pnpm run build:vite` → 通过
+- `pnpm test` → `87/87` files, `413/413` tests passed
+- `pnpm run test:e2e` → `7/7` passed
+
+### 剩余待办
+- 继续清理其他页面历史硬编码文案
+- P1 的 `Chat / Workbench 深化`
+- P1 的 `Kanban / Costs / Memory / multi-agent runtime`
+
+### 下一步
+- 继续 `PLAN-2026-03-24-PLATFORM-CLOSURE`，优先 `i18n 收口` 与 `Chat / Workbench 深化`
+[2026-03-25 02:36 +08:00] Session: Session-17 wave0-2 partial execution
+Focus: Remove Japanese support, deepen Chat/Workbench approvals, and open multi-agent runtime skeleton
+
+### 完成内容
+1. 波次 0：语言与边界基线
+   - `shared/language.ts`、`src/i18n/index.ts`
+   - 公开语言收敛为 `zh/en`
+   - 删除 `src/i18n/locales/ja/*`
+   - `README.md` / `README.zh-CN.md` 去掉日文入口
+   - `scripts/i18n/check-parity.mjs` 只校验 `en/zh`
+2. 波次 1A：Chat 思维链与思考态
+   - `src/pages/Chat/index.tsx`
+   - 顶部新增 `{分身名} 正在思考中` 运行态提示
+   - `src/pages/Chat/ChatMessage.tsx`
+   - streaming thinking 自动展开；历史 thinking 默认收起
+3. 波次 1B：QuickAction 深化
+   - `src/components/workbench/workbench-empty-state.tsx`
+   - QuickAction 改成二级 PromptPanel
+   - 技能映射标签展示
+   - 确认后回填 `ChatInput` 输入框，不再直接发送
+   - `src/pages/Chat/ChatInput.tsx` / `src/stores/chat.ts`
+   - 新增 composerDraft 底座并兼容旧测试 mock
+4. 波次 1C/1D：审批与 AskUserQuestion
+   - `src/pages/TaskKanban/AskUserQuestionWizard.tsx`
+   - 支持结构化 `toolInput.questions`
+   - 支持已有答案回填与请求上下文展示
+   - `src/pages/TaskKanban/index.tsx`
+   - 非 AskUserQuestion 审批改为专门 review dialog，补完整输入预览与危险操作告警
+5. 波次 2A/2B 第一批
+   - `electron/services/session-runtime-manager.ts`
+   - 新增 runtime skeleton：`spawn/list/kill/steer/wait`
+   - `electron/api/routes/sessions.ts`
+   - 暴露 `/api/sessions/spawn`、`/api/sessions/subagents` 及 action routes
+   - `src/pages/TaskKanban/index.tsx`
+   - ticket 增 `assigneeRole`
+   - 进行中任务禁止手动拖拽
+   - detail panel 增补 role / execution 信息层
+6. 路由稳定性
+   - `src/App.tsx`
+   - 主布局子路由改为 `index + 相对路径`
+   - 修复 browser-preview 下多页面都落回 Chat 的问题，`/cron` e2e 恢复稳定
+
+### 验证结果
+- `pnpm run i18n:check` → 通过（`en/zh`）
+- `pnpm exec vitest run tests/unit/language-detection.test.ts tests/unit/i18n-config.test.ts tests/unit/i18n-parity.test.ts --project jsdom --project node` → 通过
+- `pnpm exec vitest run tests/unit/chat-input.test.tsx tests/unit/chat-message.test.tsx tests/unit/workbench-empty-state.test.tsx tests/unit/workbench-shell.test.tsx tests/unit/task-kanban.test.tsx --project jsdom` → 通过
+- `pnpm exec vitest run tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts --project node` → 通过
+- `pnpm run typecheck` → 通过
+- `pnpm exec tsc -p tsconfig.node.json --noEmit` → 通过
+- `pnpm run lint` → 通过
+- `pnpm test` → `89/89` files, `424/424` tests passed
+- `pnpm run build:vite` → 通过
+- `pnpm run test:e2e` → `7/7` 通过
+
+### 剩余待办
+- 波次 1 仍剩：文件变更预览至少按 turn/tool group 展开 edit/write/multiedit 输入与结果
+- 波次 2 仍剩：Kanban ticket chat history、向 agent 追问、agent work / retry / 状态联动；runtime 工具注册机制与 skills bridge
+- 波次 3~5 基本未开始：Cron / Channels / Costs / Memory / Agent detail / Settings / update / a11y / 工程治理
+
+### 下一步
+- 继续 `PLAN-2026-03-24-PLATFORM-CLOSURE`
+- 优先完成波次 2 剩余项，再推进波次 3
+[2026-03-25 09:13 +08:00] Session: Session-18 wave2-kanban-runtime + cron-overview
+Focus: Continue wave 2 runtime/Kanban linkage and start wave 3 Cron overview
+
+### 完成内容
+1. Kanban ↔ runtime 联动
+   - `src/pages/TaskKanban/index.tsx`
+   - ticket 新增 `runtimeSessionId`、`runtimeTranscript`
+   - detail panel 可 `Start work`、`Send follow-up`、`Stop runtime`、`Retry work`
+   - 通过 `/api/sessions/spawn`、`/api/sessions/subagents/:id/steer`、`/kill` 联动
+   - transcript 在 detail panel 内展示，形成最小 ticket chat history
+2. Cron 总览第一批深化
+   - `src/pages/Cron/index.tsx`
+   - 增加状态筛选：`全部状态 / 仅失败 / 仅启用中`
+   - 增加最近更新时间
+   - 增加配置/执行异常 banner
+
+### 验证结果
+- `pnpm exec vitest run tests/unit/task-kanban.test.tsx --project jsdom` → 通过
+- `pnpm exec vitest run tests/unit/cron-page.test.tsx --project jsdom` → 通过
+- `pnpm exec vitest run tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts --project node` → 通过
+- `pnpm run lint` → 通过
+- `pnpm run typecheck` → 通过
+
+### 剩余待办
+- wave 2 仍剩：
+  - runtime 真正的 subagent orchestration
+  - runtime 工具注册机制 / skills bridge
+  - Kanban 更深的 agent work / retry / 状态联动细节
+- wave 3 仍剩：
+  - Cron pipeline 建模/编辑闭环
+  - failure alert / deliveryBestEffort
+  - Channels/backend runtime 抽象
+  - Costs 的 job/cron drill-down 与 realtime stream
+
+### 下一步
+- 继续 wave 2 剩余 runtime / Kanban 联动
+- 然后补 wave 3 的 Channels + Costs
+[2026-03-25 10:52 +08:00] Session: Session-19 wave2-runtime-closure + chat-file-preview + costs-top-crons
+Focus: Close the remaining Wave 2 runtime/Kanban loop, ship chat file-change preview, and start Wave 3 costs drill-down
+
+### 完成内容
+1. Wave 2 runtime backend 真闭环
+   - `electron/services/session-runtime-manager.ts`
+   - runtime 从内存 stub 升级为 Gateway-backed adapter
+   - `spawn/steer` 走 `chat.send`
+   - `kill` 走 `chat.abort`
+   - `list/wait` 走 `sessions.list` + `chat.history`
+   - 记录真实 `sessionKey` / `runId` / `status` / `lastError` / transcript
+   - spawn 时补齐 capability snapshot：连接中的 MCP tools + 已启用 skills
+   - `electron/api/routes/sessions.ts` 改为异步路由并保持原 Host API 路径
+   - `electron/main/index.ts` 注入 `gatewayManager` 和 MCP tool snapshot provider
+2. Wave 2 Kanban 状态联动深化
+   - `src/pages/TaskKanban/index.tsx`
+   - active runtime ticket 轮询 `/api/sessions/subagents/:id/wait`
+   - `running -> in-progress`
+   - `blocked -> blocked`
+   - `waiting_approval -> review`
+   - `completed -> review-ready result`
+   - `error/killed/stopped -> failed`
+   - 保持 `Start work / Send follow-up / Stop runtime / Retry work` 联动
+3. Chat / Workbench 文件变更预览收口
+   - `src/pages/Chat/message-utils.ts`
+   - 新增 tool use/result 配对提取
+   - `src/pages/Chat/ChatMessage.tsx`
+   - `edit/write/multiedit` 按 turn/tool group 展示输入、结果、文件路径与 edit 数
+4. Wave 3 Costs 第一批
+   - `electron/utils/token-usage.ts` / `electron/utils/token-usage-core.ts`
+   - transcript usage entry 增 `cronJobId`
+   - `electron/api/routes/costs.ts`
+   - 新增 `/api/costs/by-cron`
+   - `src/pages/Costs/index.tsx`
+   - Dashboard 新增 `Top Crons` 卡片
+
+### 验证结果
+- `pnpm test -- tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts tests/unit/task-kanban.test.tsx tests/unit/chat-message.test.tsx tests/unit/token-usage-scan.test.ts tests/unit/costs-routes.test.ts tests/unit/costs-page.test.tsx` → `26/26` 通过
+- `pnpm test -- tests/unit/task-kanban.test.tsx` → `12/12` 通过
+- `pnpm test -- tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts` → `4/4` 通过
+- `pnpm exec vitest run tests/unit/token-usage-scan.test.ts tests/unit/costs-routes.test.ts tests/unit/costs-page.test.tsx --project node --project jsdom` → `4/4` 通过
+- `pnpm run typecheck` → 通过
+- `pnpm exec tsc -p tsconfig.node.json --noEmit` → 通过
+- `pnpm run lint` → 通过
+- `pnpm run build:vite` → 通过
+
+### 剩余待办
+- P0 i18n 收口：继续清理其他页面历史硬编码文案
+- Wave 2：runtime 仍缺更完整的 subagent tree / tool execution path / durable persistence
+- Wave 3：Cron pipeline / failure alert / Channels capability runtime / Costs job-level drill-down 与 realtime stream
+- Wave 4~5：Memory / Agent detail / Settings / update / UX / a11y / 工程治理
+
+### 下一步
+- 继续 `PLAN-2026-03-24-PLATFORM-CLOSURE`
+- 优先补 Wave 2 剩余 runtime/tool registry 深化，再推进 Wave 3 的 Channels + Cron pipeline

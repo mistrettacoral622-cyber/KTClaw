@@ -31,11 +31,21 @@ interface ModelSummary {
   count: number;
 }
 
+interface CronSummary {
+  cronJobId: string;
+  cronName: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  sessions: number;
+}
+
 export async function handleCostsRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
-  _ctx: HostApiContext,
+  ctx: HostApiContext,
 ): Promise<boolean> {
   if (!url.pathname.startsWith('/api/costs/')) return false;
 
@@ -144,6 +154,59 @@ export async function handleCostsRoutes(
     }
 
     const rows = [...modelMap.values()].sort((a, b) => b.totalTokens - a.totalTokens);
+    sendJson(res, 200, rows);
+    return true;
+  }
+
+  if (url.pathname === '/api/costs/by-cron' && req.method === 'GET') {
+    const cronMap = new Map<string, CronSummary>();
+    const sessionSet = new Set<string>();
+
+    let cronNameById = new Map<string, string>();
+    try {
+      const result = await ctx.gatewayManager.rpc<{ jobs?: Array<{ id?: string; name?: string }> }>(
+        'cron.list',
+        { includeDisabled: true },
+      );
+      cronNameById = new Map(
+        (result.jobs ?? [])
+          .filter((job): job is { id: string; name?: string } => typeof job?.id === 'string' && job.id.trim().length > 0)
+          .map((job) => [job.id, job.name?.trim() || job.id]),
+      );
+    } catch {
+      // Fall back to raw job ids when cron metadata is unavailable.
+    }
+
+    for (const entry of entries) {
+      if (!entry.cronJobId) continue;
+      const key = entry.cronJobId;
+      const prev = cronMap.get(key) ?? {
+        cronJobId: key,
+        cronName: cronNameById.get(key) ?? key,
+        totalTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        sessions: 0,
+      };
+      const sessionKey = `${key}:${entry.sessionId}`;
+      if (!sessionSet.has(sessionKey)) {
+        sessionSet.add(sessionKey);
+        prev.sessions += 1;
+      }
+      prev.totalTokens += entry.totalTokens;
+      prev.inputTokens += entry.inputTokens;
+      prev.outputTokens += entry.outputTokens;
+      prev.costUsd += entry.costUsd ?? 0;
+      cronMap.set(key, prev);
+    }
+
+    const rows = [...cronMap.values()]
+      .map((row) => ({
+        ...row,
+        costUsd: Number(row.costUsd.toFixed(6)),
+      }))
+      .sort((a, b) => b.totalTokens - a.totalTokens);
     sendJson(res, 200, rows);
     return true;
   }

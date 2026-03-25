@@ -63,7 +63,7 @@ tail -30 continue/progress.txt
 
 `PLAN-2026-03-24-PLATFORM-CLOSURE`
 
-目标：继续完成平台级与深度功能剩余需求，不再重复已完成的 Chat / Search / Session Management / Docs 停用 / QuickAction / mhchem / Cron 详情 / Activity 中文 / Playwright smoke 批次。
+目标：平台级 P0 中的 `MCP runtime closure`、`Release / install / E2E 深化`、`日文支持移除 / zh-en i18n 基线` 已完成；P1 已完成一部分 `Chat / Workbench` 与 `Kanban` 深化，当前继续推进波次 2 剩余 runtime/kanban 联动，以及后续 `Cron / Channels / Costs / Memory / Settings / a11y`。
 
 ---
 
@@ -71,64 +71,48 @@ tail -30 continue/progress.txt
 
 ### P0
 
-#### 1. MCP runtime closure
+#### 1. i18n 收口
 
-- 补齐 MCP runtime 生命周期
-- 补 `start/stop/connect/listTools/callTool`
-- 补 per-server 日志查看
-- 补工具可见性 / tool discovery
-- 当前仅有配置 CRUD：`electron/api/routes/mcp.ts`、`src/pages/Skills/McpTab.tsx`
-
-#### 2. Release / install / E2E 深化
-
-- 当前已补真实 Playwright smoke 与 CI 执行
-- 剩余：
-  - 扩展到不止单一 browser-preview smoke
-  - 补 release smoke
-  - 补 install smoke
-  - 继续加深 CI 门禁
-
-#### 3. i18n 收口
-
-- 继续把硬编码文案迁回 locale
-- 增加 locale parity / 覆盖检查
-- 当前 Activity 已切中文，但全仓仍有大量硬编码
+- 已补 locale parity / 覆盖检查：`scripts/i18n/check-parity.mjs`、`tests/unit/i18n-parity.test.ts`、`pnpm run i18n:check`
+- 已将本批 `MCP` / `Settings` 新增文案迁回 locale
+- 已移除全部日文支持：`README.ja-JP.md`、`src/i18n/locales/ja/*`、语言入口均已下线
+- 剩余：继续清理仓库其他页面历史硬编码文案
+- 说明：MCP 页面现已按用户补充定义收口为“KTClaw 本身可以调用的 MCP 服务管理页”，启停语义与 Skills 靠近，同时保留 runtime / tool discovery / logs
 
 ### P1
 
 #### 4. Chat / Workbench 深化
 
-- 思维链展示增强：
-  - 流式 reasoning 展示
-  - 自动展开 / 收起
+- 已完成：
+  - 流式 reasoning 自动展开 / 收起
   - reasoning 生成中状态提示
-- QuickAction 深化：
-  - 二级 `PromptPanel`
-  - 技能映射
-  - 回填输入框
-- AskUserQuestion wizard 深化：
-  - 支持结构化 `toolInput.questions`
-  - 支持回填已有答案
-  - 展示请求上下文
-- 工具调用确认 UI：
-  - 专门确认弹窗
-  - 完整 tool input
-  - 危险操作告警
-- 文件变更预览：
-  - 至少按 turn/tool group 展开 edit/write/multiedit 输入与结果
+  - 对话左上角 `{分身名} 正在思考中`
+  - QuickAction 二级 `PromptPanel`
+  - QuickAction 技能映射标签
+  - QuickAction 回填输入框
+  - AskUserQuestion 支持结构化 `toolInput.questions`
+  - AskUserQuestion 支持回填已有答案
+  - AskUserQuestion 展示请求上下文
+  - 工具调用确认 UI：专门 review dialog、完整 tool input、危险操作告警
+  - 文件变更预览：按 turn/tool group 展开 `edit` / `write` / `multiedit` 的输入与结果
 
 #### 5. Kanban 深化
 
-- `assigneeRole`
-- 更完整的 ticket detail panel
-- ticket chat history
-- 向 agent 追问 ticket
-- agent work / retry / 状态联动
-- 进行中任务禁止手动拖拽
+- 已完成：
+  - `assigneeRole`
+  - 更完整的 ticket detail panel
+  - 最小 runtime 联动：`Start work / Send follow-up / Stop runtime / Retry work`
+  - 最小 ticket chat history（基于 runtime transcript）
+  - 进行中任务禁止手动拖拽
+  - active runtime ticket 轮询 `/wait`
+  - `running / blocked / waiting_approval / completed / error/killed/stopped` → ticket `workState` / column 状态联动
+  - `completed` 自动进入 review-ready 状态并展示 `workResult`
+- 剩余：
+  - 更深的 agent work / retry / 状态联动（跨重启持久化、approval 更细粒度绑定、后续 agent work 深化）
 
 #### 6. Cron 深化
 
-- 面向运维的总览层：
+- 已完成第一批总览层：
   - 状态筛选
   - delivery 配置概览
   - 配置错误 / 执行错误 banner
@@ -145,7 +129,7 @@ tail -30 continue/progress.txt
 #### 7. Costs 深化
 
 - 按 job / cron 提供 drill-down
-- `TopCrons`
+- 已完成：`TopCrons`
 - job cost table
 - 更完整图表与明细层
 - 优化分析：
@@ -179,13 +163,17 @@ tail -30 continue/progress.txt
 
 #### 9. Multi-agent runtime / tool registry
 
-- subagent orchestration
-- `sessions_spawn`
-- subagent `list/kill/steer/wait`
-- thread / session mode
-- attachments / sandbox / timeout
-- runtime 工具注册机制
-- skills 到 runtime bridge
+- 已完成第一批 backend skeleton：
+  - `sessions_spawn`
+  - subagent `list/kill/steer/wait`
+  - thread / session mode、attachments / sandbox / timeout 字段骨架
+  - Gateway-backed runtime adapter：`chat.send` / `chat.abort` / `sessions.list` / `chat.history`
+  - runtime record 持有真实 `sessionKey` / `runId` / `status` / `lastError` / transcript
+  - spawn-time capability snapshot：connected MCP tools + enabled skills
+- 剩余：
+  - 更完整的 subagent tree orchestration / durable persistence
+  - runtime 工具执行路径与 registry 深化
+  - skills 到 runtime 的更深层执行桥接
 
 #### 10. Channels / backend runtime 能力
 
@@ -259,7 +247,7 @@ tail -30 continue/progress.txt
 
 ## 当前参考优先级
 
-1. `MCP runtime closure`
-2. `Release / install / E2E 深化`
-3. `i18n 收口`
-4. `Chat / Kanban / Costs / Memory / multi-agent runtime`
+1. `Wave 2 剩余：multi-agent runtime / Kanban 更深联动`
+2. `Wave 3：Channels / Costs / Cron pipeline`
+3. `Wave 4：Memory / Agent detail / Settings`
+4. `Wave 5：Update / UX / a11y / 工程治理`

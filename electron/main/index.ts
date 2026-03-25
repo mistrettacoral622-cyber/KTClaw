@@ -36,6 +36,9 @@ import { deviceOAuthManager } from '../utils/device-oauth';
 import { browserOAuthManager } from '../utils/browser-oauth';
 import { whatsAppLoginManager } from '../utils/whatsapp-login';
 import { syncAllProviderAuthToRuntime } from '../services/providers/provider-runtime-sync';
+import { McpRuntimeManager } from '../services/mcp/runtime-manager';
+import { SessionRuntimeManager } from '../services/session-runtime-manager';
+import { loadMcpConfig } from '../api/routes/mcp';
 
 const WINDOWS_APP_USER_MODEL_ID = 'app.clawx.desktop';
 
@@ -79,6 +82,8 @@ let mainWindow: BrowserWindow | null = null;
 let gatewayManager!: GatewayManager;
 let clawHubService!: ClawHubService;
 let hostEventBus!: HostEventBus;
+let mcpRuntimeManager!: McpRuntimeManager;
+let sessionRuntimeManager!: SessionRuntimeManager;
 let hostApiServer: Server | null = null;
 const hostApiSessionToken = randomBytes(24).toString('hex');
 const mainWindowFocusState = createMainWindowFocusState();
@@ -267,10 +272,28 @@ async function initialize(): Promise<void> {
   hostApiServer = startHostApiServer({
     gatewayManager,
     clawHubService,
+    mcpRuntimeManager,
+    sessionRuntimeManager,
     eventBus: hostEventBus,
     mainWindow: window,
     hostApiSessionToken,
   });
+
+  const enabledMcpServers = loadMcpConfig().servers.filter((server) => server.enabled);
+  if (enabledMcpServers.length > 0) {
+    void Promise.allSettled(enabledMcpServers.map(async (server) => {
+      if (server.transport === 'stdio') {
+        await mcpRuntimeManager.startServer(server);
+        return;
+      }
+      await mcpRuntimeManager.connectServer(server);
+    })).then((results) => {
+      const rejected = results.filter((result) => result.status === 'rejected');
+      if (rejected.length > 0) {
+        logger.warn(`Failed to restore ${rejected.length} enabled MCP server(s) on startup`);
+      }
+    });
+  }
 
   // Register update handlers
   registerUpdateHandlers(appUpdater, window);
@@ -415,6 +438,19 @@ if (gotTheLock) {
   gatewayManager = new GatewayManager();
   clawHubService = new ClawHubService();
   hostEventBus = new HostEventBus();
+  mcpRuntimeManager = new McpRuntimeManager();
+  sessionRuntimeManager = new SessionRuntimeManager(gatewayManager, {
+    listMcpTools: () => {
+      const configs = loadMcpConfig().servers;
+      return mcpRuntimeManager
+        .listServers(configs)
+        .filter((server) => server.connected)
+        .flatMap((server) => mcpRuntimeManager.listTools(server.name).map((tool) => ({
+          server: tool.server,
+          name: tool.name,
+        })));
+    },
+  });
 
   // When a second instance is launched, focus the existing window instead.
   app.on('second-instance', () => {
@@ -464,6 +500,9 @@ if (gotTheLock) {
     // Awaiting inside before-quit can stall Electron's quit sequence.
     void gatewayManager.stop().catch((err) => {
       logger.warn('gatewayManager.stop() error during quit:', err);
+    });
+    void mcpRuntimeManager.shutdown().catch((err) => {
+      logger.warn('mcpRuntimeManager.shutdown() error during quit:', err);
     });
   });
 }

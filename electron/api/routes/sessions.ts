@@ -8,8 +8,91 @@ export async function handleSessionRoutes(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
-  _ctx: HostApiContext,
+  ctx: HostApiContext,
 ): Promise<boolean> {
+  if (url.pathname === '/api/sessions/spawn' && req.method === 'POST') {
+    try {
+      const body = await parseJsonBody<{
+        parentSessionKey: string;
+        prompt: string;
+        mode?: 'session' | 'thread';
+        agentName?: string;
+        attachments?: string[];
+        sandbox?: string;
+        timeoutMs?: number;
+      }>(req);
+      if (!body.parentSessionKey?.trim() || !body.prompt?.trim()) {
+        sendJson(res, 400, { success: false, error: 'parentSessionKey and prompt are required' });
+        return true;
+      }
+      const session = await ctx.sessionRuntimeManager.spawn({
+        parentSessionKey: body.parentSessionKey.trim(),
+        prompt: body.prompt.trim(),
+        mode: body.mode,
+        agentName: body.agentName,
+        attachments: body.attachments,
+        sandbox: body.sandbox,
+        timeoutMs: body.timeoutMs,
+      });
+      sendJson(res, 200, { success: true, session });
+    } catch (error) {
+      sendJson(res, 500, { success: false, error: String(error) });
+    }
+    return true;
+  }
+
+  if (url.pathname === '/api/sessions/subagents' && req.method === 'GET') {
+    try {
+      const sessions = await ctx.sessionRuntimeManager.list();
+      sendJson(res, 200, { success: true, sessions });
+    } catch (error) {
+      sendJson(res, 500, { success: false, error: String(error) });
+    }
+    return true;
+  }
+
+  const runtimeActionMatch = url.pathname.match(/^\/api\/sessions\/subagents\/([^/]+)\/(kill|steer|wait)$/);
+  if (runtimeActionMatch && req.method === 'POST') {
+    try {
+      const [, encodedId, action] = runtimeActionMatch;
+      const id = decodeURIComponent(encodedId);
+      if (action === 'kill') {
+        const session = await ctx.sessionRuntimeManager.kill(id);
+        if (!session) {
+          sendJson(res, 404, { success: false, error: 'Runtime session not found' });
+          return true;
+        }
+        sendJson(res, 200, { success: true, session });
+        return true;
+      }
+
+      if (action === 'steer') {
+        const body = await parseJsonBody<{ input?: string }>(req);
+        if (!body.input?.trim()) {
+          sendJson(res, 400, { success: false, error: 'input is required' });
+          return true;
+        }
+        const session = await ctx.sessionRuntimeManager.steer(id, body.input.trim());
+        if (!session) {
+          sendJson(res, 404, { success: false, error: 'Runtime session not found' });
+          return true;
+        }
+        sendJson(res, 200, { success: true, session });
+        return true;
+      }
+
+      const session = await ctx.sessionRuntimeManager.wait(id);
+      if (!session) {
+        sendJson(res, 404, { success: false, error: 'Runtime session not found' });
+        return true;
+      }
+      sendJson(res, 200, { success: true, session });
+    } catch (error) {
+      sendJson(res, 500, { success: false, error: String(error) });
+    }
+    return true;
+  }
+
   if (url.pathname === '/api/sessions/delete' && req.method === 'POST') {
     try {
       const body = await parseJsonBody<{ sessionKey: string }>(req);

@@ -86,4 +86,69 @@ describe('token usage session scan', () => {
       ]),
     );
   });
+
+  it('annotates usage entries with cronJobId when cron run logs reference the same session', async () => {
+    const openclawDir = join(testHome, '.openclaw');
+    await mkdir(openclawDir, { recursive: true });
+    await writeFile(join(openclawDir, 'openclaw.json'), JSON.stringify({
+      agents: {
+        list: [
+          { id: 'main', name: 'Main', default: true },
+        ],
+      },
+    }, null, 2), 'utf8');
+
+    const sessionId = 'cron-run-session-1';
+    const sessionsDir = join(openclawDir, 'agents', 'main', 'sessions');
+    await mkdir(sessionsDir, { recursive: true });
+    await writeFile(
+      join(sessionsDir, `${sessionId}.jsonl`),
+      [
+        JSON.stringify({
+          type: 'message',
+          timestamp: '2026-03-25T01:00:00.000Z',
+          message: {
+            role: 'assistant',
+            model: 'gpt-5.2',
+            provider: 'openai',
+            usage: {
+              input: 500,
+              output: 250,
+              total: 750,
+            },
+          },
+        }),
+      ].join('\n'),
+      'utf8',
+    );
+
+    const cronRunsDir = join(openclawDir, 'cron', 'runs');
+    await mkdir(cronRunsDir, { recursive: true });
+    await writeFile(
+      join(cronRunsDir, 'job-nightly-digest.jsonl'),
+      [
+        JSON.stringify({
+          jobId: 'job-nightly-digest',
+          action: 'finished',
+          sessionId,
+          status: 'ok',
+          ts: Date.parse('2026-03-25T01:00:00.000Z'),
+        }),
+      ].join('\n'),
+      'utf8',
+    );
+
+    const { getRecentTokenUsageHistory } = await import('@electron/utils/token-usage');
+    const entries = await getRecentTokenUsageHistory();
+
+    expect(entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sessionId,
+          cronJobId: 'job-nightly-digest',
+          totalTokens: 750,
+        }),
+      ]),
+    );
+  });
 });

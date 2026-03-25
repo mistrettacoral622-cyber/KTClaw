@@ -2,6 +2,7 @@ export interface TokenUsageHistoryEntry {
   timestamp: string;
   sessionId: string;
   agentId: string;
+  cronJobId?: string;
   model?: string;
   provider?: string;
   content?: string;

@@ -76,6 +76,18 @@ describe('Costs page usage display', () => {
     },
   ];
 
+  const cronRows = [
+    {
+      cronJobId: 'job-nightly-digest',
+      cronName: 'Nightly Digest',
+      totalTokens: 900,
+      inputTokens: 500,
+      outputTokens: 400,
+      costUsd: 0.42,
+      sessions: 3,
+    },
+  ];
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(hostApiFetch).mockImplementation(async (path) => {
@@ -87,6 +99,9 @@ describe('Costs page usage display', () => {
       }
       if (path === '/api/costs/by-agent') {
         return agentRows;
+      }
+      if (path === '/api/costs/by-cron') {
+        return cronRows;
       }
       throw new Error(`Unexpected hostApiFetch call: ${String(path)}`);
     });
@@ -106,6 +121,8 @@ describe('Costs page usage display', () => {
     fireEvent.click(screen.getByRole('button', { name: '大盘监控' }));
     expect(await screen.findByText('12 次会话')).toBeInTheDocument();
     expect(screen.getByText('$1.2345')).toBeInTheDocument();
+    expect(screen.getByText('Top Crons')).toBeInTheDocument();
+    expect(screen.getByText('Nightly Digest')).toBeInTheDocument();
     const dashboardTable = screen.getByRole('table');
     const dashboardCells = within(dashboardTable);
     expect(dashboardCells.getByText('planner-agent')).toBeInTheDocument();

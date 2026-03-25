@@ -2,8 +2,9 @@
  * Task Kanban Page / Frame 05
  * 任务看板 / 自动化工作流：拖拽式任务管理
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { hostApiFetch } from '@/lib/host-api';
 import { useAgentsStore } from '@/stores/agents';
 import { useApprovalsStore, type ApprovalItem } from '@/stores/approvals';
 import type { AgentSummary } from '@/types/agent';
@@ -13,7 +14,7 @@ import { AskUserQuestionWizard } from './AskUserQuestionWizard';
 
 type TicketStatus = 'backlog' | 'todo' | 'in-progress' | 'review' | 'done';
 type TicketPriority = 'low' | 'medium' | 'high';
-type WorkState = 'idle' | 'starting' | 'working' | 'done' | 'failed';
+type WorkState = 'idle' | 'starting' | 'working' | 'blocked' | 'waiting_approval' | 'done' | 'failed';
 
 interface KanbanTicket {
   id: string;
@@ -22,12 +23,25 @@ interface KanbanTicket {
   status: TicketStatus;
   priority: TicketPriority;
   assigneeId?: string;
+  assigneeRole?: string;
   workState: WorkState;
   workStartedAt?: string;
   workError?: string;
   workResult?: string;
+  runtimeSessionId?: string;
+  runtimeTranscript?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+interface RuntimeSessionResponse {
+  id: string;
+  status?: string;
+  transcript?: string[];
+  lastError?: string;
+  error?: string;
+  result?: string;
+  output?: string;
 }
 
 /* ─── Persistence ─── */
@@ -47,7 +61,7 @@ function saveTickets(tickets: KanbanTicket[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets));
 }
 
-function createTicket(input: { title: string; description: string; priority: TicketPriority; assigneeId?: string }): KanbanTicket {
+function createTicket(input: { title: string; description: string; priority: TicketPriority; assigneeId?: string; assigneeRole?: string }): KanbanTicket {
   const now = new Date().toISOString();
   return {
     id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -56,6 +70,7 @@ function createTicket(input: { title: string; description: string; priority: Tic
     status: 'backlog',
     priority: input.priority,
     assigneeId: input.assigneeId,
+    assigneeRole: input.assigneeRole,
     workState: 'idle',
     createdAt: now,
     updatedAt: now,
@@ -82,9 +97,119 @@ const WORK_STATE_STYLES: Record<WorkState, { label: string; color: string }> = {
   idle:     { label: '',       color: '' },
   starting: { label: 'Starting', color: '#f59e0b' },
   working:  { label: 'Working', color: '#3b82f6' },
+  blocked:  { label: 'Blocked', color: '#f97316' },
+  waiting_approval: { label: 'Waiting Approval', color: '#7c3aed' },
   done:     { label: 'Done', color: '#10b981' },
-  failed:   { label: '失败',   color: '#ef4444' },
+  failed:   { label: 'Failed',   color: '#ef4444' },
 };
+
+const ACTIVE_RUNTIME_WORK_STATES = new Set<WorkState>(['starting', 'working', 'blocked', 'waiting_approval']);
+const RUNTIME_WAIT_POLL_MS = 3000;
+
+function readRuntimeError(session: RuntimeSessionResponse): string | undefined {
+  if (typeof session.lastError === 'string' && session.lastError.trim()) return session.lastError.trim();
+  if (typeof session.error === 'string' && session.error.trim()) return session.error.trim();
+  return undefined;
+}
+
+function readRuntimeResult(session: RuntimeSessionResponse): string | undefined {
+  if (typeof session.result === 'string' && session.result.trim()) return session.result.trim();
+  if (typeof session.output === 'string' && session.output.trim()) return session.output.trim();
+  if (Array.isArray(session.transcript) && session.transcript.length > 0) {
+    const last = session.transcript.at(-1);
+    if (typeof last === 'string' && last.trim()) return last.trim();
+  }
+  return undefined;
+}
+
+function mapRuntimeSessionToTicketUpdates(ticket: KanbanTicket, session: RuntimeSessionResponse): Partial<KanbanTicket> {
+  const status = (session.status ?? '').toLowerCase();
+  const runtimeError = readRuntimeError(session);
+  const runtimeResult = readRuntimeResult(session);
+  const base: Partial<KanbanTicket> = {
+    runtimeSessionId: session.id || ticket.runtimeSessionId,
+    runtimeTranscript: Array.isArray(session.transcript) ? session.transcript : ticket.runtimeTranscript,
+  };
+
+  if (status === 'running') {
+    return {
+      ...base,
+      status: 'in-progress',
+      workState: 'working',
+      workError: undefined,
+    };
+  }
+  if (status === 'blocked') {
+    return {
+      ...base,
+      status: 'in-progress',
+      workState: 'blocked',
+      workError: runtimeError ?? ticket.workError ?? 'Runtime blocked',
+      workResult: undefined,
+    };
+  }
+  if (status === 'waiting_approval') {
+    return {
+      ...base,
+      status: 'review',
+      workState: 'waiting_approval',
+      workError: runtimeError ?? ticket.workError ?? 'Waiting for approval',
+      workResult: undefined,
+    };
+  }
+  if (status === 'completed') {
+    return {
+      ...base,
+      status: 'review',
+      workState: 'done',
+      workError: undefined,
+      workResult: runtimeResult ?? ticket.workResult,
+    };
+  }
+  if (status === 'error') {
+    return {
+      ...base,
+      workState: 'failed',
+      workError: runtimeError ?? ticket.workError ?? 'Runtime error',
+    };
+  }
+  if (status === 'killed') {
+    return {
+      ...base,
+      workState: 'failed',
+      workError: runtimeError ?? ticket.workError ?? 'Runtime killed',
+    };
+  }
+  if (status === 'stopped') {
+    return {
+      ...base,
+      workState: 'failed',
+      workError: runtimeError ?? ticket.workError ?? 'Runtime stopped',
+    };
+  }
+
+  return base;
+}
+
+function isSameTranscript(a?: string[], b?: string[]): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function hasRuntimeTicketChanges(ticket: KanbanTicket, updates: Partial<KanbanTicket>): boolean {
+  if ('status' in updates && updates.status !== ticket.status) return true;
+  if ('workState' in updates && updates.workState !== ticket.workState) return true;
+  if ('workError' in updates && updates.workError !== ticket.workError) return true;
+  if ('workResult' in updates && updates.workResult !== ticket.workResult) return true;
+  if ('runtimeSessionId' in updates && updates.runtimeSessionId !== ticket.runtimeSessionId) return true;
+  if ('runtimeTranscript' in updates && !isSameTranscript(ticket.runtimeTranscript, updates.runtimeTranscript)) return true;
+  return false;
+}
 
 /* ─── Agent color helper ─── */
 
@@ -110,14 +235,14 @@ export function TaskKanban() {
   // Persist on every change
   useEffect(() => { saveTickets(tickets); }, [tickets]);
 
-  const updateTicket = (id: string, updates: Partial<KanbanTicket>) => {
+  const updateTicket = useCallback((id: string, updates: Partial<KanbanTicket>) => {
     setTickets((prev) =>
       prev.map((t) => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)
     );
     if (detailTicket?.id === id) {
       setDetailTicket((prev) => prev ? { ...prev, ...updates, updatedAt: new Date().toISOString() } : prev);
     }
-  };
+  }, [detailTicket?.id]);
 
   const deleteTicket = (id: string) => {
     setTickets((prev) => prev.filter((t) => t.id !== id));
@@ -128,10 +253,133 @@ export function TaskKanban() {
     updateTicket(id, { status });
   };
 
-  const handleCreate = (input: { title: string; description: string; priority: TicketPriority; assigneeId?: string }) => {
+  const handleCreate = (input: { title: string; description: string; priority: TicketPriority; assigneeId?: string; assigneeRole?: string }) => {
     const ticket = createTicket(input);
     setTickets((prev) => [ticket, ...prev]);
     setCreateOpen(false);
+  };
+
+  useEffect(() => {
+    const activeTickets = tickets.filter((ticket) => {
+      if (!ticket.runtimeSessionId) return false;
+      return ACTIVE_RUNTIME_WORK_STATES.has(ticket.workState);
+    });
+    if (activeTickets.length === 0) return undefined;
+
+    let disposed = false;
+    const pollRuntime = async () => {
+      for (const ticket of activeTickets) {
+        if (!ticket.runtimeSessionId) continue;
+        try {
+          const response = await hostApiFetch<{
+            success: boolean;
+            session: RuntimeSessionResponse;
+          }>(`/api/sessions/subagents/${encodeURIComponent(ticket.runtimeSessionId)}/wait`, {
+            method: 'POST',
+          });
+          if (disposed || !response?.session) continue;
+          const runtimeUpdates = mapRuntimeSessionToTicketUpdates(ticket, response.session);
+          if (hasRuntimeTicketChanges(ticket, runtimeUpdates)) {
+            updateTicket(ticket.id, runtimeUpdates);
+          }
+        } catch (error) {
+          if (disposed) continue;
+          const runtimeUpdates: Partial<KanbanTicket> = {
+            workState: 'failed',
+            workError: String(error),
+          };
+          if (hasRuntimeTicketChanges(ticket, runtimeUpdates)) {
+            updateTicket(ticket.id, runtimeUpdates);
+          }
+        }
+      }
+    };
+
+    const timer = window.setInterval(() => {
+      void pollRuntime();
+    }, RUNTIME_WAIT_POLL_MS);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [tickets, updateTicket]);
+
+  const startRuntimeWork = async (ticket: KanbanTicket) => {
+    updateTicket(ticket.id, {
+      status: 'in-progress',
+      workState: 'starting',
+      workError: undefined,
+      workResult: undefined,
+      workStartedAt: new Date().toISOString(),
+    });
+
+    try {
+      const response = await hostApiFetch<{
+        success: boolean;
+        session: RuntimeSessionResponse;
+      }>('/api/sessions/spawn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentSessionKey: `agent:${ticket.assigneeId ?? 'main'}:main`,
+          agentName: ticket.assigneeRole ?? ticket.assigneeId,
+          prompt: [ticket.title, ticket.description].filter(Boolean).join('\n\n'),
+          mode: 'session',
+        }),
+      });
+
+      updateTicket(ticket.id, mapRuntimeSessionToTicketUpdates(ticket, response.session));
+    } catch (error) {
+      updateTicket(ticket.id, {
+        workState: 'failed',
+        workError: String(error),
+      });
+    }
+  };
+
+  const steerRuntimeWork = async (ticket: KanbanTicket, input: string) => {
+    if (!ticket.runtimeSessionId || !input.trim()) return;
+    try {
+      const response = await hostApiFetch<{
+        success: boolean;
+        session: RuntimeSessionResponse;
+      }>(`/api/sessions/subagents/${encodeURIComponent(ticket.runtimeSessionId)}/steer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: input.trim() }),
+      });
+
+      const runtimeUpdates = mapRuntimeSessionToTicketUpdates(ticket, response.session);
+      updateTicket(ticket.id, runtimeUpdates);
+    } catch (error) {
+      updateTicket(ticket.id, {
+        workError: String(error),
+      });
+    }
+  };
+
+  const stopRuntimeWork = async (ticket: KanbanTicket) => {
+    if (!ticket.runtimeSessionId) return;
+    try {
+      const response = await hostApiFetch<{
+        success: boolean;
+        session: RuntimeSessionResponse;
+      }>(`/api/sessions/subagents/${encodeURIComponent(ticket.runtimeSessionId)}/kill`, {
+        method: 'POST',
+      });
+
+      const runtimeUpdates = mapRuntimeSessionToTicketUpdates(ticket, response.session);
+      updateTicket(ticket.id, {
+        ...runtimeUpdates,
+        workState: runtimeUpdates.workState ?? 'failed',
+        workError: runtimeUpdates.workError ?? 'Manually stopped',
+      });
+    } catch (error) {
+      updateTicket(ticket.id, {
+        workError: String(error),
+      });
+    }
   };
 
   /* Drag handlers */
@@ -270,6 +518,9 @@ export function TaskKanban() {
           onClose={() => setDetailTicket(null)}
           onUpdate={(updates) => updateTicket(detailTicket.id, updates)}
           onDelete={() => deleteTicket(detailTicket.id)}
+          onStartRuntime={() => void startRuntimeWork(detailTicket)}
+          onSteerRuntime={(input) => void steerRuntimeWork(detailTicket, input)}
+          onStopRuntime={() => void stopRuntimeWork(detailTicket)}
         />
       )}
     </div>
@@ -293,10 +544,12 @@ function TicketCard({
   const agent = agentIdx >= 0 ? agents[agentIdx] : null;
   const color = agent ? agentColor(agentIdx) : '#8e8e93';
   const ws = WORK_STATE_STYLES[ticket.workState];
+  const isDragLocked = ACTIVE_RUNTIME_WORK_STATES.has(ticket.workState);
 
   return (
     <div
-      draggable
+      data-testid={`ticket-card-${ticket.id}`}
+      draggable={!isDragLocked}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
@@ -310,6 +563,11 @@ function TicketCard({
         <div className="mb-2 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full" style={{ background: color }} />
           <span className="text-[12px] font-medium" style={{ color }}>{agent.name}</span>
+        </div>
+      )}
+      {ticket.assigneeRole && (
+        <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-[#6b7280]">
+          {ticket.assigneeRole}
         </div>
       )}
       <p className="mb-1 text-[14px] font-semibold leading-snug text-[#000000]">{ticket.title}</p>
@@ -339,12 +597,13 @@ function CreateModal({
 }: {
   agents: AgentSummary[];
   onClose: () => void;
-  onCreate: (input: { title: string; description: string; priority: TicketPriority; assigneeId?: string }) => void;
+  onCreate: (input: { title: string; description: string; priority: TicketPriority; assigneeId?: string; assigneeRole?: string }) => void;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TicketPriority>('medium');
   const [assigneeId, setAssigneeId] = useState<string>('');
+  const [assigneeRole, setAssigneeRole] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const isComposingRef = useRef(false);
 
@@ -352,7 +611,13 @@ function CreateModal({
 
   const handleSubmit = () => {
     if (!title.trim()) return;
-    onCreate({ title: title.trim(), description: description.trim(), priority, assigneeId: assigneeId || undefined });
+    onCreate({
+      title: title.trim(),
+      description: description.trim(),
+      priority,
+      assigneeId: assigneeId || undefined,
+      assigneeRole: assigneeRole.trim() || undefined,
+    });
   };
 
   return (
@@ -437,6 +702,15 @@ function CreateModal({
             </select>
           </div>
         )}
+        <div className="mb-5">
+          <p className="mb-1.5 text-[13px] font-medium text-[#000000]">Assignee Role</p>
+          <input
+            value={assigneeRole}
+            onChange={(e) => setAssigneeRole(e.target.value)}
+            placeholder="例如：planner / reviewer / operator"
+            className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] outline-none focus:border-clawx-ac"
+          />
+        </div>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-black/10 py-2 text-[13px] text-[#3c3c43] hover:bg-[#f2f2f7]">取消</button>
           <button
@@ -457,17 +731,24 @@ function CreateModal({
 
 function DetailPanel({
   ticket, agents, onClose, onUpdate, onDelete,
+  onStartRuntime,
+  onSteerRuntime,
+  onStopRuntime,
 }: {
   ticket: KanbanTicket;
   agents: AgentSummary[];
   onClose: () => void;
   onUpdate: (updates: Partial<KanbanTicket>) => void;
   onDelete: () => void;
+  onStartRuntime: () => void;
+  onSteerRuntime: (input: string) => void;
+  onStopRuntime: () => void;
 }) {
   const agentIdx = agents.findIndex((a) => a.id === ticket.assigneeId);
   const agent = agentIdx >= 0 ? agents[agentIdx] : null;
   const color = agent ? agentColor(agentIdx) : '#8e8e93';
   const p = PRIORITY_STYLES[ticket.priority];
+  const [followup, setFollowup] = useState('');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/20" onClick={onClose}>
@@ -533,6 +814,13 @@ function DetailPanel({
             </div>
           )}
 
+          {ticket.assigneeRole && (
+            <div>
+              <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Assignee Role</p>
+              <p className="text-[13px] font-medium text-[#3c3c43]">{ticket.assigneeRole}</p>
+            </div>
+          )}
+
           {ticket.workState !== 'idle' && (
             <div>
               <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Execution</p>
@@ -545,8 +833,79 @@ function DetailPanel({
               {ticket.workResult && (
                 <p className="mt-1 text-[12px] text-[#3c3c43]">{ticket.workResult}</p>
               )}
+              {ACTIVE_RUNTIME_WORK_STATES.has(ticket.workState) && (
+                <p className="mt-2 text-[12px] text-[#8e8e93]">运行中任务不可拖拽，等待 runtime 返回结果后再移动状态。</p>
+              )}
             </div>
           )}
+
+          <div>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Runtime</p>
+            {ticket.runtimeSessionId ? (
+              <>
+                <div className="mb-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-[12px] text-[#475467]">
+                  Session: {ticket.runtimeSessionId}
+                </div>
+                <div className="mb-3 rounded-xl border border-black/[0.06] bg-[#fafafa] px-3 py-3">
+                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Transcript</p>
+                  <div className="flex flex-col gap-2">
+                    {(ticket.runtimeTranscript ?? []).map((entry, index) => (
+                      <div key={`${ticket.runtimeSessionId}-${index}`} className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#3c3c43] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                        {entry}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-2 flex gap-2">
+                  <input
+                    aria-label="Follow-up message"
+                    value={followup}
+                    onChange={(e) => setFollowup(e.target.value)}
+                    placeholder="继续追问这个 ticket..."
+                    className="flex-1 rounded-lg border border-black/10 px-3 py-2 text-[13px] outline-none focus:border-clawx-ac"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSteerRuntime(followup);
+                      setFollowup('');
+                    }}
+                    disabled={!followup.trim()}
+                    className="rounded-lg bg-clawx-ac px-3 py-2 text-[12px] font-medium text-white hover:bg-[#0056b3] disabled:opacity-50"
+                  >
+                    Send follow-up
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onStopRuntime}
+                    className="rounded-lg border border-[#ef4444]/20 px-3 py-2 text-[12px] text-[#ef4444] hover:bg-[#fef2f2]"
+                  >
+                    Stop runtime
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onStartRuntime}
+                    className="rounded-lg border border-black/10 px-3 py-2 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+                  >
+                    Retry work
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onStartRuntime}
+                  className="rounded-lg bg-clawx-ac px-3 py-2 text-[12px] font-medium text-white hover:bg-[#0056b3]"
+                >
+                  Start work
+                </button>
+                <span className="text-[12px] text-[#8e8e93]">启动一个 runtime session 让 agent 开始处理这个 ticket。</span>
+              </div>
+            )}
+          </div>
 
           {/* Move to column */}
           <div>
@@ -587,6 +946,13 @@ function ApprovalsSection({
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [wizard, setWizard] = useState<ApprovalItem | null>(null);
+  const [reviewing, setReviewing] = useState<ApprovalItem | null>(null);
+
+  const reviewText = reviewing?.toolInput
+    ? JSON.stringify(reviewing.toolInput, null, 2)
+    : (reviewing?.prompt ?? '');
+  const riskPreview = reviewText.toLowerCase();
+  const isDangerous = ['rm -rf', 'sudo', 'del ', 'format ', 'powershell -command remove-item'].some((token) => riskPreview.includes(token));
 
   return (
     <>
@@ -625,7 +991,16 @@ function ApprovalsSection({
                   >
                     Respond
                   </button>
-                ) : rejectingId === item.id ? (
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setReviewing(item)}
+                    className="rounded-lg bg-[#111827] px-2.5 py-1 text-[12px] font-medium text-white hover:bg-[#1f2937]"
+                  >
+                    Review
+                  </button>
+                )}
+                {item.command === 'AskUserQuestion' ? null : rejectingId === item.id ? (
                   <>
                     <input
                       autoFocus
@@ -659,13 +1034,6 @@ function ApprovalsSection({
                   <>
                     <button
                       type="button"
-                      onClick={() => onApprove(item.id)}
-                      className="rounded-lg bg-[#10b981] px-2.5 py-1 text-[12px] font-medium text-white hover:bg-[#059669]"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setRejectingId(item.id)}
                       className="rounded-lg border border-[#ef4444]/30 px-2.5 py-1 text-[12px] text-[#ef4444] hover:bg-[#fef2f2]"
                     >
@@ -688,6 +1056,58 @@ function ApprovalsSection({
           }}
           onDismiss={() => setWizard(null)}
         />
+      )}
+
+      {reviewing && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/35" role="dialog" aria-label="Approval review">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-[16px] font-semibold text-[#111827]">Tool approval review</h3>
+                <p className="mt-1 text-[12px] text-[#6b7280]">Agent: {reviewing.agentId ?? 'unknown'} · Command: {reviewing.command ?? 'unknown'}</p>
+              </div>
+              <button type="button" onClick={() => setReviewing(null)} className="text-[18px] text-[#8e8e93] hover:text-[#3c3c43]">×</button>
+            </div>
+
+            {isDangerous && (
+              <div className="mb-4 rounded-xl border border-[#fca5a5] bg-[#fef2f2] px-4 py-3 text-[13px] text-[#b91c1c]">
+                危险操作：当前审批包含高风险命令，请确认后再放行。
+              </div>
+            )}
+
+            {reviewing.prompt ? (
+              <div className="mb-3">
+                <p className="mb-1 text-[12px] font-medium text-[#6b7280]">Prompt</p>
+                <div className="rounded-xl bg-[#f8fafc] px-4 py-3 text-[13px] text-[#374151]">{reviewing.prompt}</div>
+              </div>
+            ) : null}
+
+            <div className="mb-5">
+              <p className="mb-1 text-[12px] font-medium text-[#6b7280]">Tool input</p>
+              <pre className="overflow-x-auto rounded-xl bg-[#111827] px-4 py-3 text-[12px] text-[#e5e7eb]">{reviewText || '(empty)'}</pre>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewing(null)}
+                className="rounded-lg border border-black/10 px-3 py-2 text-[13px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onApprove(reviewing.id);
+                  setReviewing(null);
+                }}
+                className="rounded-lg bg-[#10b981] px-3 py-2 text-[13px] font-medium text-white hover:bg-[#059669]"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

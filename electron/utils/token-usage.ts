@@ -89,8 +89,46 @@ async function listRecentSessionFiles(): Promise<Array<{ filePath: string; sessi
   }
 }
 
+async function readCronRunSessionIndex(): Promise<Map<string, string>> {
+  const cronRunsDir = join(getOpenClawConfigDir(), 'cron', 'runs');
+  const mapping = new Map<string, string>();
+
+  try {
+    const files = await readdir(cronRunsDir);
+    for (const fileName of files) {
+      if (!fileName.endsWith('.jsonl')) continue;
+      const fallbackJobId = fileName.replace(/\.jsonl$/, '');
+      const filePath = join(cronRunsDir, fileName);
+      const raw = await readFile(filePath, 'utf8').catch(() => '');
+      if (!raw.trim()) continue;
+
+      for (const line of raw.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+          const sessionId = typeof parsed.sessionId === 'string' ? parsed.sessionId.trim() : '';
+          const jobId = typeof parsed.jobId === 'string' && parsed.jobId.trim()
+            ? parsed.jobId.trim()
+            : fallbackJobId;
+          if (sessionId && jobId) {
+            mapping.set(sessionId, jobId);
+          }
+        } catch {
+          // Ignore malformed cron run log lines.
+        }
+      }
+    }
+  } catch {
+    // Ignore missing or unreadable cron run logs.
+  }
+
+  return mapping;
+}
+
 export async function getRecentTokenUsageHistory(limit?: number): Promise<TokenUsageHistoryEntry[]> {
   const files = await listRecentSessionFiles();
+  const cronJobBySessionId = await readCronRunSessionIndex();
   const results: TokenUsageHistoryEntry[] = [];
   const maxEntries = typeof limit === 'number' && Number.isFinite(limit)
     ? Math.max(Math.floor(limit), 0)
@@ -103,7 +141,11 @@ export async function getRecentTokenUsageHistory(limit?: number): Promise<TokenU
       const entries = parseUsageEntriesFromJsonl(content, {
         sessionId: file.sessionId,
         agentId: file.agentId,
-      }, Number.isFinite(maxEntries) ? maxEntries - results.length : undefined);
+      }, Number.isFinite(maxEntries) ? maxEntries - results.length : undefined)
+        .map((entry) => {
+          const cronJobId = cronJobBySessionId.get(entry.sessionId);
+          return cronJobId ? { ...entry, cronJobId } : entry;
+        });
       results.push(...entries);
     } catch (error) {
       logger.debug(`Failed to read token usage transcript ${file.filePath}:`, error);

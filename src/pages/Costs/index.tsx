@@ -48,6 +48,16 @@ interface AgentSummary {
   sessions: number;
 }
 
+interface CronSummary {
+  cronJobId: string;
+  cronName: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  sessions: number;
+}
+
 interface AlertRule {
   id: string;
   name: string;
@@ -98,6 +108,7 @@ export function Costs() {
   const [limit, setLimit] = useState(200);
   const [summary, setSummary] = useState<CostsSummary | null>(null);
   const [agentRows, setAgentRows] = useState<AgentSummary[]>([]);
+  const [cronRows, setCronRows] = useState<CronSummary[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -116,12 +127,14 @@ export function Costs() {
 
   const fetchSummary = useCallback(async () => {
     try {
-      const [s, a] = await Promise.all([
+      const [s, a, c] = await Promise.all([
         hostApiFetch<CostsSummary>('/api/costs/summary?days=30'),
         hostApiFetch<AgentSummary[]>('/api/costs/by-agent'),
+        hostApiFetch<CronSummary[]>('/api/costs/by-cron'),
       ]);
       setSummary(s);
       setAgentRows(Array.isArray(a) ? a : []);
+      setCronRows(Array.isArray(c) ? c : []);
     } catch {
       // non-critical
     }
@@ -208,7 +221,7 @@ export function Costs() {
             modelRows={modelRows}
           />
         )}
-        {activeTab === 'dashboard' && <DashboardTab summary={summary} agentRows={agentRows} />}
+        {activeTab === 'dashboard' && <DashboardTab summary={summary} agentRows={agentRows} cronRows={cronRows} />}
         {activeTab === 'usage' && <UsageTab agentRows={agentRows} />}
         {activeTab === 'alerts' && <AlertsTab />}
       </div>
@@ -322,7 +335,15 @@ function RealtimeTab({
 
 /* ─── Dashboard Tab ─── */
 
-function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; agentRows: AgentSummary[] }) {
+function DashboardTab({
+  summary,
+  agentRows,
+  cronRows,
+}: {
+  summary: CostsSummary | null;
+  agentRows: AgentSummary[];
+  cronRows: CronSummary[];
+}) {
   const timeline = summary?.timeline ?? [];
   const totals = summary?.totals;
 
@@ -343,6 +364,7 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
   // Top agents
   const topAgents = agentRows.slice(0, 5);
   const totalAgentTokens = agentRows.reduce((s, a) => s + a.totalTokens, 0);
+  const topCrons = cronRows.slice(0, 5);
 
   return (
     <div className="space-y-5">
@@ -473,6 +495,31 @@ function DashboardTab({ summary, agentRows }: { summary: CostsSummary | null; ag
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {topCrons.length > 0 && (
+        <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Top Crons</p>
+          <div className="space-y-3">
+            {topCrons.map((row) => (
+              <div
+                key={row.cronJobId}
+                className="flex items-center gap-4 rounded-xl border border-[#f2f2f7] px-4 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-[#111827]">{row.cronName}</p>
+                  <p className="mt-1 text-[11px] text-[#8e8e93]">
+                    {row.sessions} runs · {formatTokens(row.inputTokens)} in · {formatTokens(row.outputTokens)} out
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[13px] font-semibold text-[#111827]">{formatTokens(row.totalTokens)}</p>
+                  <p className="mt-1 text-[11px] text-[#ff6a00]">{formatCost(row.costUsd)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

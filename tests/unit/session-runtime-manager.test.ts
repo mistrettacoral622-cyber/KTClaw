@@ -1,0 +1,140 @@
+import { describe, expect, it, vi } from 'vitest';
+import { SessionRuntimeManager } from '@electron/services/session-runtime-manager';
+
+describe('SessionRuntimeManager', () => {
+  it('spawns runtime sessions through gateway RPC and refreshes metadata from aliases', async () => {
+    let runtimeSessionKey = '';
+    const gatewayRpcMock = vi.fn(async (method: string, params?: Record<string, unknown>) => {
+      if (method === 'chat.send') {
+        runtimeSessionKey = String(params?.sessionKey ?? '');
+        return { runId: 'run-spawn-1' };
+      }
+      if (method === 'sessions.list') {
+        return {
+          sessions: [
+            {
+              key: runtimeSessionKey,
+              state: 'waiting_approval',
+              runId: 'run-session-list-2',
+              lastError: 'needs-human-approval',
+            },
+          ],
+        };
+      }
+      if (method === 'chat.history') {
+        return {
+          history: [
+            { role: 'user', content: 'Investigate failing tests' },
+            { role: 'assistant', content: [{ type: 'text', text: 'Waiting for approval from reviewer' }] },
+          ],
+        };
+      }
+      throw new Error(`Unexpected gateway RPC: ${method}`);
+    });
+    const manager = new SessionRuntimeManager(
+      { rpc: gatewayRpcMock } as never,
+      {
+        listMcpTools: () => [{ server: 'docs-server', name: 'write_docs' }],
+        listEnabledSkills: async () => ['brainstorming', 'test-driven-development'],
+      },
+    );
+
+    const record = await manager.spawn({
+      parentSessionKey: 'agent:main:main',
+      prompt: 'Investigate failing tests',
+      agentName: 'reviewer',
+    });
+
+    expect(record.sessionKey).toBe(`agent:main:main:subagent:${record.id}`);
+    expect(record.status).toBe('waiting_approval');
+    expect(record.runId).toBe('run-session-list-2');
+    expect(record.lastError).toBe('needs-human-approval');
+    expect(record.toolSnapshot).toEqual([{ server: 'docs-server', name: 'write_docs' }]);
+    expect(record.skillSnapshot).toEqual(['brainstorming', 'test-driven-development']);
+    expect(record.transcript).toEqual([
+      'Investigate failing tests',
+      'Waiting for approval from reviewer',
+    ]);
+    expect(gatewayRpcMock).toHaveBeenCalledWith(
+      'chat.send',
+      expect.objectContaining({
+        sessionKey: record.sessionKey,
+        message: 'Investigate failing tests',
+      }),
+    );
+  });
+
+  it('supports steer/wait/kill via gateway and maps runtime states', async () => {
+    let runtimeSessionKey = '';
+    let runtimeStateField: 'state' | 'status' = 'status';
+    let runtimeState = 'running';
+    const gatewayRpcMock = vi.fn(async (method: string, params?: Record<string, unknown>) => {
+      if (method === 'chat.send') {
+        runtimeSessionKey = String(params?.sessionKey ?? runtimeSessionKey);
+        return { runId: 'run-send-1' };
+      }
+      if (method === 'chat.abort') {
+        return { ok: true };
+      }
+      if (method === 'sessions.list') {
+        return {
+          sessions: [
+            {
+              sessionKey: runtimeSessionKey,
+              [runtimeStateField]: runtimeState,
+            },
+          ],
+        };
+      }
+      if (method === 'chat.history') {
+        return {
+          messages: [{ role: 'assistant', content: `gateway-history-${runtimeState}` }],
+        };
+      }
+      throw new Error(`Unexpected gateway RPC: ${method}`);
+    });
+    const manager = new SessionRuntimeManager({ rpc: gatewayRpcMock } as never);
+    const record = await manager.spawn({
+      parentSessionKey: 'agent:main:main',
+      prompt: 'Initial task',
+    });
+
+    const steered = await manager.steer(record.id, 'Follow-up instruction');
+    expect(steered?.transcript).toEqual(['gateway-history-running']);
+    expect(gatewayRpcMock).toHaveBeenCalledWith(
+      'chat.send',
+      expect.objectContaining({
+        sessionKey: record.sessionKey,
+        message: 'Follow-up instruction',
+      }),
+    );
+
+    const cases: Array<{ input: string; field: 'state' | 'status'; expected: string }> = [
+      { input: 'running', field: 'status', expected: 'running' },
+      { input: 'blocked', field: 'state', expected: 'blocked' },
+      { input: 'waiting_approval', field: 'status', expected: 'waiting_approval' },
+      { input: 'failed', field: 'state', expected: 'error' },
+      { input: 'done', field: 'status', expected: 'completed' },
+      { input: 'aborted', field: 'state', expected: 'killed' },
+    ];
+
+    for (const item of cases) {
+      runtimeStateField = item.field;
+      runtimeState = item.input;
+      const waited = await manager.wait(record.id);
+      expect(waited?.status).toBe(item.expected);
+      expect(waited?.transcript).toEqual([`gateway-history-${item.input}`]);
+    }
+
+    const listed = await manager.list();
+    expect(listed[0]?.id).toBe(record.id);
+    expect(listed[0]?.status).toBe('killed');
+
+    const killed = await manager.kill(record.id);
+    expect(killed?.status).toBe('killed');
+    expect(gatewayRpcMock).toHaveBeenCalledWith(
+      'chat.abort',
+      { sessionKey: record.sessionKey },
+    );
+  });
+});

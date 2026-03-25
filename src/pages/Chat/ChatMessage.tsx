@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { invokeIpc } from '@/lib/api-client';
 import type { RawMessage, AttachedFileMeta } from '@/stores/chat';
-import { extractText, extractThinking, extractImages, extractToolUse, formatTimestamp } from './message-utils';
+import { extractText, extractThinking, extractImages, extractToolGroups, formatTimestamp } from './message-utils';
 
 interface ChatMessageProps {
   message: RawMessage;
@@ -25,6 +25,7 @@ interface ChatMessageProps {
     durationMs?: number;
     summary?: string;
   }>;
+  autoExpandThinking?: boolean;
 }
 
 interface ExtractedImage { url?: string; data?: string; mimeType: string; }
@@ -41,6 +42,7 @@ export const ChatMessage = memo(function ChatMessage({
   showThinking,
   isStreaming = false,
   streamingTools = [],
+  autoExpandThinking = false,
 }: ChatMessageProps) {
   const isUser = message.role === 'user';
   const role = typeof message.role === 'string' ? message.role.toLowerCase() : '';
@@ -49,7 +51,7 @@ export const ChatMessage = memo(function ChatMessage({
   const hasText = text.trim().length > 0;
   const thinking = extractThinking(message);
   const images = extractImages(message);
-  const tools = extractToolUse(message);
+  const tools = extractToolGroups(message);
   const visibleThinking = showThinking ? thinking : null;
   const visibleTools = tools;
 
@@ -89,14 +91,22 @@ export const ChatMessage = memo(function ChatMessage({
 
         {/* Thinking section */}
         {visibleThinking && (
-          <ThinkingBlock content={visibleThinking} />
+          <ThinkingBlock content={visibleThinking} autoExpand={isStreaming || autoExpandThinking} />
         )}
 
         {/* Tool use cards */}
         {visibleTools.length > 0 && (
           <div className="w-full space-y-2">
             {visibleTools.map((tool, i) => (
-              <ToolCard key={tool.id || i} name={tool.name} input={tool.input} />
+              <ToolCard
+                key={tool.id || i}
+                name={tool.name}
+                input={tool.input}
+                resultText={tool.resultText}
+                filePath={tool.filePath}
+                changeCount={tool.changeCount}
+                isFileChange={tool.isFileChange}
+              />
             ))}
           </div>
         )}
@@ -359,14 +369,24 @@ function MessageBubble({
 
 // ── Thinking Block ──────────────────────────────────────────────
 
-function ThinkingBlock({ content }: { content: string }) {
-  const [expanded, setExpanded] = useState(false);
+interface ThinkingBlockProps {
+  content: string;
+  autoExpand?: boolean;
+}
+
+function ThinkingBlock({ content, autoExpand = false }: ThinkingBlockProps) {
+  const [manualExpanded, setManualExpanded] = useState(false);
+  const expanded = autoExpand || manualExpanded;
 
   return (
     <div className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.03] text-[14px]">
       <button
         className="flex items-center gap-2 w-full px-3.5 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          if (!autoExpand) {
+            setManualExpanded(!manualExpanded);
+          }
+        }}
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         <span className="font-medium">思考过程</span>
@@ -569,8 +589,25 @@ function ImageLightbox({
 
 // ── Tool Card ───────────────────────────────────────────────────
 
-function ToolCard({ name, input }: { name: string; input: unknown }) {
+function ToolCard({
+  name,
+  input,
+  resultText,
+  filePath,
+  changeCount,
+  isFileChange = false,
+}: {
+  name: string;
+  input: unknown;
+  resultText?: string;
+  filePath?: string;
+  changeCount?: number;
+  isFileChange?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const badgeLabel = isFileChange ? '文件变更预览' : '工具执行';
+  const helperLabel = expanded ? '收起调用详情' : '展开查看调用详情';
+  const changeLabel = typeof changeCount === 'number' ? `${changeCount} edits` : null;
 
   return (
     <div className="w-full rounded-xl border border-black/10 dark:border-white/10 bg-zinc-50/90 dark:bg-white/[0.03] text-[14px] overflow-hidden">
@@ -582,17 +619,42 @@ function ToolCard({ name, input }: { name: string; input: unknown }) {
         <Wrench className="h-3 w-3 shrink-0 opacity-60" />
         <div className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full border border-black/10 dark:border-white/15 px-2 py-0.5 text-[10px] leading-none tracking-wide text-muted-foreground">工具执行</span>
+            <span className="inline-flex items-center rounded-full border border-black/10 dark:border-white/15 px-2 py-0.5 text-[10px] leading-none tracking-wide text-muted-foreground">{badgeLabel}</span>
             <span className="font-mono text-xs text-foreground truncate">{name}</span>
           </div>
-          <span className="mt-1 block text-[11px] text-muted-foreground/85">{expanded ? '收起调用参数' : '展开查看调用参数'}</span>
+          {(filePath || changeLabel) && (
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground/85">
+              {filePath && <span className="font-mono">{filePath}</span>}
+              {changeLabel && (
+                <span className="rounded-full border border-black/10 px-2 py-0.5 leading-none dark:border-white/10">
+                  {changeLabel}
+                </span>
+              )}
+            </div>
+          )}
+          <span className="mt-1 block text-[11px] text-muted-foreground/85">{helperLabel}</span>
         </div>
         {expanded ? <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />}
       </button>
-      {expanded && input != null && (
-        <pre className="border-t border-black/10 dark:border-white/10 px-3.5 py-2.5 text-xs text-muted-foreground overflow-x-auto bg-black/[0.015] dark:bg-white/[0.02]">
-          {typeof input === 'string' ? input : JSON.stringify(input, null, 2) as string}
-        </pre>
+      {expanded && (
+        <div className="border-t border-black/10 dark:border-white/10 bg-black/[0.015] dark:bg-white/[0.02]">
+          {input != null && (
+            <div className="px-3.5 py-2.5">
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Input</div>
+              <pre className="overflow-x-auto text-xs text-muted-foreground">
+                {typeof input === 'string' ? input : JSON.stringify(input, null, 2) as string}
+              </pre>
+            </div>
+          )}
+          {resultText && (
+            <div className="border-t border-black/10 px-3.5 py-2.5 dark:border-white/10">
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Result</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                {resultText}
+              </pre>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

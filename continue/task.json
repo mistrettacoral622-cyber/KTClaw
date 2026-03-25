@@ -3,7 +3,7 @@
   "objective": "Build and polish the ClawX Electron + React workbench UI with full backend integration.",
   "current_phase": "execution",
   "current_focus": "PLAN-2026-03-24-PLATFORM-CLOSURE",
-  "last_updated": "2026-03-24T23:04:03.1370751+08:00",
+  "last_updated": "2026-03-25T10:52:12+08:00",
   "tasks": [
     {
       "id": "SESSION-8-001",
@@ -186,6 +186,97 @@
       "type": "feature",
       "status": "done",
       "priority": "P0"
+    },
+    {
+      "id": "SESSION-16-001",
+      "title": "Close MCP runtime lifecycle and align MCP management surface with KTClaw-callable services",
+      "type": "feature",
+      "status": "done",
+      "priority": "P0"
+    },
+    {
+      "id": "SESSION-16-002",
+      "title": "Add locale parity checks and localize MCP/settings batch strings",
+      "type": "feature",
+      "status": "done",
+      "priority": "P0"
+    },
+    {
+      "id": "SESSION-16-003",
+      "title": "Deepen release/install smoke scripts and multi-route Playwright gates",
+      "type": "feature",
+      "status": "done",
+      "priority": "P0"
+    },
+    {
+      "id": "SESSION-17-001",
+      "title": "Remove Japanese support and enforce zh/en-only i18n baseline",
+      "type": "feature",
+      "status": "done",
+      "priority": "P0"
+    },
+    {
+      "id": "SESSION-17-002",
+      "title": "Deepen chat reasoning status and quick-action composer refill workflow",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-17-003",
+      "title": "Deepen AskUserQuestion structured approvals and Kanban review modal",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-17-004",
+      "title": "Add session runtime backend skeleton for spawn/list/kill/steer/wait",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-18-001",
+      "title": "Wire Kanban tickets to runtime sessions for start/steer/kill transcript linkage",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-18-002",
+      "title": "Add Cron overview status filters, update metadata, and error summary banner",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-19-001",
+      "title": "Replace runtime stub with Gateway-backed session orchestration and capability snapshots",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-19-002",
+      "title": "Deepen Kanban runtime polling and state mapping for blocked/review/completed flows",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-19-003",
+      "title": "Add chat file-change preview grouped by tool turn for edit/write/multiedit",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-19-004",
+      "title": "Add costs Top Crons aggregate and dashboard card",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
     }
   ]
 }
