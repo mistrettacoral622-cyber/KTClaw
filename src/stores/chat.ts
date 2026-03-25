@@ -86,6 +86,8 @@ interface ChatState {
   lastUserMessageAt: number | null;
   /** Images collected from tool results, attached to the next assistant message */
   pendingToolImages: AttachedFileMeta[];
+  composerDraft: string;
+  setComposerDraft: (value: string) => void;
 
   // Sessions
   sessions: ChatSession[];
@@ -1077,6 +1079,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   pendingFinal: false,
   lastUserMessageAt: null,
   pendingToolImages: [],
+  composerDraft: '',
+  setComposerDraft: (value: string) => set({ composerDraft: value }),
 
   sessions: [],
   currentSessionKey: DEFAULT_SESSION_KEY,

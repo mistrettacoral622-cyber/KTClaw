@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -89,5 +89,68 @@ describe('GET/PUT /api/memory/file path security', () => {
     expect(statusCode).toBe(400);
     expect(payload.error).toBe('Invalid request');
     expect(existsSync(outsideFile)).toBe(false);
+  });
+
+  it('rejects writes for non-whitelisted relative paths', async () => {
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      makeJsonRequest('PUT', { relativePath: 'notes.txt', content: 'deny me' }),
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory/file'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockSendJson).toHaveBeenCalledTimes(1);
+    const [, statusCode, payload] = mockSendJson.mock.calls[0] as [unknown, number, { error?: string }];
+    expect(statusCode).toBe(400);
+    expect(payload.error).toMatch(/allowed|whitelist|invalid/i);
+  });
+
+  it('rejects stale writes when expected mtime is older than file mtime', async () => {
+    const targetPath = join(workspaceDir, 'memory', 'notes.md');
+    await mkdir(join(workspaceDir, 'memory'), { recursive: true });
+    writeFileSync(targetPath, 'original\n', 'utf-8');
+    const staleTime = new Date(statSync(targetPath).mtimeMs - 1_000).toISOString();
+
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      makeJsonRequest('PUT', {
+        relativePath: 'memory/notes.md',
+        content: 'new content',
+        expectedMtime: staleTime,
+      }),
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory/file'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockSendJson).toHaveBeenCalledTimes(1);
+    const [, statusCode, payload] = mockSendJson.mock.calls[0] as [unknown, number, { error?: string; currentMtime?: string }];
+    expect(statusCode).toBe(409);
+    expect(payload.error).toMatch(/stale|modified|conflict/i);
+    expect(payload.currentMtime).toBeTruthy();
+    expect(readFileSync(targetPath, 'utf-8')).toBe('original\n');
+  });
+
+  it('normalizes line endings before writing allowed files', async () => {
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      makeJsonRequest('PUT', {
+        relativePath: 'memory/normalize.md',
+        content: 'line1\r\nline2\r\n',
+      }),
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory/file'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockSendJson).toHaveBeenCalledTimes(1);
+    const [, statusCode, payload] = mockSendJson.mock.calls[0] as [unknown, number, { ok?: boolean }];
+    expect(statusCode).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(readFileSync(join(workspaceDir, 'memory', 'normalize.md'), 'utf-8')).toBe('line1\nline2\n');
   });
 });

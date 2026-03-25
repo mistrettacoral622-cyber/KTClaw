@@ -1901,3 +1901,100 @@ Focus: Continue Wave 3 by turning the Cron pipeline backlog into a real create/e
 ### 下一步
 - 继续 `PLAN-2026-03-24-PLATFORM-CLOSURE`
 - 优先推进 Channels 的 auth gate / multi-user isolation，或开始 Memory 深化第一批
+[2026-03-25 13:22 +08:00] Session: Session-23 runtime-tree + costs-analysis + memory-safe-write + channels-rate-limit
+Focus: Continue platform closure by deepening runtime/Kanban orchestration, adding costs analysis, finishing the first multi-agent memory slice, and tightening channel runtime guardrails
+
+### Completed
+1. Wave 2 runtime / Kanban closure
+   - `electron/services/session-runtime-manager.ts`
+   - `electron/api/routes/sessions.ts`
+   - `src/pages/TaskKanban/index.tsx`
+   - runtime records now keep parent/child linkage metadata
+   - Kanban retry/start can spawn child runtime sessions and preserve lineage
+2. Wave 3 costs / channels closure
+   - `electron/api/routes/costs.ts`
+   - `src/pages/Costs/index.tsx`
+   - `electron/api/routes/channels.ts`
+   - added `/api/costs/analysis` with optimization score / anomalies / WoW / cache savings / insights
+   - realtime costs tab now supports auto-refresh polling
+   - channel `/test` and `/send` routes now enforce per-channel rate limiting
+3. Wave 4 memory slice
+   - `electron/api/routes/memory.ts`
+   - `src/pages/Memory/index.tsx`
+   - memory page now supports agent scope switching, server-side search, hit counts / highlights, unsaved-change warning, stale-write detection, and atomic writes
+
+### Verification
+- `pnpm exec vitest run tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts tests/unit/task-kanban.test.tsx tests/unit/costs-routes.test.ts tests/unit/costs-page.test.tsx tests/unit/channels-routes.test.ts tests/unit/openclaw-memory-file-route.test.ts tests/unit/openclaw-memory-status.test.ts tests/unit/memory-page.test.tsx tests/unit/settings-memory-browser.test.tsx --project node --project jsdom` -> pass (`42/42`)
+- `pnpm run typecheck` -> pass
+- `pnpm exec tsc -p tsconfig.node.json --noEmit` -> pass
+- `pnpm run lint` -> pass
+- `pnpm run build:vite` -> pass
+- `pnpm run comms:replay` -> pass
+- `pnpm run comms:compare` -> pass
+
+### Next
+- Continue `PLAN-2026-03-24-PLATFORM-CLOSURE`
+- Prioritize remaining real gaps: i18n hardcoded copy cleanup, deeper runtime registry / skill bridge, channel multi-user isolation, remaining memory helpers (copy/download, git snapshot, AI analysis, QMD), richer agent hierarchy / cron linkage / avatar state, update / UX / a11y governance
+
+[2026-03-25 13:23 +08:00] Session: Session-24 settings-maintenance + agent-detail
+Focus: Continue Wave 4 by exposing missing Settings maintenance actions and landing the first standalone Agent detail page
+
+### Completed
+1. Settings maintenance actions
+   - `src/pages/Settings/index.tsx`
+   - `electron/api/routes/app.ts`
+   - surfaced `Re-run Setup`, `Reset All Settings`, and `Clear Server Data`
+   - host route now clears approvals / cron run logs / KTClaw logs / agent session stores
+2. Agent detail page
+   - `src/pages/AgentDetail/index.tsx`
+   - `src/App.tsx`
+   - `src/pages/Agents/index.tsx`
+   - `tests/unit/agent-detail-page.test.tsx`
+   - `tests/e2e/routes-smoke.spec.ts`
+   - added standalone read-only `/agents/:agentId` page backed by existing `AgentSummary`
+
+### Verification
+- `pnpm exec vitest run tests/unit/app-routes.test.ts tests/unit/settings-center.test.tsx tests/unit/agent-detail-page.test.tsx --project jsdom` -> pass (`9/9`)
+- `pnpm exec vitest run tests/unit/app-routes.test.ts tests/unit/settings-center.test.tsx tests/unit/agent-detail-page.test.tsx tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts tests/unit/task-kanban.test.tsx tests/unit/costs-routes.test.ts tests/unit/costs-page.test.tsx tests/unit/channels-routes.test.ts tests/unit/openclaw-memory-file-route.test.ts tests/unit/openclaw-memory-status.test.ts tests/unit/memory-page.test.tsx tests/unit/settings-memory-browser.test.tsx --project node --project jsdom` -> pass (`51/51`)
+- `pnpm run typecheck` -> pass
+- `pnpm run lint` -> pass
+- `pnpm run build:vite` -> pass
+- `pnpm exec playwright test tests/e2e/routes-smoke.spec.ts` -> pass (`8/8`)
+
+### Next
+- Continue `PLAN-2026-03-24-PLATFORM-CLOSURE`
+- Remaining concrete backlog still includes: i18n hardcoded copy cleanup, deeper runtime registry / skills bridge, channel multi-user isolation, memory copy/download + git snapshot + AI/QMD, real hierarchy / cron / avatar extensions for agent detail, and Wave 5 update / UX / a11y governance
+[2026-03-25 13:36 +08:00] Session: Session-24-002 memory-helpers
+Focus: Finish the remaining low-coupling Memory helper items after the main Wave 4 slice
+
+### Completed
+1. `src/pages/Memory/index.tsx`
+   - added `Copy` and `Download` actions for the selected memory file
+   - successful save now triggers `/api/memory/reindex`
+2. `tests/unit/memory-page.test.tsx`
+   - added regression coverage for clipboard copy and reindex-after-save
+
+### Verification
+- `pnpm exec vitest run tests/unit/memory-page.test.tsx --project jsdom` -> pass (`2/2`)
+- `pnpm run typecheck` -> pass
+- `pnpm run lint` -> pass
+- `pnpm run build:vite` -> pass
+[2026-03-25 13:58 +08:00] Session: Session-24-003 brand-assets
+Focus: Continue Wave 4 by exposing the remaining global brand asset slice in Settings
+
+### Completed
+1. `src/stores/settings.ts`
+   - added `brandLogoDataUrl` / `brandIconDataUrl`
+2. `src/pages/Settings/index.tsx`
+   - brand card now supports logo/icon upload + clear
+3. `src/components/layout/TitleBar.tsx`
+   - title bar now renders custom brand mark / brand name
+4. `src/components/layout/Sidebar.tsx`
+   - sidebar chrome now reads the custom brand mark
+
+### Verification
+- `pnpm exec vitest run tests/unit/settings-center.test.tsx --project jsdom` -> pass (`6/6`)
+- `pnpm run typecheck` -> pass
+- `pnpm run lint` -> pass
+- `pnpm run build:vite` -> pass
+- `pnpm exec playwright test tests/e2e/routes-smoke.spec.ts` -> pass (`8/8`)

@@ -27,29 +27,16 @@ import zhSkills from './locales/zh/skills.json';
 import zhCron from './locales/zh/cron.json';
 import zhSetup from './locales/zh/setup.json';
 
-// JA
-import jaCommon from './locales/ja/common.json';
-import jaSettings from './locales/ja/settings.json';
-import jaDashboard from './locales/ja/dashboard.json';
-import jaChat from './locales/ja/chat.json';
-import jaChannels from './locales/ja/channels.json';
-import jaAgents from './locales/ja/agents.json';
-import jaSkills from './locales/ja/skills.json';
-import jaCron from './locales/ja/cron.json';
-import jaSetup from './locales/ja/setup.json';
-
 export const SUPPORTED_LANGUAGES = [
     { code: 'zh', label: '中文' },
     { code: 'en', label: 'English' },
-    { code: 'ja', label: '日本語' },
 ] as const satisfies ReadonlyArray<{ code: LanguageCode; label: string }>;
 
-const EXPOSED_LANGUAGE_CODES = ['zh', 'en', 'ja'] as const;
+const EXPOSED_LANGUAGE_CODES = ['zh', 'en'] as const;
 type ExposedLanguageCode = (typeof EXPOSED_LANGUAGE_CODES)[number];
 
 function resolveExposedLanguage(language: string | undefined): ExposedLanguageCode {
     const resolved = resolveSupportedLanguage(language);
-    if (resolved === 'ja') return 'ja';
     if (resolved === 'en') return 'en';
     return 'zh';
 }
@@ -76,17 +63,6 @@ const resources = {
         skills: zhSkills,
         cron: zhCron,
         setup: zhSetup,
-    },
-    ja: {
-        common: jaCommon,
-        settings: jaSettings,
-        dashboard: jaDashboard,
-        chat: jaChat,
-        channels: jaChannels,
-        agents: jaAgents,
-        skills: jaSkills,
-        cron: jaCron,
-        setup: jaSetup,
     },
 };
 

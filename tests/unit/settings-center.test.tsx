@@ -1,12 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Settings from '@/pages/Settings';
+import { TitleBar } from '@/components/layout/TitleBar';
+import { SETTINGS_NAV_GROUPS, type SettingsSectionId } from '@/components/settings-center/settings-shell-data';
 import { hostApiFetch } from '@/lib/host-api';
 import { useSettingsStore } from '@/stores/settings';
-import { toast } from 'sonner';
 
-const { gatewayState, updateState } = vi.hoisted(() => ({
+const { gatewayState, updateState, navigateMock, invokeIpcMock } = vi.hoisted(() => ({
   gatewayState: {
     status: { state: 'running', port: 18789 },
     restart: vi.fn(),
@@ -23,7 +24,22 @@ const { gatewayState, updateState } = vi.hoisted(() => ({
     installUpdate: vi.fn(),
     init: vi.fn(),
   },
+  navigateMock: vi.fn(),
+  invokeIpcMock: vi.fn((channel: string) => {
+    if (channel === 'window:isMaximized') {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(undefined);
+  }),
 }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('@/stores/gateway', () => ({
   useGatewayStore: () => gatewayState,
@@ -52,7 +68,7 @@ vi.mock('@/components/settings/ProvidersSettings', () => ({
 }));
 
 vi.mock('@/lib/api-client', () => ({
-  invokeIpc: vi.fn(),
+  invokeIpc: invokeIpcMock,
   toUserMessage: (error: unknown) => String(error),
   getGatewayWsDiagnosticEnabled: () => false,
   setGatewayWsDiagnosticEnabled: vi.fn(),
@@ -82,9 +98,22 @@ vi.mock('react-i18next', () => ({
     init: vi.fn(),
   },
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: string | { defaultValue?: string }) => {
+      if (typeof options === 'string') {
+        return options;
+      }
+      return options?.defaultValue ?? key;
+    },
   }),
 }));
+
+function getNavLabel(id: SettingsSectionId): string {
+  const item = SETTINGS_NAV_GROUPS.flatMap((group) => group.items).find((entry) => entry.id === id);
+  if (!item) {
+    throw new Error(`Missing nav item for ${id}`);
+  }
+  return item.label;
+}
 
 describe('Settings center', () => {
   beforeEach(() => {
@@ -93,43 +122,62 @@ describe('Settings center', () => {
     useSettingsStore.getState().resetSettings();
   });
 
-  it('renders the current grouped navigation and section shells', () => {
+  it('renders grouped navigation and key section shells', () => {
     render(
       <MemoryRouter>
         <Settings />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    expect(screen.getAllByText('基础').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('工作流').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('能力').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('治理').length).toBeGreaterThan(0);
+    for (const group of SETTINGS_NAV_GROUPS) {
+      expect(screen.getAllByText(group.label).length).toBeGreaterThan(0);
+    }
 
-    fireEvent.click(screen.getByRole('button', { name: /迁移与备份/ }));
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('migration-backup') }));
     expect(screen.getByRole('button', { name: /启动迁移向导/ })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /记忆与知识/ }));
-    expect(screen.getByRole('tab', { name: '策略配置 (Settings)' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '数据浏览器 (Browser)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('memory-knowledge') }));
+    expect(screen.getByRole('tab', { name: /Settings/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Browser/ })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /反馈与开发者/ }));
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('feedback-developer') }));
     expect(screen.getByText('KTClaw Doctor')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Run checks' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Re-run Setup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset All Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear Server Data' })).toBeInTheDocument();
   });
 
-  it('persists experimental toggles through the host settings api', () => {
+  it('splits the Skills and MCP settings surface into tabbed panels', async () => {
+    render(
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('skills-mcp') }));
+
+    expect(screen.getByRole('tab', { name: 'Skills' })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('tab', { name: 'MCP' })).toBeInTheDocument();
+    expect(screen.getByText(/Native Skills/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'MCP' }));
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: 'MCP' })).toHaveAttribute('data-state', 'active');
+    });
+    expect(screen.getByText('MCP services')).toBeInTheDocument();
+  });
+
+  it('persists developer toggles through the host settings api', () => {
     const hostApiFetchMock = vi.mocked(hostApiFetch);
     render(
       <MemoryRouter>
         <Settings />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /反馈与开发者/ }));
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('feedback-developer') }));
 
-    const remoteSwitch = screen.getByRole('switch', { name: /API RPC/ });
-    fireEvent.click(remoteSwitch);
-
+    fireEvent.click(screen.getByRole('switch', { name: /API RPC/ }));
     expect(hostApiFetchMock).toHaveBeenCalledWith(
       '/api/settings/remoteRpcEnabled',
       expect.objectContaining({
@@ -138,9 +186,7 @@ describe('Settings center', () => {
       }),
     );
 
-    const p2pSwitch = screen.getByRole('switch', { name: /P2P/ });
-    fireEvent.click(p2pSwitch);
-
+    fireEvent.click(screen.getByRole('switch', { name: /P2P/ }));
     expect(hostApiFetchMock).toHaveBeenCalledWith(
       '/api/settings/p2pSyncEnabled',
       expect.objectContaining({
@@ -150,175 +196,92 @@ describe('Settings center', () => {
     );
   });
 
-  it('persists route rules and tool permission editors through the host settings api', async () => {
+  it('provides maintenance actions for setup re-entry, settings reset, and server data clear', async () => {
     const hostApiFetchMock = vi.mocked(hostApiFetch);
     render(
       <MemoryRouter>
         <Settings />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /通道高级配置/ }));
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /\+ 添加路由规则/ }));
-    });
-    fireEvent.change(await screen.findByRole('textbox', { name: '新增路由规则' }), {
-      target: { value: 'support-* -> planner-agent' },
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '保存规则' }));
-    });
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('feedback-developer') }));
 
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ channelRouteRules: ['support-* -> planner-agent'] }),
-      }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Re-run Setup' }));
+    expect(navigateMock).toHaveBeenCalledWith('/setup');
 
-    fireEvent.click(screen.getByRole('button', { name: /工具权限/ }));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /路径白名单/ }));
-    });
-    expect(await screen.findByText('新增允许访问路径')).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.change(screen.getByRole('textbox', { name: '新增允许访问路径' }), {
-        target: { value: 'C:\\Projects\\KTClaw' },
-      });
-      fireEvent.click(screen.getByRole('button', { name: '保存路径' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Reset All Settings' }));
     });
     expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ filePathAllowlist: ['C:\\Projects\\KTClaw'] }),
-      }),
+      '/api/settings/reset',
+      expect.objectContaining({ method: 'POST' }),
     );
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /编辑黑名单/ }));
-    });
-    expect(await screen.findByText('新增命令黑名单')).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.change(screen.getByRole('textbox', { name: '新增命令黑名单' }), {
-        target: { value: 'rm -rf /' },
-      });
-      fireEvent.click(screen.getByRole('button', { name: '保存黑名单' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Clear Server Data' }));
     });
     expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ terminalCommandBlocklist: ['rm -rf /'] }),
-      }),
+      '/api/app/clear-server-data',
+      expect.objectContaining({ method: 'POST' }),
     );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /\+ 添加工具许可/ }));
-    });
-    expect(await screen.findByText('新增工具许可')).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.change(screen.getByRole('textbox', { name: '新增工具许可' }), {
-        target: { value: 'github-cli --repo anthropics/claude-code' },
-      });
-      fireEvent.click(screen.getByRole('button', { name: '保存许可' }));
-    });
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ customToolGrants: ['github-cli --repo anthropics/claude-code'] }),
-      }),
-    );
-
-    await waitFor(() => {
-      expect(vi.mocked(toast.success)).toHaveBeenCalledWith('已添加工具许可');
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /\+ Python 解释器/ }));
-    });
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({
-          customToolGrants: ['github-cli --repo anthropics/claude-code', 'Python 解释器'],
-        }),
-      }),
-    );
-  }, 10000);
-
-  it('keeps editor state and reports an error when route rule persistence fails', async () => {
-    const hostApiFetchMock = vi.mocked(hostApiFetch);
-    hostApiFetchMock.mockRejectedValueOnce(new Error('write failed'));
-
-    render(
-      <MemoryRouter>
-        <Settings />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /通道高级配置/ }));
-    fireEvent.click(screen.getByRole('button', { name: /\+ 添加路由规则/ }));
-    fireEvent.change(screen.getByRole('textbox', { name: '新增路由规则' }), {
-      target: { value: 'ops-* -> reviewer-agent' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '保存规则' }));
-
-    await waitFor(() => {
-      expect(vi.mocked(toast.error)).toHaveBeenCalledWith('保存路由规则失败');
-    });
-    expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
-    expect(screen.getByRole('textbox', { name: '新增路由规则' })).toHaveValue('ops-* -> reviewer-agent');
   });
 
-  it('persists channel advanced defaults and global risk level through the host settings api', () => {
-    const hostApiFetchMock = vi.mocked(hostApiFetch);
+  it('uploads and clears custom brand logo/icon data urls', async () => {
     render(
       <MemoryRouter>
         <Settings />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /通道高级配置/ }));
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('general') }));
 
-    const chatModeSelect = screen.getByRole('combobox', { name: '默认群聊行为模式' });
-    fireEvent.change(chatModeSelect, { target: { value: 'all-listen' } });
+    const logoInput = screen.getByLabelText('Upload brand logo');
+    const iconInput = screen.getByLabelText('Upload brand icon');
 
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings/groupChatMode',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ value: 'all-listen' }),
-      }),
-    );
-
-    const groupRateInput = screen.getByRole('spinbutton', { name: '群聊每分钟发言上限' });
-    fireEvent.change(groupRateInput, { target: { value: '9' } });
-
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings/groupRate',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ value: '9' }),
-      }),
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: /工具权限/ }));
-
-    const riskSelect = screen.getByRole('combobox', {
-      name: '全局风险级别设定 (Global Risk Level)',
+    fireEvent.change(logoInput, {
+      target: { files: [new File(['logo'], 'logo.png', { type: 'image/png' })] },
     });
-    fireEvent.change(riskSelect, { target: { value: 'strict' } });
+    fireEvent.change(iconInput, {
+      target: { files: [new File(['icon'], 'icon.png', { type: 'image/png' })] },
+    });
 
-    expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings/globalRiskLevel',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ value: 'strict' }),
-      }),
-    );
+    await waitFor(() => {
+      expect(useSettingsStore.getState().brandLogoDataUrl).toMatch(/^data:image\/png;base64,/);
+      expect(useSettingsStore.getState().brandIconDataUrl).toMatch(/^data:image\/png;base64,/);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear brand logo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear brand icon' }));
+
+    expect(useSettingsStore.getState().brandLogoDataUrl).toBe(null);
+    expect(useSettingsStore.getState().brandIconDataUrl).toBe(null);
+  });
+
+  it('renders custom brand icon and name in the title bar', () => {
+    const originalElectron = window.electron;
+    Object.defineProperty(window, 'electron', {
+      value: {
+        ...(originalElectron ?? {}),
+        platform: 'win32',
+      },
+      configurable: true,
+      writable: true,
+    });
+
+    useSettingsStore.setState({
+      brandName: 'Acme Control',
+      brandIconDataUrl: 'data:image/png;base64,abc123',
+    });
+
+    render(<TitleBar />);
+
+    expect(screen.getByText('Acme Control')).toBeInTheDocument();
+    expect(screen.getByAltText('Brand icon')).toHaveAttribute('src', 'data:image/png;base64,abc123');
+
+    Object.defineProperty(window, 'electron', {
+      value: originalElectron,
+      configurable: true,
+      writable: true,
+    });
   });
 });

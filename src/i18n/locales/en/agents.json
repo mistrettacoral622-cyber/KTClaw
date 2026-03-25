@@ -33,6 +33,30 @@
         "addChannel": "Add Channel",
         "noChannels": "No channels are assigned to this agent yet."
     },
+    "detail": {
+        "title": "Agent Detail",
+        "linkLabel": "Details",
+        "backToAgents": "Back to agents",
+        "notFoundTitle": "Agent not found",
+        "notFoundDescription": "The requested agent does not exist in the current KTClaw snapshot.",
+        "loading": "Loading agent details...",
+        "kicker": "Agent detail",
+        "noPersona": "No persona configured.",
+        "metadata": "Metadata",
+        "agentId": "Agent ID",
+        "model": "Model",
+        "workspace": "Workspace",
+        "agentDir": "Agent directory",
+        "mainSessionKey": "Main session key",
+        "hierarchy": "Hierarchy",
+        "rootSummary": "This is the root KTClaw agent.",
+        "reportsToSummary": "{{name}} reports to {{parent}}",
+        "reportsTo": "Reports to",
+        "directReports": "Direct reports",
+        "channels": "Channels",
+        "noChannels": "No channels assigned.",
+        "none": "none"
+    },
     "removeChannelDialog": {
         "title": "Remove Channel",
         "message": "Remove {{name}} from KTClaw? This deletes the current channel configuration."

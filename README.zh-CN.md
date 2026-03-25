@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md">English</a> | 简体中文 | <a href="README.ja-JP.md">日本語</a>
+  <a href="README.md">English</a> | 简体中文
 </p>
 
 ---
@@ -329,6 +329,7 @@ pnpm typecheck            # TypeScript 类型检查
 pnpm test                 # 运行单元测试
 pnpm run test:e2e         # 运行 Playwright E2E 测试
 pnpm run test:e2e:headed  # 以有头模式运行 Playwright E2E 测试
+pnpm run smoke:linux      # Linux release + install smoke（非破坏性校验）
 pnpm run comms:replay     # 计算通信回放指标
 pnpm run comms:baseline   # 刷新通信基线快照
 pnpm run comms:compare    # 将回放指标与基线阈值对比
@@ -340,6 +341,9 @@ pnpm package              # 为当前平台打包
 pnpm package:mac          # 为 macOS 打包
 pnpm package:win          # 为 Windows 打包
 pnpm package:linux        # 为 Linux 打包
+pnpm package:mac:ci       # CI 用 macOS 打包（不发布）
+pnpm package:win:ci       # CI 用 Windows 打包（不发布）
+pnpm package:linux:ci     # CI 用 Linux 打包（不发布）
 ```
 
 ### 通信回归检查

@@ -18,6 +18,39 @@ import { whatsAppLoginManager } from '../../utils/whatsapp-login';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
 
+const CHANNEL_RATE_LIMITS = {
+  test: { max: 2, windowMs: 30_000 },
+  send: { max: 8, windowMs: 10_000 },
+};
+
+type RateLimitRule = { max: number; windowMs: number };
+type RateLimitResult =
+  | { allowed: true }
+  | { allowed: false; retryAfterSeconds: number };
+
+const channelActionRateBuckets = new Map<string, number[]>();
+
+function checkChannelRateLimit(
+  key: string,
+  rule: RateLimitRule,
+): RateLimitResult {
+  const now = Date.now();
+  const windowStart = now - rule.windowMs;
+  const existing = (channelActionRateBuckets.get(key) || []).filter((ts) => ts > windowStart);
+  if (existing.length >= rule.max) {
+    const retryAfterMs = Math.max(0, rule.windowMs - (now - existing[0]));
+    channelActionRateBuckets.set(key, existing);
+    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil(retryAfterMs / 1000)) };
+  }
+  existing.push(now);
+  channelActionRateBuckets.set(key, existing);
+  return { allowed: true };
+}
+
+function sendRateLimitError(res: ServerResponse, retryAfterSeconds: number): void {
+  sendJson(res, 429, { success: false, error: 'Rate limit exceeded', retryAfterSeconds });
+}
+
 function scheduleGatewayChannelRestart(ctx: HostApiContext, reason: string): void {
   if (ctx.gatewayManager.getStatus().state === 'stopped') {
     return;
@@ -510,6 +543,12 @@ export async function handleChannelRoutes(
         sendJson(res, 503, { success: false, error: 'Gateway is not running' });
         return true;
       }
+      const rateKey = `${channelId}:test`;
+      const rateResult = checkChannelRateLimit(rateKey, CHANNEL_RATE_LIMITS.test);
+      if (!rateResult.allowed) {
+        sendRateLimitError(res, rateResult.retryAfterSeconds);
+        return true;
+      }
       // Attempt to send a test message via the gateway HTTP API
       const port = status.port ?? 3000;
       const http = await import('node:http');
@@ -544,6 +583,12 @@ export async function handleChannelRoutes(
       const status = ctx.gatewayManager.getStatus();
       if (status.state !== 'running') {
         sendJson(res, 503, { success: false, error: 'Gateway is not running' });
+        return true;
+      }
+      const rateKey = `${channelId}:send`;
+      const rateResult = checkChannelRateLimit(rateKey, CHANNEL_RATE_LIMITS.send);
+      if (!rateResult.allowed) {
+        sendRateLimitError(res, rateResult.retryAfterSeconds);
         return true;
       }
       const port = status.port ?? 3000;

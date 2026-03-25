@@ -98,7 +98,18 @@ function readFileAsBase64(file: globalThis.File): Promise<string> {
 export function ChatInput({ onSend, onStop, disabled = false, sending = false, isEmpty = false }: ChatInputProps) {
   const { t } = useTranslation('chat');
   const navigate = useNavigate();
-  const [input, setInput] = useState('');
+  const rawComposerDraft = useChatStore((s) => ('composerDraft' in s && typeof s.composerDraft === 'string' ? s.composerDraft : undefined));
+  const rawSetComposerDraft = useChatStore((s) => ('setComposerDraft' in s && typeof s.setComposerDraft === 'function'
+    ? s.setComposerDraft
+    : undefined));
+  const [localComposerDraft, setLocalComposerDraft] = useState(rawComposerDraft ?? '');
+  const composerDraft = typeof rawComposerDraft === 'string' ? rawComposerDraft : localComposerDraft;
+  const setComposerDraft = useCallback((value: string) => {
+    if (rawSetComposerDraft) {
+      rawSetComposerDraft(value);
+    }
+    setLocalComposerDraft(value);
+  }, [rawSetComposerDraft]);
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [targetAgentId, setTargetAgentId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -152,23 +163,29 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     [agents, targetAgentId],
   );
   const showAgentPicker = mentionableAgents.length > 0;
-  const slashMatches = useMemo(() => getChatInputSlashMatches(input), [input]);
+  const slashMatches = useMemo(() => getChatInputSlashMatches(composerDraft), [composerDraft]);
   const showSlashMenu = useMemo(
-    () => isSlashCommandPrefixInput(input) && slashMatches.length > 0,
-    [input, slashMatches.length],
+    () => isSlashCommandPrefixInput(composerDraft) && slashMatches.length > 0,
+    [composerDraft, slashMatches.length],
   );
   const [slashActiveIndex, setSlashActiveIndex] = useState(0);
   const activeSlashCommand = showSlashMenu
     ? (slashMatches[Math.min(slashActiveIndex, slashMatches.length - 1)] ?? null)
     : null;
 
+  useEffect(() => {
+    if (typeof rawComposerDraft === 'string') {
+      setLocalComposerDraft(rawComposerDraft);
+    }
+  }, [rawComposerDraft]);
+
   const applySlashCompletion = useCallback((commandName: string) => {
-    setInput(`${commandName} `);
+    setComposerDraft(`${commandName} `);
     setSlashActiveIndex(0);
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-  }, []);
+  }, [setComposerDraft]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -176,7 +193,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
-  }, [input]);
+  }, [composerDraft]);
 
   // Focus textarea on mount (avoids Windows focus loss after session delete + native dialog)
   useEffect(() => {
@@ -337,7 +354,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
   }, []);
 
   const allReady = attachments.length === 0 || attachments.every(a => a.status === 'ready');
-  const canSend = (input.trim() || attachments.length > 0) && allReady && !disabled && !sending;
+  const canSend = (composerDraft.trim() || attachments.length > 0) && allReady && !disabled && !sending;
   const canStop = sending && !disabled && !!onStop;
 
   const executeLocalSlashCommand = useCallback((rawInput: string): boolean => {
@@ -347,7 +364,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     switch (parsed.command.key) {
       case 'new': {
         newSession();
-        setInput('');
+        setComposerDraft('');
         setAttachments([]);
         setTargetAgentId(null);
         setPickerOpen(false);
@@ -365,21 +382,21 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         } else {
           toast.info('No active run to stop.');
         }
-        setInput('');
+        setComposerDraft('');
         return true;
       }
       case 'agent': {
         const query = parsed.args.trim();
         if (!query) {
           setPickerOpen(true);
-          setInput('');
+          setComposerDraft('');
           return true;
         }
         const normalizedQuery = query.toLowerCase();
         if (normalizedQuery === 'clear' || normalizedQuery === 'none' || normalizedQuery === 'off') {
           setTargetAgentId(null);
           setPickerOpen(false);
-          setInput('');
+          setComposerDraft('');
           return true;
         }
 
@@ -401,29 +418,29 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
 
         setTargetAgentId(match.id);
         setPickerOpen(false);
-        setInput('');
+        setComposerDraft('');
         return true;
       }
       case 'cwd': {
         const query = parsed.args.trim();
         if (!query) {
           setFolderPopoverOpen(true);
-          setInput('');
+          setComposerDraft('');
           return true;
         }
         const normalizedQuery = query.toLowerCase();
         if (normalizedQuery === 'clear' || normalizedQuery === 'none' || normalizedQuery === 'off') {
           setWorkingDirectory(null);
-          setInput('');
+          setComposerDraft('');
           return true;
         }
         setWorkingDirectory(query);
         setFolderPopoverOpen(false);
-        setInput('');
+        setComposerDraft('');
         return true;
       }
       case 'help': {
-        setInput('/');
+        setComposerDraft('/');
         setSlashActiveIndex(0);
         requestAnimationFrame(() => {
           textareaRef.current?.focus();
@@ -432,25 +449,25 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
       }
       case 'memory': {
         navigate('/memory');
-        setInput('');
+        setComposerDraft('');
         setSlashActiveIndex(0);
         return true;
       }
       case 'cron': {
         navigate('/cron');
-        setInput('');
+        setComposerDraft('');
         setSlashActiveIndex(0);
         return true;
       }
       case 'settings': {
         navigate('/settings');
-        setInput('');
+        setComposerDraft('');
         setSlashActiveIndex(0);
         return true;
       }
       case 'clear': {
         newSession();
-        setInput('');
+        setComposerDraft('');
         setAttachments([]);
         setTargetAgentId(null);
         setPickerOpen(false);
@@ -463,7 +480,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         return true;
       }
       case 'export': {
-        setInput('');
+        setComposerDraft('');
         setSlashActiveIndex(0);
         if (messages.length === 0) {
           toast.info('No conversation messages to export yet.');
@@ -500,17 +517,17 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
       default:
         return false;
     }
-  }, [agents, canStop, currentAgentId, currentSessionKey, messages, navigate, newSession, onStop]);
+  }, [agents, canStop, currentAgentId, currentSessionKey, messages, navigate, newSession, onStop, setComposerDraft]);
 
   const handleSend = useCallback(() => {
-    if (executeLocalSlashCommand(input)) return;
+    if (executeLocalSlashCommand(composerDraft)) return;
     if (!canSend) return;
     const readyAttachments = attachments.filter(a => a.status === 'ready');
-    // Capture values before clearing — clear input immediately for snappy UX,
+    // Capture values before clearing — clear composer draft immediately for snappy UX,
     // but keep attachments available for the async send
-    const textToSend = input.trim();
+    const textToSend = composerDraft.trim();
     const attachmentsToSend = readyAttachments.length > 0 ? readyAttachments : undefined;
-    setInput('');
+    setComposerDraft('');
     setAttachments([]);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -519,7 +536,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     setTargetAgentId(null);
     setPickerOpen(false);
     setWorkingDirectory(null);
-  }, [attachments, canSend, executeLocalSlashCommand, input, onSend, targetAgentId, workingDirectory]);
+  }, [attachments, canSend, executeLocalSlashCommand, composerDraft, onSend, setComposerDraft, targetAgentId, workingDirectory]);
 
   const handleStop = useCallback(() => {
     if (!canStop) return;
@@ -544,7 +561,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         applySlashCompletion(activeSlashCommand.name);
         return;
       }
-      if (e.key === 'Backspace' && !input && targetAgentId) {
+      if (e.key === 'Backspace' && !composerDraft && targetAgentId) {
         setTargetAgentId(null);
         return;
       }
@@ -555,7 +572,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         }
         e.preventDefault();
         if (showSlashMenu && activeSlashCommand) {
-          const normalizedInput = input.trim();
+          const normalizedInput = composerDraft.trim();
           if (normalizedInput === activeSlashCommand.name && !activeSlashCommand.argsHint) {
             handleSend();
             return;
@@ -566,7 +583,7 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
         handleSend();
       }
     },
-    [activeSlashCommand, applySlashCompletion, handleSend, input, showSlashMenu, slashMatches.length, targetAgentId],
+    [activeSlashCommand, applySlashCompletion, handleSend, composerDraft, showSlashMenu, slashMatches.length, targetAgentId],
   );
 
   // Handle paste (Ctrl/Cmd+V with files)
@@ -790,8 +807,8 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
             <div className="flex-1 relative">
               <Textarea
                 ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={composerDraft}
+                onChange={(e) => setComposerDraft(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onCompositionStart={() => {
                   isComposingRef.current = true;

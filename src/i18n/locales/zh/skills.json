@@ -107,5 +107,79 @@
         "noResults": "未找到匹配的技能。",
         "emptyPrompt": "搜索新技能以扩展您的能力。",
         "searchError": "ClawHub 搜索失败。请检查您的连接或安装。"
+    },
+    "mcp": {
+        "title": "MCP 服务",
+        "description": "管理 KTClaw 可调用的 MCP 服务；启用后即可暴露工具，同时保留 runtime 控制与日志。",
+        "dialog": {
+            "addTitle": "添加 MCP 服务",
+            "editTitle": "编辑 MCP 服务",
+            "subtitle": "配置 KTClaw 可调用的本地或远程 MCP 服务连接参数。",
+            "close": "关闭",
+            "cancel": "取消",
+            "save": "保存",
+            "saving": "保存中...",
+            "fields": {
+                "name": "名称",
+                "transport": "传输方式",
+                "command": "命令",
+                "args": "参数",
+                "url": "URL",
+                "env": "环境变量"
+            },
+            "validation": {
+                "nameRequired": "名称不能为空",
+                "commandRequired": "stdio 服务器必须填写命令",
+                "urlRequired": "远程服务器必须填写 URL"
+            }
+        },
+        "actions": {
+            "refresh": "刷新服务",
+            "addService": "添加服务",
+            "enableService": "启用服务",
+            "disableService": "停用服务",
+            "edit": "编辑",
+            "delete": "删除服务",
+            "deleteConfirm": "确认删除这个 MCP 服务？",
+            "refreshTools": "刷新工具",
+            "runTool": "运行工具",
+            "runningTool": "运行中...",
+            "loadLogs": "加载日志",
+            "loadingLogs": "加载中...",
+            "start": "start",
+            "connect": "connect",
+            "stop": "stop"
+        },
+        "empty": {
+            "title": "暂无 MCP 服务",
+            "description": "添加一个服务，即可在这里查看它的工具、runtime 控制和日志。"
+        },
+        "panels": {
+            "toolsTitle": "已发现工具",
+            "toolsDescription": "查看工具可见性并做一次性调用调试。",
+            "logsTitle": "服务日志",
+            "logsDescription": "按服务查看最近的 runtime 事件和 stderr。"
+        },
+        "fields": {
+            "tool": "工具",
+            "argsJson": "参数 JSON"
+        },
+        "states": {
+            "loading": "加载中...",
+            "connected": "已连接",
+            "disconnected": "未连接",
+            "pid": "pid {{pid}}",
+            "selectTool": "请先选择一个工具",
+            "invalidJson": "工具参数必须是合法 JSON",
+            "toolCallError": "工具调用返回错误",
+            "noTools": "当前还没有发现工具。请先启动或连接 runtime，然后刷新工具。",
+            "noLogs": "暂未加载日志。"
+        },
+        "status": {
+            "stopped": "stopped",
+            "starting": "starting",
+            "running": "running",
+            "error": "error"
+        }
     }
 }

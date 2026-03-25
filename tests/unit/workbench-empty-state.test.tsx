@@ -6,10 +6,12 @@ import { useGatewayStore } from '@/stores/gateway';
 
 describe('WorkbenchEmptyState', () => {
   const sendMessageMock = vi.fn();
+  const setComposerDraftMock = vi.fn();
 
   beforeEach(() => {
     sendMessageMock.mockReset();
-    useChatStore.setState({ sendMessage: sendMessageMock });
+    setComposerDraftMock.mockReset();
+    useChatStore.setState({ sendMessage: sendMessageMock, setComposerDraft: setComposerDraftMock, composerDraft: '' });
   });
 
   it('renders a quick action toolbar with persistent selected-action controls and 2x2 suggestion cards', () => {
@@ -35,7 +37,7 @@ describe('WorkbenchEmptyState', () => {
     }
   });
 
-  it('keeps one-click quick action affordances while allowing rerun from persistent selected action', () => {
+  it('opens a prompt panel and refills the composer instead of sending immediately', () => {
     useGatewayStore.setState({ status: { state: 'running', port: 18789 } });
     render(<WorkbenchEmptyState />);
 
@@ -45,15 +47,17 @@ describe('WorkbenchEmptyState', () => {
 
     fireEvent.click(quickActionButtons[1]);
     expect(quickActionButtons[1]).toHaveAttribute('aria-pressed', 'true');
-
-    expect(sendMessageMock).toHaveBeenCalledTimes(1);
-    const firstPrompt = sendMessageMock.mock.calls[0]?.[0];
-    expect(typeof firstPrompt).toBe('string');
-    expect((firstPrompt as string).length).toBeGreaterThan(0);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: /quick action prompt/i })).toBeInTheDocument();
+    expect(screen.getByText(/mapped skills/i)).toBeInTheDocument();
 
     fireEvent.click(runSelectedButton);
-    expect(sendMessageMock).toHaveBeenCalledTimes(2);
-    expect(sendMessageMock.mock.calls[1]?.[0]).toBe(firstPrompt);
+    expect(screen.getByRole('dialog', { name: /quick action prompt/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /fill composer/i }));
+    expect(setComposerDraftMock).toHaveBeenCalledTimes(1);
+    expect(typeof setComposerDraftMock.mock.calls[0]?.[0]).toBe('string');
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it('shows a disconnected hint and disables suggestion cards when gateway is down', () => {

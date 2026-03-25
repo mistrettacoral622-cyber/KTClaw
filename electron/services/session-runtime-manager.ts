@@ -12,6 +12,9 @@ export type RuntimeSessionMode = 'session' | 'thread';
 export interface RuntimeSessionRecord {
   id: string;
   parentSessionKey: string;
+  parentRuntimeId?: string;
+  rootRuntimeId: string;
+  depth: number;
   sessionKey: string;
   mode: RuntimeSessionMode;
   prompt: string;
@@ -25,12 +28,14 @@ export interface RuntimeSessionRecord {
   createdAt: string;
   updatedAt: string;
   transcript: string[];
+  childRuntimeIds: string[];
   toolSnapshot: Array<{ server: string; name: string }>;
   skillSnapshot: string[];
 }
 
 export interface SpawnRuntimeSessionInput {
   parentSessionKey: string;
+  parentRuntimeId?: string;
   prompt: string;
   mode?: RuntimeSessionMode;
   agentName?: string;
@@ -95,11 +100,19 @@ export class SessionRuntimeManager {
     await this.ensureHydrated();
     const now = new Date().toISOString();
     const id = randomUUID();
-    const sessionKey = this.buildRuntimeSessionKey(input.parentSessionKey, id);
+    const parentRuntime = input.parentRuntimeId ? this.sessions.get(input.parentRuntimeId) : undefined;
+    if (input.parentRuntimeId && !parentRuntime) {
+      throw new Error(`Runtime parent session not found: ${input.parentRuntimeId}`);
+    }
+    const actualParentSessionKey = parentRuntime?.sessionKey ?? input.parentSessionKey;
+    const sessionKey = this.buildRuntimeSessionKey(actualParentSessionKey, id);
     const capabilitySnapshot = await this.buildCapabilitySnapshot();
     const record: RuntimeSessionRecord = {
       id,
-      parentSessionKey: input.parentSessionKey,
+      parentSessionKey: actualParentSessionKey,
+      parentRuntimeId: parentRuntime?.id,
+      rootRuntimeId: parentRuntime?.rootRuntimeId ?? parentRuntime?.id ?? id,
+      depth: parentRuntime ? parentRuntime.depth + 1 : 0,
       sessionKey,
       mode: input.mode ?? 'session',
       prompt: input.prompt,
@@ -111,10 +124,17 @@ export class SessionRuntimeManager {
       createdAt: now,
       updatedAt: now,
       transcript: [input.prompt],
+      childRuntimeIds: [],
       toolSnapshot: capabilitySnapshot.toolSnapshot,
       skillSnapshot: capabilitySnapshot.skillSnapshot,
     };
     this.sessions.set(record.id, record);
+    if (parentRuntime) {
+      this.patchRecord(parentRuntime.id, {
+        childRuntimeIds: [...new Set([...parentRuntime.childRuntimeIds, record.id])],
+        updatedAt: now,
+      });
+    }
     await this.persistSessions();
     const sendResult = await this.gatewayRpc<Record<string, unknown>>('chat.send', {
       sessionKey,
@@ -259,6 +279,15 @@ export class SessionRuntimeManager {
         for (const record of this.clampPersistedRecords(normalizedRecords)) {
           this.sessions.set(record.id, record);
         }
+        for (const record of this.sessions.values()) {
+          if (!record.parentRuntimeId) continue;
+          const parent = this.sessions.get(record.parentRuntimeId);
+          if (!parent || parent.childRuntimeIds.includes(record.id)) continue;
+          this.sessions.set(parent.id, {
+            ...parent,
+            childRuntimeIds: [...parent.childRuntimeIds, record.id],
+          });
+        }
       } catch {
         // Best effort: runtime APIs still work in-memory when hydration fails.
       } finally {
@@ -295,6 +324,9 @@ export class SessionRuntimeManager {
     return {
       id,
       parentSessionKey,
+      parentRuntimeId: this.extractFirstString(row, ['parentRuntimeId']),
+      rootRuntimeId: this.extractFirstString(row, ['rootRuntimeId']) ?? id,
+      depth: typeof row.depth === 'number' && Number.isFinite(row.depth) ? Math.max(0, Math.floor(row.depth)) : 0,
       sessionKey,
       mode,
       prompt,
@@ -308,6 +340,7 @@ export class SessionRuntimeManager {
       createdAt: this.resolveUpdatedAt([this.coerceIsoDate(row.createdAt)]),
       updatedAt: this.resolveUpdatedAt([this.coerceIsoDate(row.updatedAt), this.coerceIsoDate(row.createdAt)]),
       transcript: this.normalizeStringArray(row.transcript),
+      childRuntimeIds: this.normalizeStringArray(row.childRuntimeIds),
       toolSnapshot: this.normalizeToolSnapshot(row.toolSnapshot),
       skillSnapshot: this.normalizeStringArray(row.skillSnapshot),
     };
@@ -385,6 +418,7 @@ export class SessionRuntimeManager {
       ...record,
       attachments: [...record.attachments],
       transcript: [...record.transcript],
+      childRuntimeIds: [...record.childRuntimeIds],
       toolSnapshot: record.toolSnapshot.map((tool) => ({ ...tool })),
       skillSnapshot: [...record.skillSnapshot],
     };

@@ -30,7 +30,7 @@
 </p>
 
 <p align="center">
-  English | <a href="README.zh-CN.md">简体中文</a> | <a href="README.ja-JP.md">日本語</a>
+  English | <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 ---
@@ -329,6 +329,7 @@ pnpm typecheck            # TypeScript validation
 pnpm test                 # Run unit tests
 pnpm run test:e2e         # Run Playwright E2E tests
 pnpm run test:e2e:headed  # Run Playwright E2E tests in headed mode
+pnpm run smoke:linux      # Linux release + install smoke (non-destructive)
 pnpm run comms:replay     # Compute communication replay metrics
 pnpm run comms:baseline   # Refresh communication baseline snapshot
 pnpm run comms:compare    # Compare replay metrics against baseline thresholds
@@ -340,6 +341,9 @@ pnpm package              # Package for current platform
 pnpm package:mac          # Package for macOS
 pnpm package:win          # Package for Windows
 pnpm package:linux        # Package for Linux
+pnpm package:mac:ci       # CI package for macOS (no publish)
+pnpm package:win:ci       # CI package for Windows (no publish)
+pnpm package:linux:ci     # CI package for Linux (no publish)
 ```
 
 ### Communication Regression Checks

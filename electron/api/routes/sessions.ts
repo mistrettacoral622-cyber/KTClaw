@@ -13,7 +13,8 @@ export async function handleSessionRoutes(
   if (url.pathname === '/api/sessions/spawn' && req.method === 'POST') {
     try {
       const body = await parseJsonBody<{
-        parentSessionKey: string;
+        parentSessionKey?: string;
+        parentRuntimeId?: string;
         prompt: string;
         mode?: 'session' | 'thread';
         agentName?: string;
@@ -21,12 +22,13 @@ export async function handleSessionRoutes(
         sandbox?: string;
         timeoutMs?: number;
       }>(req);
-      if (!body.parentSessionKey?.trim() || !body.prompt?.trim()) {
-        sendJson(res, 400, { success: false, error: 'parentSessionKey and prompt are required' });
+      if ((!body.parentSessionKey?.trim() && !body.parentRuntimeId?.trim()) || !body.prompt?.trim()) {
+        sendJson(res, 400, { success: false, error: 'prompt and parentSessionKey or parentRuntimeId are required' });
         return true;
       }
       const session = await ctx.sessionRuntimeManager.spawn({
-        parentSessionKey: body.parentSessionKey.trim(),
+        parentSessionKey: body.parentSessionKey?.trim() || '',
+        parentRuntimeId: body.parentRuntimeId?.trim() || undefined,
         prompt: body.prompt.trim(),
         mode: body.mode,
         agentName: body.agentName,

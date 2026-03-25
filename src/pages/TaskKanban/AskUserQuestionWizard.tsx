@@ -21,6 +21,13 @@ interface WizardQuestion {
   multiSelect?: boolean;
 }
 
+interface StructuredToolInput {
+  questions?: unknown;
+  answers?: Record<string, unknown>;
+  context?: unknown;
+  requestedToolInput?: unknown;
+}
+
 const ACCENT = '#007aff';
 const BG = '#ffffff';
 const SECONDARY_BG = '#f2f2f7';
@@ -99,15 +106,90 @@ function parsePromptQuestions(prompt?: string): WizardQuestion[] {
 }
 
 function questionKey(question: WizardQuestion, index: number): string {
-  const title = question.header?.trim() || question.question.trim();
-  return `${index + 1}. ${title || `Question ${index + 1}`}`;
+  const title = question.question.trim() || question.header?.trim();
+  return title || `Question ${index + 1}`;
+}
+
+function getStructuredToolInput(approval: ApprovalItem): StructuredToolInput | null {
+  if (!approval.toolInput || typeof approval.toolInput !== 'object') {
+    return null;
+  }
+  return approval.toolInput as StructuredToolInput;
+}
+
+function getQuestionPrefill(question: WizardQuestion, index: number, answers: Record<string, unknown>): string | string[] | null {
+  const candidates = [
+    questionKey(question, index),
+    question.question.trim(),
+    question.header?.trim() ?? '',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const value = answers[candidate];
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string');
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function renderContextSummary(context: unknown): string | null {
+  if (!context || typeof context !== 'object') {
+    return null;
+  }
+
+  const candidate = context as Record<string, unknown>;
+  const requested = candidate.requestedToolInput && typeof candidate.requestedToolInput === 'object'
+    ? candidate.requestedToolInput as Record<string, unknown>
+    : candidate;
+
+  if (typeof requested.command === 'string' && requested.command.trim()) {
+    return `Command: ${requested.command.trim()}`;
+  }
+
+  if (typeof requested.toolName === 'string' && requested.toolName.trim()) {
+    return `Tool: ${requested.toolName.trim()}`;
+  }
+
+  return null;
 }
 
 function AskUserQuestionWizardContent({ approval, onRespond, onDismiss }: Props) {
-  const questions = useMemo(() => parsePromptQuestions(approval.prompt), [approval.prompt]);
+  const structuredToolInput = useMemo(() => getStructuredToolInput(approval), [approval]);
+  const questions = useMemo(() => {
+    const structured = toQuestions(structuredToolInput?.questions);
+    return structured.length > 0 ? structured : parsePromptQuestions(approval.prompt);
+  }, [approval.prompt, structuredToolInput]);
+  const prefilledAnswers = useMemo(() => structuredToolInput?.answers ?? {}, [structuredToolInput]);
+  const contextSummary = useMemo(
+    () => renderContextSummary(structuredToolInput?.context ?? structuredToolInput?.requestedToolInput),
+    [structuredToolInput],
+  );
   const [step, setStep] = useState(0);
-  const [singleAnswers, setSingleAnswers] = useState<Record<string, string>>({});
-  const [multiAnswers, setMultiAnswers] = useState<Record<string, string[]>>({});
+  const [singleAnswers, setSingleAnswers] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    questions.forEach((question, index) => {
+      const value = getQuestionPrefill(question, index, prefilledAnswers);
+      if (typeof value === 'string') {
+        initial[questionKey(question, index)] = value;
+      }
+    });
+    return initial;
+  });
+  const [multiAnswers, setMultiAnswers] = useState<Record<string, string[]>>(() => {
+    const initial: Record<string, string[]> = {};
+    questions.forEach((question, index) => {
+      const value = getQuestionPrefill(question, index, prefilledAnswers);
+      if (Array.isArray(value)) {
+        initial[questionKey(question, index)] = value;
+      }
+    });
+    return initial;
+  });
   const [otherAnswers, setOtherAnswers] = useState<Record<string, string>>({});
   const [fallbackAnswer, setFallbackAnswer] = useState('');
 
@@ -247,6 +329,11 @@ function AskUserQuestionWizardContent({ approval, onRespond, onDismiss }: Props)
             <p className="mt-2 text-[16px] leading-relaxed text-[#374151]">
               {current?.question}
             </p>
+            {contextSummary && (
+              <div className="mt-4 rounded-xl border border-[#c6c6c8] bg-[#f8f8fb] px-4 py-3 text-[13px] text-[#4b5563]">
+                {contextSummary}
+              </div>
+            )}
 
             <div className="mt-6 flex flex-col gap-3">
               {(current?.options ?? []).map((option) => {
@@ -258,6 +345,7 @@ function AskUserQuestionWizardContent({ approval, onRespond, onDismiss }: Props)
                     key={option.label}
                     type="button"
                     onClick={() => (current?.multiSelect ? toggleMulti(option.label) : selectSingle(option.label))}
+                    aria-pressed={selected}
                     className="w-full rounded-xl border px-4 py-3 text-left transition-colors"
                     style={{
                       background: selected ? '#eff6ff' : SECONDARY_BG,

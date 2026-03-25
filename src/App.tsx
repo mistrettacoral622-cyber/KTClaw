@@ -14,6 +14,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 const Models = lazy(() => import('./pages/Models').then((m) => ({ default: m.Models })));
 const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })));
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })));
+const AgentDetail = lazy(() => import('./pages/AgentDetail').then((m) => ({ default: m.AgentDetail })));
 const Channels = lazy(() => import('./pages/Channels').then((m) => ({ default: m.Channels })));
 const Skills = lazy(() => import('./pages/Skills').then((m) => ({ default: m.Skills })));
 const Cron = lazy(() => import('./pages/Cron').then((m) => ({ default: m.Cron })));
@@ -190,20 +191,21 @@ function App() {
 
           {/* Main application routes */}
           <Route element={<MainLayout />}>
-            <Route path="/" element={<Chat />} />
-            <Route path="/models" element={<Models />} />
-            <Route path="/agents" element={<Agents />} />
-            <Route path="/channels" element={<Channels />} />
-            <Route path="/skills" element={<Skills />} />
-            <Route path="/cron" element={<Cron />} />
-            <Route path="/team-overview" element={<TeamOverview />} />
-            <Route path="/team-map" element={<TeamMap />} />
-            <Route path="/kanban" element={<TaskKanban />} />
-            <Route path="/activity" element={<Activity />} />
+            <Route index element={<Chat />} />
+            <Route path="models" element={<Models />} />
+            <Route path="agents" element={<Agents />} />
+            <Route path="agents/:agentId" element={<AgentDetail />} />
+            <Route path="channels" element={<Channels />} />
+            <Route path="skills" element={<Skills />} />
+            <Route path="cron" element={<Cron />} />
+            <Route path="team-overview" element={<TeamOverview />} />
+            <Route path="team-map" element={<TeamMap />} />
+            <Route path="kanban" element={<TaskKanban />} />
+            <Route path="activity" element={<Activity />} />
             {/* /memory 已迁移至 Settings > 记忆与知识 */}
-            <Route path="/memory" element={<Memory />} />
-            <Route path="/costs" element={<Costs />} />
-            <Route path="/settings/*" element={<Settings />} />
+            <Route path="memory" element={<Memory />} />
+            <Route path="costs" element={<Costs />} />
+            <Route path="settings/*" element={<Settings />} />
           </Route>
         </Routes>
         </Suspense>

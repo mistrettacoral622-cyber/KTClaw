@@ -16,6 +16,7 @@ export interface ApprovalItem {
   requestedAt?: string;
   updatedAt?: string;
   expiresAt?: string;
+  toolInput?: Record<string, unknown>;
 }
 
 interface ApprovalsState {

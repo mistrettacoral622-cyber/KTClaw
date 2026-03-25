@@ -3,7 +3,7 @@
   "objective": "Build and polish the ClawX Electron + React workbench UI with full backend integration.",
   "current_phase": "execution",
   "current_focus": "PLAN-2026-03-24-PLATFORM-CLOSURE",
-  "last_updated": "2026-03-25T11:44:45+08:00",
+  "last_updated": "2026-03-25T13:58:13+08:00",
   "tasks": [
     {
       "id": "SESSION-8-001",
@@ -316,6 +316,55 @@
     {
       "id": "SESSION-22-002",
       "title": "Wire cron failure alert and deliveryBestEffort policy fields through routes",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-23-001",
+      "title": "Deepen runtime tree orchestration and Kanban retry lineage",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-23-002",
+      "title": "Add costs analysis cards and realtime auto-refresh loop",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-23-003",
+      "title": "Deepen multi-agent memory browser with search and safe writes",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-23-004",
+      "title": "Add channel send/test rate limiting guardrails",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-24-001",
+      "title": "Add settings maintenance actions and standalone agent detail page",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-24-002",
+      "title": "Add memory copy/download helpers and reindex-after-save flow",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-24-003",
+      "title": "Add global brand logo/icon upload and chrome rendering",
       "type": "feature",
       "status": "done",
       "priority": "P1"

@@ -203,4 +203,64 @@ describe('SessionRuntimeManager', () => {
     expect(killed?.status).toBe('killed');
     expect(gatewayRpcMock).toHaveBeenCalledWith('chat.abort', { sessionKey: spawned.sessionKey });
   });
+
+  it('links child runtime sessions to a parent runtime session tree', async () => {
+    const historyBySessionKey = new Map<string, string[]>();
+    const gatewayRpcMock = vi.fn(async (method: string, params?: Record<string, unknown>) => {
+      if (method === 'chat.send') {
+        const sessionKey = String(params?.sessionKey ?? '');
+        const message = String(params?.message ?? '');
+        historyBySessionKey.set(sessionKey, [message]);
+        return { runId: `run-${sessionKey.split(':').at(-1)}` };
+      }
+      if (method === 'sessions.list') {
+        return {
+          sessions: [...historyBySessionKey.keys()].map((sessionKey) => ({
+            sessionKey,
+            status: 'running',
+          })),
+        };
+      }
+      if (method === 'chat.history') {
+        const sessionKey = String(params?.sessionKey ?? '');
+        return {
+          messages: (historyBySessionKey.get(sessionKey) ?? []).map((content) => ({
+            role: 'assistant',
+            content,
+          })),
+        };
+      }
+      throw new Error(`Unexpected gateway RPC: ${method}`);
+    });
+
+    const manager = new SessionRuntimeManager({ rpc: gatewayRpcMock } as never);
+    const root = await manager.spawn({
+      parentSessionKey: 'agent:planner-1:main',
+      prompt: 'Root task',
+    });
+    const child = await manager.spawn({
+      parentSessionKey: 'agent:planner-1:main',
+      parentRuntimeId: root.id,
+      prompt: 'Child task',
+    });
+
+    expect(child.parentRuntimeId).toBe(root.id);
+    expect(child.rootRuntimeId).toBe(root.id);
+    expect(child.depth).toBe(1);
+    expect(child.parentSessionKey).toBe(root.sessionKey);
+    expect(child.sessionKey).toBe(`${root.sessionKey}:subagent:${child.id}`);
+
+    const listed = await manager.list();
+    const listedRoot = listed.find((record) => record.id === root.id);
+    const listedChild = listed.find((record) => record.id === child.id);
+
+    expect(listedRoot?.childRuntimeIds).toEqual([child.id]);
+    expect(listedChild).toEqual(expect.objectContaining({
+      id: child.id,
+      parentRuntimeId: root.id,
+      rootRuntimeId: root.id,
+      depth: 1,
+      parentSessionKey: root.sessionKey,
+    }));
+  });
 });

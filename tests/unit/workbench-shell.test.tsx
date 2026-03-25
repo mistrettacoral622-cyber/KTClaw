@@ -142,4 +142,16 @@ describe('Chat workbench shell', () => {
     render(<Chat />);
     expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
   });
+
+  it('displays the thinking banner when the assistant run is active', () => {
+    chatState.sending = true;
+    render(<Chat />);
+    expect(screen.getByText('KaiTianClaw 正在思考中')).toBeInTheDocument();
+  });
+
+  it('hides the thinking banner when no run is active', () => {
+    chatState.sending = false;
+    render(<Chat />);
+    expect(screen.queryByText(/正在思考中/)).not.toBeInTheDocument();
+  });
 });

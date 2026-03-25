@@ -270,6 +270,29 @@
     "docs": "Website",
     "github": "GitHub"
   },
+  "skillsMcp": {
+    "overview": {
+      "title": "Split Skills and MCP views",
+      "description": "Use one tab for built-in skills and another for MCP services KTClaw can call, including runtime, tool discovery, and logs.",
+      "tabsAriaLabel": "Skills and MCP view switcher"
+    },
+    "tabs": {
+      "skills": "Skills",
+      "mcp": "MCP"
+    },
+    "skillsCard": {
+      "title": "Installed Native Skills",
+      "refresh": "Refresh",
+      "gatewayWarning": "Gateway is disconnected. Connect the Gateway before managing skills.",
+      "loading": "Loading...",
+      "empty": "No installed skills yet",
+      "coreBadge": "Core",
+      "browseMarketplace": "Browse skill marketplace..."
+    },
+    "mcpCard": {
+      "title": "MCP Services and Runtime"
+    }
+  },
   "settingsCenter": {
     "groups": {
       "quickConfig": "Quick Config",

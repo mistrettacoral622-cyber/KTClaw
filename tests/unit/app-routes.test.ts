@@ -1,15 +1,42 @@
+// @vitest-environment node
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'http';
 
-const runOpenClawDoctorMock = vi.fn();
-const runOpenClawDoctorFixMock = vi.fn();
-const sendJsonMock = vi.fn();
-const sendNoContentMock = vi.fn();
+const {
+  runOpenClawDoctorMock,
+  runOpenClawDoctorFixMock,
+  sendJsonMock,
+  sendNoContentMock,
+  rmMock,
+  readdirMock,
+} = vi.hoisted(() => ({
+  runOpenClawDoctorMock: vi.fn(),
+  runOpenClawDoctorFixMock: vi.fn(),
+  sendJsonMock: vi.fn(),
+  sendNoContentMock: vi.fn(),
+  rmMock: vi.fn(),
+  readdirMock: vi.fn(),
+}));
 
 vi.mock('@electron/utils/openclaw-doctor', () => ({
   runOpenClawDoctor: (...args: unknown[]) => runOpenClawDoctorMock(...args),
   runOpenClawDoctorFix: (...args: unknown[]) => runOpenClawDoctorFixMock(...args),
 }));
+
+vi.mock('@electron/utils/paths', () => ({
+  getOpenClawConfigDir: () => 'C:/openclaw',
+  getLogsDir: () => 'C:/ktclaw/logs',
+}));
+
+vi.mock('node:fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+  return {
+    ...actual,
+    rm: (...args: unknown[]) => rmMock(...args),
+    readdir: (...args: unknown[]) => readdirMock(...args),
+  };
+});
 
 vi.mock('@electron/api/route-utils', () => ({
   setCorsHeaders: vi.fn(),
@@ -21,6 +48,8 @@ vi.mock('@electron/api/route-utils', () => ({
 describe('handleAppRoutes', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    rmMock.mockResolvedValue(undefined);
+    readdirMock.mockResolvedValue(['main', 'agent-a']);
   });
 
   it('runs openclaw doctor through the host api', async () => {
@@ -55,5 +84,25 @@ describe('handleAppRoutes', () => {
     expect(handled).toBe(true);
     expect(runOpenClawDoctorFixMock).toHaveBeenCalledTimes(1);
     expect(sendJsonMock).toHaveBeenCalledWith(expect.anything(), 200, { success: false, exitCode: 1 });
+  });
+
+  it('clears local server data through the host api', async () => {
+    const { handleAppRoutes } = await import('@electron/api/routes/app');
+
+    const handled = await handleAppRoutes(
+      { method: 'POST' } as IncomingMessage,
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/app/clear-server-data'),
+      {
+        gatewayManager: {
+          getStatus: () => ({ state: 'stopped' }),
+          stop: vi.fn().mockResolvedValue(undefined),
+          start: vi.fn().mockResolvedValue(undefined),
+        },
+      } as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(sendJsonMock).toHaveBeenCalledWith(expect.anything(), 200, { success: true });
   });
 });

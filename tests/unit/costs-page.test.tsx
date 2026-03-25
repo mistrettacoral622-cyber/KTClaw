@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { Costs } from '@/pages/Costs';
 import { hostApiFetch } from '@/lib/host-api';
 
@@ -103,6 +103,33 @@ describe('Costs page usage display', () => {
     },
   ];
 
+  const analysis = {
+    optimizationScore: 74,
+    cacheSavings: {
+      cacheTokens: 340,
+      estimatedCostUsd: 0.21,
+      savingsRatePct: 12.6,
+    },
+    weekOverWeek: {
+      previous: { totalTokens: 2000, costUsd: 0.9, sessions: 7, cacheTokens: 180 },
+      current: { totalTokens: 2600, costUsd: 1.1, sessions: 9, cacheTokens: 240 },
+      deltas: { totalTokensPct: 30, costUsdPct: 22.2, sessionsPct: 28.6, cacheTokensPct: 33.3 },
+    },
+    anomalies: [
+      {
+        date: '2026-03-22',
+        totalTokens: 980,
+        costUsd: 0.31,
+        zScore: 2.4,
+        reason: 'Nightly Digest spike',
+      },
+    ],
+    insights: [
+      'Costs climbed week over week; consider tuning prompts.',
+      'Cache usage avoided measurable spend this period.',
+    ],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(hostApiFetch).mockImplementation(async (path) => {
@@ -117,6 +144,9 @@ describe('Costs page usage display', () => {
       }
       if (path === '/api/costs/by-cron') {
         return cronRows;
+      }
+      if (path === '/api/costs/analysis') {
+        return analysis;
       }
       throw new Error(`Unexpected hostApiFetch call: ${String(path)}`);
     });
@@ -155,5 +185,45 @@ describe('Costs page usage display', () => {
     expect(await screen.findByText('统计范围: 全部 Agent 累计')).toBeInTheDocument();
     expect(screen.getByText('planner-agent')).toBeInTheDocument();
     expect(screen.getByText('80.0% (2.0K)')).toBeInTheDocument();
+  });
+
+  it('renders dashboard analysis cards and supports realtime auto-refresh polling', async () => {
+    vi.useFakeTimers();
+    try {
+      render(<Costs />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toggle = screen.getByRole('checkbox', { name: 'Auto refresh' });
+      expect(toggle).toBeInTheDocument();
+
+      fireEvent.click(toggle);
+      fireEvent.change(screen.getByLabelText('Refresh interval'), { target: { value: '15' } });
+
+      await act(async () => {
+        vi.advanceTimersByTime(15_000);
+      });
+
+      const usageCalls = vi.mocked(hostApiFetch).mock.calls.filter(
+        ([path]) => path === '/api/usage/recent-token-history?limit=200',
+      );
+      expect(usageCalls.length).toBeGreaterThanOrEqual(2);
+
+      fireEvent.click(screen.getByRole('button', { name: '大盘监控' }));
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(screen.getByText('Optimization Score')).toBeInTheDocument();
+      expect(screen.getByText('74')).toBeInTheDocument();
+      expect(screen.getByText('Cache Savings')).toBeInTheDocument();
+      expect(screen.getByText('$0.2100')).toBeInTheDocument();
+      expect(screen.getByText('Week-over-week')).toBeInTheDocument();
+      expect(screen.getByText('2026-03-22')).toBeInTheDocument();
+      expect(screen.getByText('Nightly Digest spike')).toBeInTheDocument();
+      expect(screen.getByText('Costs climbed week over week; consider tuning prompts.')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

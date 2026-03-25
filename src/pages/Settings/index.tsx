@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { SettingsMigrationWizard } from '@/components/settings-center/settings-m
 import { SettingsNav } from '@/components/settings-center/settings-nav';
 import { SettingsSectionCard } from '@/components/settings-center/settings-section-card';
 import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
+import { McpTab } from '@/pages/Skills/McpTab';
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_NAV_GROUPS,
@@ -25,7 +26,7 @@ import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { useSkillsStore } from '@/stores/skills';
 import { useUpdateStore } from '@/stores/update';
-import type { ReactNode } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 
 export function Settings() {
   const { t } = useTranslation(['settings', 'common']);
@@ -55,6 +56,7 @@ export function Settings() {
     setP2pSyncEnabled,
     telemetryEnabled,
     setTelemetryEnabled,
+    resetSettings,
   } = useSettingsStore();
 
   const { status: gatewayStatus, restart: restartGateway } = useGatewayStore();
@@ -80,6 +82,8 @@ export function Settings() {
   const [doctorRunning, setDoctorRunning] = useState<'diagnose' | 'fix' | null>(null);
   const [doctorSummary, setDoctorSummary] = useState('');
   const [migrationWizardOpen, setMigrationWizardOpen] = useState(false);
+  const [resettingAllSettings, setResettingAllSettings] = useState(false);
+  const [clearingServerData, setClearingServerData] = useState(false);
 
   useEffect(() => setProxyEnabledDraft(proxyEnabled), [proxyEnabled]);
   useEffect(() => setProxyServerDraft(proxyServer), [proxyServer]);
@@ -164,6 +168,39 @@ export function Settings() {
     }
   };
 
+  const rerunSetup = () => {
+    navigate('/setup');
+  };
+
+  const resetAllSettings = async () => {
+    setResettingAllSettings(true);
+    try {
+      await hostApiFetch('/api/settings/reset', {
+        method: 'POST',
+      });
+      resetSettings();
+      toast.success('Settings reset to defaults');
+    } catch (error) {
+      toast.error(`Failed to reset settings: ${toUserMessage(error)}`);
+    } finally {
+      setResettingAllSettings(false);
+    }
+  };
+
+  const clearServerData = async () => {
+    setClearingServerData(true);
+    try {
+      await hostApiFetch('/api/app/clear-server-data', {
+        method: 'POST',
+      });
+      toast.success('Server data cleared');
+    } catch (error) {
+      toast.error(`Failed to clear server data: ${toUserMessage(error)}`);
+    } finally {
+      setClearingServerData(false);
+    }
+  };
+
   return (
     <div className="h-full bg-[linear-gradient(180deg,#f3f4f6_0%,#eceff3_100%)] p-6 dark:bg-background">
       <div className="mx-auto flex h-full max-w-[1360px] overflow-hidden rounded-[32px] border border-black/[0.05] bg-white shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-background">
@@ -228,6 +265,11 @@ export function Settings() {
                 doctorRunning,
                 runDoctor,
                 doctorSummary,
+                rerunSetup,
+                resetAllSettings,
+                resettingAllSettings,
+                clearServerData,
+                clearingServerData,
                 openMigrationWizard: () => setMigrationWizardOpen(true),
                 updateStatus,
                 updateInfo,
@@ -288,6 +330,11 @@ type RenderSectionArgs = {
   doctorRunning: 'diagnose' | 'fix' | null;
   runDoctor: (mode: 'diagnose' | 'fix') => Promise<void>;
   doctorSummary: string;
+  rerunSetup: () => void;
+  resetAllSettings: () => Promise<void>;
+  resettingAllSettings: boolean;
+  clearServerData: () => Promise<void>;
+  clearingServerData: boolean;
   openMigrationWizard: () => void;
   updateStatus: import('@/stores/update').UpdateStatus;
   updateInfo: import('@/stores/update').UpdateInfo | null;
@@ -321,7 +368,7 @@ function renderActiveSection(args: RenderSectionArgs) {
       return <SettingsMemoryKnowledgePanel />;
 
     case 'skills-mcp':
-      return <SkillsMcpSection />;
+      return <SkillsMcpOverviewSection />;
 
     case 'tool-permissions':
       return <ToolPermissionsSection />;
@@ -433,6 +480,37 @@ function renderActiveSection(args: RenderSectionArgs) {
                 🐛 复制本机运行环境清单
               </button>
             </div>
+            <div className="mt-4 rounded-xl border border-[#c6c6c8] bg-[#f9fafb] p-3">
+              <p className="text-[12px] font-medium text-[#111827]">Maintenance</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-[12px]"
+                  onClick={args.rerunSetup}
+                >
+                  Re-run Setup
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-[12px]"
+                  onClick={() => void args.resetAllSettings()}
+                  disabled={args.resettingAllSettings || args.clearingServerData}
+                >
+                  {args.resettingAllSettings ? args.t('common:status.running') : 'Reset All Settings'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg text-[12px]"
+                  onClick={() => void args.clearServerData()}
+                  disabled={args.clearingServerData || args.resettingAllSettings}
+                >
+                  {args.clearingServerData ? args.t('common:status.running') : 'Clear Server Data'}
+                </Button>
+              </div>
+            </div>
           </SettingsSectionCard>
         </>
       );
@@ -448,13 +526,17 @@ function SettingsCard({
   title,
   headerRight,
   children,
+  ...sectionProps
 }: {
   title: string;
   headerRight?: ReactNode;
   children: ReactNode;
-}) {
+} & React.ComponentPropsWithoutRef<'section'>) {
   return (
-    <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
+    <section
+      className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4"
+      {...sectionProps}
+    >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[15px] font-semibold text-[#000000]">{title}</h3>
         {headerRight}
@@ -538,17 +620,106 @@ function InputField({
   );
 }
 
+function BrandImageUploadField({
+  label,
+  dataUrl,
+  previewAlt,
+  inputLabel,
+  clearLabel,
+  onUpload,
+  onClear,
+}: {
+  label: string;
+  dataUrl: string | null;
+  previewAlt: string;
+  inputLabel: string;
+  clearLabel: string;
+  onUpload: (event: ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+}) {
+  const inputId = useId();
+
+  return (
+    <div className="py-3">
+      <p className="mb-1.5 text-[13px] font-medium text-[#000000]">{label}</p>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/10 bg-[#f2f2f7]">
+          {dataUrl ? (
+            <img src={dataUrl} alt={previewAlt} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[10px] text-[#8e8e93]">None</span>
+          )}
+        </div>
+        <label
+          htmlFor={inputId}
+          className="cursor-pointer rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+        >
+          Upload
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          aria-label={inputLabel}
+          onChange={onUpload}
+        />
+        <button
+          type="button"
+          aria-label={clearLabel}
+          onClick={onClear}
+          disabled={!dataUrl}
+          className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Section: General (07.1) ─── */
 
 function GeneralSection() {
   const {
     theme, setTheme, accentColor, setAccentColor, language, setLanguage, launchAtStartup, setLaunchAtStartup,
-    brandName, setBrandName, brandSubtitle, setBrandSubtitle, myName, setMyName,
+    brandName, setBrandName, brandSubtitle, setBrandSubtitle, brandLogoDataUrl, setBrandLogoDataUrl,
+    brandIconDataUrl, setBrandIconDataUrl, myName, setMyName,
     showToolCalls, setShowToolCalls, emojiAvatar, setEmojiAvatar,
     hideAvatarBg, setHideAvatarBg, minimizeToTray, setMinimizeToTray,
   } = useSettingsStore();
   const languageSelectId = useId();
   const accentCustomColorId = useId();
+
+  const handleBrandImageUpload = (
+    event: ChangeEvent<HTMLInputElement>,
+    setDataUrl: (value: string | null) => void,
+    kind: 'logo' | 'icon',
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error(`Please select an image file for the brand ${kind}.`);
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setDataUrl(reader.result);
+      } else {
+        toast.error(`Unable to read brand ${kind}.`);
+      }
+    };
+    reader.onerror = () => {
+      toast.error(`Unable to read brand ${kind}.`);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
 
   return (
     <>
@@ -701,6 +872,27 @@ function GeneralSection() {
       </SettingsCard>
 
       {/* 退出登录 */}
+      <SettingsCard title="Brand assets">
+        <BrandImageUploadField
+          label="Brand logo"
+          dataUrl={brandLogoDataUrl}
+          previewAlt="Brand logo preview"
+          inputLabel="Upload brand logo"
+          clearLabel="Clear brand logo"
+          onUpload={(event) => handleBrandImageUpload(event, setBrandLogoDataUrl, 'logo')}
+          onClear={() => setBrandLogoDataUrl(null)}
+        />
+        <BrandImageUploadField
+          label="Brand icon"
+          dataUrl={brandIconDataUrl}
+          previewAlt="Brand icon preview"
+          inputLabel="Upload brand icon"
+          clearLabel="Clear brand icon"
+          onUpload={(event) => handleBrandImageUpload(event, setBrandIconDataUrl, 'icon')}
+          onClear={() => setBrandIconDataUrl(null)}
+        />
+      </SettingsCard>
+
       <div className="py-2 text-center">
         <button
           type="button"
@@ -1139,241 +1331,150 @@ function AutomationDefaultsSection() {
 
 /* ─── Section: Skills & MCP (09.2) ─── */
 
-const MCP_QUICK_TEMPLATES = [
-  { label: 'File System', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '.'] },
-  { label: 'Brave Search', command: 'npx', args: ['-y', '@modelcontextprotocol/server-brave-search'] },
-  { label: 'SQLite', command: 'npx', args: ['-y', '@modelcontextprotocol/server-sqlite'] },
-  { label: 'Web Fetch', command: 'npx', args: ['-y', '@modelcontextprotocol/server-fetch'] },
-  { label: 'Puppeteer', command: 'npx', args: ['-y', '@modelcontextprotocol/server-puppeteer'] },
-  { label: 'Memory', command: 'npx', args: ['-y', '@modelcontextprotocol/server-memory'] },
-];
-
-interface McpServer { name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean; transport: string; addedAt: string; }
-
-function SkillsMcpSection() {
+function SkillsMcpOverviewSection() {
   const { skills, loading: skillsLoading, fetchSkills, enableSkill, disableSkill } = useSkillsStore();
   const { status: gatewayStatus } = useGatewayStore();
   const isGatewayConnected = gatewayStatus.state === 'running';
+  const [activeTab, setActiveTab] = useState<'skills' | 'mcp'>('skills');
+  const { t } = useTranslation('settings');
 
-  const [mcpServers, setMcpServers] = useState<McpServer[]>([]);
-  const [mcpLoading, setMcpLoading] = useState(false);
-  const [addMcpOpen, setAddMcpOpen] = useState(false);
-  const [addMcpName, setAddMcpName] = useState('');
-  const [addMcpCmd, setAddMcpCmd] = useState('');
-  const [addMcpArgs, setAddMcpArgs] = useState('');
-  const [addMcpSaving, setAddMcpSaving] = useState(false);
-
-  const fetchMcp = useCallback(async () => {
-    setMcpLoading(true);
-    try {
-      const data = await hostApiFetch<{ servers: McpServer[] }>('/api/mcp');
-      setMcpServers(Array.isArray(data.servers) ? data.servers : []);
-    } catch { /* ignore */ } finally { setMcpLoading(false); }
-  }, []);
-
-  useEffect(() => { void fetchSkills(); void fetchMcp(); }, [fetchSkills, fetchMcp]);
+  useEffect(() => {
+    void fetchSkills();
+  }, [fetchSkills]);
 
   const handleSkillToggle = async (skillId: string, enabled: boolean) => {
     try {
       if (enabled) await enableSkill(skillId);
       else await disableSkill(skillId);
-    } catch { /* ignore */ }
-  };
-
-  const handleMcpToggle = async (name: string) => {
-    await hostApiFetch(`/api/mcp/${encodeURIComponent(name)}/toggle`, { method: 'PATCH' });
-    await fetchMcp();
-  };
-
-  const handleMcpDelete = async (name: string) => {
-    await hostApiFetch(`/api/mcp/${encodeURIComponent(name)}`, { method: 'DELETE' });
-    await fetchMcp();
-  };
-
-  const handleAddMcp = async () => {
-    if (!addMcpName.trim() || !addMcpCmd.trim()) return;
-    setAddMcpSaving(true);
-    try {
-      await hostApiFetch('/api/mcp', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: addMcpName.trim(),
-          command: addMcpCmd.trim(),
-          args: addMcpArgs.trim() ? addMcpArgs.trim().split(/\s+/) : [],
-          env: {},
-          enabled: true,
-          transport: 'stdio',
-        }),
-      });
-      setAddMcpOpen(false);
-      setAddMcpName('');
-      setAddMcpCmd('');
-      setAddMcpArgs('');
-      await fetchMcp();
-    } finally { setAddMcpSaving(false); }
-  };
-
-  const handleQuickTemplate = async (tpl: typeof MCP_QUICK_TEMPLATES[number]) => {
-    await hostApiFetch('/api/mcp', {
-      method: 'POST',
-      body: JSON.stringify({ name: tpl.label, command: tpl.command, args: tpl.args, env: {}, enabled: true, transport: 'stdio' }),
-    });
-    await fetchMcp();
+    } catch {
+      // ignore
+    }
   };
 
   return (
-    <>
-      <SettingsCard
-        title="已安装内置技能 (Native Skills)"
-        headerRight={
-          <button type="button" onClick={() => void fetchSkills()} className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
-            ↻ 刷新
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[#d1d5db] bg-[#f8fafc] p-2">
+        <div className="mb-3">
+          <p className="text-[14px] font-medium text-[#111827]">
+            {t('skillsMcp.overview.title', { defaultValue: '将 Skills 与 MCP 分开查看' })}
+          </p>
+          <p className="mt-1 text-[12px] text-[#6b7280]">
+            {t('skillsMcp.overview.description', { defaultValue: '一个页签管理内置技能，另一个页签专注 KTClaw 可调用的 MCP 服务、runtime、工具发现与日志。' })}
+          </p>
+        </div>
+        <div
+          role="tablist"
+          aria-label={t('skillsMcp.overview.tabsAriaLabel', { defaultValue: 'Skills 与 MCP 视图切换' })}
+          className="inline-flex rounded-xl bg-[#e5e7eb] p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'skills'}
+            aria-controls="settings-skills-panel"
+            id="settings-skills-tab"
+            data-state={activeTab === 'skills' ? 'active' : 'inactive'}
+            onClick={() => setActiveTab('skills')}
+            className={cn(
+              'rounded-lg px-4 py-2 text-[13px] font-medium transition-colors',
+              activeTab === 'skills' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6b7280] hover:text-[#111827]',
+            )}
+          >
+            {t('skillsMcp.tabs.skills', { defaultValue: 'Skills' })}
           </button>
-        }
-      >
-        {!isGatewayConnected && (
-          <div className="my-2 rounded-lg border border-[#fbbf24]/30 bg-[#fffbeb] px-3 py-2.5">
-            <span className="text-[13px] text-[#92400e]">⚠ Gateway 未连接。请先连接 Gateway 再管理技能。</span>
-          </div>
-        )}
-
-        {skillsLoading ? (
-          <div className="py-6 text-center text-[13px] text-[#8e8e93]">加载中...</div>
-        ) : skills.length === 0 ? (
-          <div className="py-6 text-center text-[13px] text-[#8e8e93]">暂无已安装技能</div>
-        ) : (
-          skills.map((skill) => (
-            <div key={skill.id} className="flex items-center justify-between gap-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p id={`skill-${skill.id}`} className="text-[13px] font-medium text-[#000000]">
-                  {skill.icon && <span className="mr-1.5">{skill.icon}</span>}
-                  {skill.name}
-                  {skill.version && <span className="ml-1.5 text-[11px] font-normal text-[#c6c6c8]">v{skill.version}</span>}
-                  {skill.isCore && <span className="ml-1.5 rounded-full bg-[#f2f2f7] px-1.5 py-0.5 text-[10px] text-[#8e8e93]">核心</span>}
-                </p>
-                <p className="mt-0.5 text-[12px] text-[#8e8e93]">{skill.description}</p>
-              </div>
-              <Switch
-                checked={skill.enabled}
-                disabled={skill.isCore}
-                onCheckedChange={(v) => void handleSkillToggle(skill.id, v)}
-                aria-labelledby={`skill-${skill.id}`}
-              />
-            </div>
-          ))
-        )}
-
-        <div className="py-3 text-center">
-          <button type="button" className="text-[13px] text-clawx-ac hover:underline">
-            浏览技能市场...
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'mcp'}
+            aria-controls="settings-mcp-panel"
+            id="settings-mcp-tab"
+            data-state={activeTab === 'mcp' ? 'active' : 'inactive'}
+            onClick={() => setActiveTab('mcp')}
+            className={cn(
+              'rounded-lg px-4 py-2 text-[13px] font-medium transition-colors',
+              activeTab === 'mcp' ? 'bg-white text-[#111827] shadow-sm' : 'text-[#6b7280] hover:text-[#111827]',
+            )}
+          >
+            {t('skillsMcp.tabs.mcp', { defaultValue: 'MCP' })}
           </button>
         </div>
-      </SettingsCard>
+      </div>
 
-      <SettingsCard
-        title="Model Context Protocol 接入"
-        headerRight={
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void fetchMcp()} className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
-              ↻ 刷新
+      {activeTab === 'skills' ? (
+        <SettingsCard
+          key="skills"
+          aria-labelledby="settings-skills-tab"
+          role="tabpanel"
+          id="settings-skills-panel"
+          title={t('skillsMcp.skillsCard.title', { defaultValue: '已安装内置技能 (Native Skills)' })}
+          headerRight={(
+            <button type="button" onClick={() => void fetchSkills()} className="text-[12px] text-[#8e8e93] hover:text-[#000000]">
+              {t('skillsMcp.skillsCard.refresh', { defaultValue: '↻ 刷新' })}
             </button>
-            <button
-              type="button"
-              onClick={() => setAddMcpOpen(true)}
-              className="rounded-lg bg-clawx-ac px-3 py-1 text-[12px] font-medium text-white hover:bg-[#0056b3]"
-            >
-              + 添加服务
-            </button>
-          </div>
-        }
-      >
-        <div className="py-2">
-          <p className="mb-2 text-[13px] font-medium text-[#000000]">快速添加模版 (Quick Templates)</p>
-          <div className="flex flex-wrap gap-2">
-            {MCP_QUICK_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.label}
-                type="button"
-                onClick={() => void handleQuickTemplate(tpl)}
-                className="rounded-full border border-black/10 px-3 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
-              >
-                + {tpl.label}
-              </button>
-            ))}
-          </div>
-        </div>
+          )}
+        >
+          {!isGatewayConnected && (
+            <div className="my-2 rounded-lg border border-[#fbbf24]/30 bg-[#fffbeb] px-3 py-2.5">
+              <span className="text-[13px] text-[#92400e]">
+                {t('skillsMcp.skillsCard.gatewayWarning', { defaultValue: '⚠ Gateway 未连接。请先连接 Gateway 再管理技能。' })}
+              </span>
+            </div>
+          )}
 
-        {mcpLoading ? (
-          <div className="py-4 text-center text-[13px] text-[#8e8e93]">加载中...</div>
-        ) : mcpServers.length === 0 ? (
-          <div className="py-6 text-center text-[13px] text-[#8e8e93]">暂无 MCP 服务，点击「+ 添加服务」或使用快速模版</div>
-        ) : (
-          mcpServers.map((svc) => (
-            <div key={svc.name} className="border-t border-black/[0.04] py-3">
-              <div className="mb-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={cn('h-2 w-2 rounded-full', svc.enabled ? 'bg-[#10b981]' : 'bg-[#d1d5db]')} />
-                  <span className="text-[13px] font-medium text-[#000000]">{svc.name}</span>
-                  <span className="rounded-full bg-[#f2f2f7] px-1.5 py-0.5 text-[10px] text-[#8e8e93]">{svc.transport}</span>
+          {skillsLoading ? (
+            <div className="py-6 text-center text-[13px] text-[#8e8e93]">
+              {t('skillsMcp.skillsCard.loading', { defaultValue: '加载中...' })}
+            </div>
+          ) : skills.length === 0 ? (
+            <div className="py-6 text-center text-[13px] text-[#8e8e93]">
+              {t('skillsMcp.skillsCard.empty', { defaultValue: '暂无已安装技能' })}
+            </div>
+          ) : (
+            skills.map((skill) => (
+              <div key={skill.id} className="flex items-center justify-between gap-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p id={`skill-overview-${skill.id}`} className="text-[13px] font-medium text-[#000000]">
+                    {skill.icon && <span className="mr-1.5">{skill.icon}</span>}
+                    {skill.name}
+                    {skill.version && <span className="ml-1.5 text-[11px] font-normal text-[#c6c6c8]">v{skill.version}</span>}
+                    {skill.isCore ? (
+                      <span className="ml-1.5 rounded-full bg-[#f2f2f7] px-1.5 py-0.5 text-[10px] text-[#8e8e93]">
+                        {t('skillsMcp.skillsCard.coreBadge', { defaultValue: '核心' })}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-[#8e8e93]">{skill.description}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleMcpToggle(svc.name)}
-                    className="rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
-                  >
-                    {svc.enabled ? '停用' : '启用'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleMcpDelete(svc.name)}
-                    className="rounded-md border border-[#ef4444]/20 px-2.5 py-1 text-[12px] text-[#ef4444] hover:bg-[#fef2f2]"
-                  >
-                    删除
-                  </button>
-                </div>
+                <Switch
+                  checked={skill.enabled}
+                  disabled={skill.isCore}
+                  onCheckedChange={(value) => void handleSkillToggle(skill.id, value)}
+                  aria-labelledby={`skill-overview-${skill.id}`}
+                />
               </div>
-              <code className="font-mono text-[11px] text-[#8e8e93]">{svc.command} {svc.args.join(' ')}</code>
-            </div>
-          ))
-        )}
-      </SettingsCard>
+            ))
+          )}
 
-      {/* Add MCP modal */}
-      {addMcpOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="w-[400px] rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-[16px] font-semibold text-[#000000]">添加 MCP 服务</h2>
-            <div className="mb-3">
-              <p className="mb-1 text-[13px] font-medium text-[#000000]">服务名称</p>
-              <input value={addMcpName} onChange={(e) => setAddMcpName(e.target.value)} placeholder="如：My GitHub MCP"
-                aria-label="服务名称"
-                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] outline-none focus:border-clawx-ac" />
-            </div>
-            <div className="mb-3">
-              <p className="mb-1 text-[13px] font-medium text-[#000000]">命令 (Command)</p>
-              <input value={addMcpCmd} onChange={(e) => setAddMcpCmd(e.target.value)} placeholder="npx"
-                aria-label="命令 (Command)"
-                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] font-mono outline-none focus:border-clawx-ac" />
-            </div>
-            <div className="mb-5">
-              <p className="mb-1 text-[13px] font-medium text-[#000000]">参数 (Args，空格分隔)</p>
-              <input value={addMcpArgs} onChange={(e) => setAddMcpArgs(e.target.value)} placeholder="-y @modelcontextprotocol/server-github"
-                aria-label="参数 (Args，空格分隔)"
-                className="w-full rounded-lg border border-black/10 px-3 py-2 text-[13px] font-mono outline-none focus:border-clawx-ac" />
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { setAddMcpOpen(false); setAddMcpName(''); setAddMcpCmd(''); setAddMcpArgs(''); }}
-                className="flex-1 rounded-xl border border-black/10 py-2 text-[13px] text-[#3c3c43] hover:bg-[#f2f2f7]">取消</button>
-              <button type="button" onClick={() => void handleAddMcp()} disabled={addMcpSaving || !addMcpName.trim() || !addMcpCmd.trim()}
-                className="flex-1 rounded-xl bg-clawx-ac py-2 text-[13px] font-medium text-white hover:bg-[#0056b3] disabled:opacity-50">
-                {addMcpSaving ? '添加中...' : '确认添加'}
-              </button>
-            </div>
+          <div className="py-3 text-center">
+            <button type="button" className="text-[13px] text-clawx-ac hover:underline">
+              {t('skillsMcp.skillsCard.browseMarketplace', { defaultValue: '浏览技能市场...' })}
+            </button>
           </div>
-        </div>
-      )}
-    </>
+        </SettingsCard>
+      ) : null}
+
+      {activeTab === 'mcp' ? (
+        <SettingsCard
+          key="mcp"
+          aria-labelledby="settings-mcp-tab"
+          role="tabpanel"
+          id="settings-mcp-panel"
+          title={t('skillsMcp.mcpCard.title', { defaultValue: 'MCP 服务与 Runtime' })}
+        >
+          <McpTab />
+        </SettingsCard>
+      ) : null}
+    </div>
   );
 }
 

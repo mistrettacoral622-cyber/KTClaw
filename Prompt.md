@@ -67,6 +67,28 @@ tail -30 continue/progress.txt
 
 ---
 
+## Latest Delta（2026-03-25）
+
+- 已新增完成：
+  - Wave 2：runtime subagent tree / Kanban retry lineage
+  - Wave 3：`/api/costs/analysis` + Costs 分析卡片 + realtime auto-refresh
+  - Wave 3：Channels `/test` / `/send` rate limiting guardrails
+  - Wave 4：Memory 多 agent scope / search / hit highlights / stale-write / atomic write / copy / download / reindex-after-save
+  - Wave 4：Settings `Re-run Setup` / `Reset All Settings` / `Clear Server Data`
+  - Wave 4：Settings global `logo / icon upload`
+  - Wave 4：standalone read-only `/agents/:agentId`
+- 因此下面旧清单里，涉及上述能力的“剩余”描述请以本段为准，不要重复实现已完成部分。
+- 当前真正还缺的重点：
+  - P0 i18n：继续清理其他页面历史硬编码文案
+  - Runtime / registry：tool execution path / deeper skill bridge / finer approval tree binding
+  - Channels：multi-user isolation / richer capability runtime
+  - Memory：git snapshot、AI analysis、QMD collection
+  - Agent detail：real `reportsTo/directReports` persistence、cron relation view、avatar upload/remove
+  - Settings：agent image override
+  - Wave 5：update / UX / a11y / 工程治理
+
+---
+
 ## 当前剩余需求
 
 ### P0

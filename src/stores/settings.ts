@@ -47,6 +47,8 @@ interface SettingsState {
   // Identity / Brand
   brandName: string;
   brandSubtitle: string;
+  brandLogoDataUrl: string | null;
+  brandIconDataUrl: string | null;
   myName: string;
 
   // Model defaults
@@ -117,6 +119,8 @@ interface SettingsState {
   setP2pSyncEnabled: (value: boolean) => void;
   setBrandName: (value: string) => void;
   setBrandSubtitle: (value: string) => void;
+  setBrandLogoDataUrl: (value: string | null) => void;
+  setBrandIconDataUrl: (value: string | null) => void;
   setMyName: (value: string) => void;
   setDefaultModel: (value: string) => void;
   setContextLimit: (value: number) => void;
@@ -197,6 +201,8 @@ const defaultSettings = {
   brandName: 'KTClaw Control',
   brandSubtitle: '智能编排中枢',
   myName: 'Commander',
+  brandLogoDataUrl: null as string | null,
+  brandIconDataUrl: null as string | null,
   defaultModel: 'claude-sonnet-4-6',
   contextLimit: 32000,
   showToolCalls: false,
@@ -339,6 +345,8 @@ export const useSettingsStore = create<SettingsState>()(
       markSetupComplete: () => set({ setupComplete: true }),
       setBrandName: (brandName) => set({ brandName }),
       setBrandSubtitle: (brandSubtitle) => set({ brandSubtitle }),
+      setBrandLogoDataUrl: (brandLogoDataUrl) => set({ brandLogoDataUrl }),
+      setBrandIconDataUrl: (brandIconDataUrl) => set({ brandIconDataUrl }),
       setMyName: (myName) => set({ myName }),
       setDefaultModel: (defaultModel) => set({ defaultModel }),
       setContextLimit: (contextLimit) => set({ contextLimit }),

@@ -107,5 +107,79 @@
         "noResults": "No skills found matching your search.",
         "emptyPrompt": "Search for new skills to expand your capabilities.",
         "searchError": "ClawHub search failed. Check your connection or installation."
+    },
+    "mcp": {
+        "title": "MCP services",
+        "description": "Manage MCP services KTClaw can call; enable a service to expose its tools while keeping runtime controls and logs available.",
+        "dialog": {
+            "addTitle": "Add MCP service",
+            "editTitle": "Edit MCP service",
+            "subtitle": "Configure connection settings for local or remote MCP services that KTClaw can call.",
+            "close": "Close",
+            "cancel": "Cancel",
+            "save": "Save",
+            "saving": "Saving...",
+            "fields": {
+                "name": "Name",
+                "transport": "Transport",
+                "command": "Command",
+                "args": "Arguments",
+                "url": "URL",
+                "env": "Environment variables"
+            },
+            "validation": {
+                "nameRequired": "Name is required",
+                "commandRequired": "A stdio server requires a command",
+                "urlRequired": "A remote server requires a URL"
+            }
+        },
+        "actions": {
+            "refresh": "Refresh services",
+            "addService": "Add service",
+            "enableService": "Enable service",
+            "disableService": "Disable service",
+            "edit": "Edit",
+            "delete": "Delete service",
+            "deleteConfirm": "Delete this MCP service?",
+            "refreshTools": "Refresh tools",
+            "runTool": "Run tool",
+            "runningTool": "Running...",
+            "loadLogs": "Load logs",
+            "loadingLogs": "Loading...",
+            "start": "start",
+            "connect": "connect",
+            "stop": "stop"
+        },
+        "empty": {
+            "title": "No MCP services configured",
+            "description": "Add a service to expose its tools, runtime controls, and logs here."
+        },
+        "panels": {
+            "toolsTitle": "Discovered tools",
+            "toolsDescription": "Inspect tool visibility and run one-off tool calls.",
+            "logsTitle": "Server logs",
+            "logsDescription": "Review recent runtime events and stderr for this service."
+        },
+        "fields": {
+            "tool": "Tool",
+            "argsJson": "Arguments JSON"
+        },
+        "states": {
+            "loading": "Loading...",
+            "connected": "connected",
+            "disconnected": "disconnected",
+            "pid": "pid {{pid}}",
+            "selectTool": "Select a tool first",
+            "invalidJson": "Tool arguments must be valid JSON",
+            "toolCallError": "Tool call returned an error",
+            "noTools": "No tools discovered yet. Start or connect the runtime first, then refresh tools.",
+            "noLogs": "No logs loaded yet."
+        },
+        "status": {
+            "stopped": "stopped",
+            "starting": "starting",
+            "running": "running",
+            "error": "error"
+        }
     }
 }

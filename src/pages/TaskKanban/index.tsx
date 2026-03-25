@@ -29,8 +29,12 @@ interface KanbanTicket {
   workError?: string;
   workResult?: string;
   runtimeSessionId?: string;
+  runtimeParentSessionId?: string;
+  runtimeRootSessionId?: string;
+  runtimeDepth?: number;
   runtimeSessionKey?: string;
   runtimeTranscript?: string[];
+  runtimeChildSessionIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +42,11 @@ interface KanbanTicket {
 interface RuntimeSessionResponse {
   id: string;
   sessionKey?: string;
+  parentSessionKey?: string;
+  parentRuntimeId?: string;
+  rootRuntimeId?: string;
+  depth?: number;
+  childRuntimeIds?: string[];
   status?: string;
   transcript?: string[];
   lastError?: string;
@@ -130,8 +139,12 @@ function mapRuntimeSessionToTicketUpdates(ticket: KanbanTicket, session: Runtime
   const runtimeResult = readRuntimeResult(session);
   const base: Partial<KanbanTicket> = {
     runtimeSessionId: session.id || ticket.runtimeSessionId,
+    runtimeParentSessionId: session.parentRuntimeId || ticket.runtimeParentSessionId,
+    runtimeRootSessionId: session.rootRuntimeId || ticket.runtimeRootSessionId,
+    runtimeDepth: typeof session.depth === 'number' ? session.depth : ticket.runtimeDepth,
     runtimeSessionKey: session.sessionKey || ticket.runtimeSessionKey,
     runtimeTranscript: Array.isArray(session.transcript) ? session.transcript : ticket.runtimeTranscript,
+    runtimeChildSessionIds: Array.isArray(session.childRuntimeIds) ? session.childRuntimeIds : ticket.runtimeChildSessionIds,
   };
 
   if (status === 'running') {
@@ -210,8 +223,12 @@ function hasRuntimeTicketChanges(ticket: KanbanTicket, updates: Partial<KanbanTi
   if ('workError' in updates && updates.workError !== ticket.workError) return true;
   if ('workResult' in updates && updates.workResult !== ticket.workResult) return true;
   if ('runtimeSessionId' in updates && updates.runtimeSessionId !== ticket.runtimeSessionId) return true;
+  if ('runtimeParentSessionId' in updates && updates.runtimeParentSessionId !== ticket.runtimeParentSessionId) return true;
+  if ('runtimeRootSessionId' in updates && updates.runtimeRootSessionId !== ticket.runtimeRootSessionId) return true;
+  if ('runtimeDepth' in updates && updates.runtimeDepth !== ticket.runtimeDepth) return true;
   if ('runtimeSessionKey' in updates && updates.runtimeSessionKey !== ticket.runtimeSessionKey) return true;
   if ('runtimeTranscript' in updates && !isSameTranscript(ticket.runtimeTranscript, updates.runtimeTranscript)) return true;
+  if ('runtimeChildSessionIds' in updates && !isSameTranscript(ticket.runtimeChildSessionIds, updates.runtimeChildSessionIds)) return true;
   return false;
 }
 
@@ -339,6 +356,7 @@ export function TaskKanban() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           parentSessionKey: `agent:${ticket.assigneeId ?? 'main'}:main`,
+          ...(ticket.runtimeSessionId ? { parentRuntimeId: ticket.runtimeSessionId } : {}),
           agentName: ticket.assigneeRole ?? ticket.assigneeId,
           prompt: [ticket.title, ticket.description].filter(Boolean).join('\n\n'),
           mode: 'session',
@@ -880,6 +898,17 @@ function DetailPanel({
                 {ticket.runtimeSessionKey && (
                   <div className="mb-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-[12px] text-[#475467]">
                     Session key: {ticket.runtimeSessionKey}
+                  </div>
+                )}
+                {ticket.runtimeParentSessionId && (
+                  <div className="mb-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-[12px] text-[#475467]">
+                    Parent run: {ticket.runtimeParentSessionId}
+                    {typeof ticket.runtimeDepth === 'number' ? ` · Depth ${ticket.runtimeDepth}` : ''}
+                  </div>
+                )}
+                {ticket.runtimeChildSessionIds && ticket.runtimeChildSessionIds.length > 0 && (
+                  <div className="mb-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-[12px] text-[#475467]">
+                    Child runs: {ticket.runtimeChildSessionIds.length}
                   </div>
                 )}
                 <div className="mb-3 rounded-xl border border-black/[0.06] bg-[#fafafa] px-3 py-3">

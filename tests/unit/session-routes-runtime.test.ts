@@ -239,4 +239,66 @@ describe('session runtime routes', () => {
     });
     expect(gatewayRpcMock).toHaveBeenCalledWith('chat.abort', { sessionKey: spawned.sessionKey });
   });
+
+  it('spawns child runtime sessions through parentRuntimeId linkage', async () => {
+    const { SessionRuntimeManager } = await import('@electron/services/session-runtime-manager');
+    const { handleSessionRoutes } = await import('@electron/api/routes/sessions');
+
+    const historyBySessionKey = new Map<string, string[]>();
+    const gatewayRpcMock = vi.fn(async (method: string, params?: Record<string, unknown>) => {
+      if (method === 'chat.send') {
+        const sessionKey = String(params?.sessionKey ?? '');
+        const message = String(params?.message ?? '');
+        historyBySessionKey.set(sessionKey, [message]);
+        return { runId: `run-${sessionKey.split(':').at(-1)}` };
+      }
+      if (method === 'sessions.list') {
+        return {
+          sessions: [...historyBySessionKey.keys()].map((sessionKey) => ({
+            sessionKey,
+            status: 'running',
+          })),
+        };
+      }
+      if (method === 'chat.history') {
+        const sessionKey = String(params?.sessionKey ?? '');
+        return {
+          messages: (historyBySessionKey.get(sessionKey) ?? []).map((content) => ({
+            role: 'assistant',
+            content,
+          })),
+        };
+      }
+      throw new Error(`Unexpected gateway RPC: ${method}`);
+    });
+
+    const manager = new SessionRuntimeManager({ rpc: gatewayRpcMock } as never);
+    const root = await manager.spawn({
+      parentSessionKey: 'agent:main:main',
+      prompt: 'Initial root work',
+    });
+    const ctx = { sessionRuntimeManager: manager } as never;
+
+    const handled = await handleSessionRoutes(
+      createRequest('POST', {
+        parentSessionKey: 'agent:main:main',
+        parentRuntimeId: root.id,
+        prompt: 'Retry as child work',
+      }),
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/sessions/spawn'),
+      ctx,
+    );
+
+    expect(handled).toBe(true);
+    expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, {
+      success: true,
+      session: expect.objectContaining({
+        parentRuntimeId: root.id,
+        rootRuntimeId: root.id,
+        depth: 1,
+        parentSessionKey: root.sessionKey,
+      }),
+    });
+  });
 });

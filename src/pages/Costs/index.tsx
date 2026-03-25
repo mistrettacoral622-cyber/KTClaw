@@ -61,6 +61,28 @@ interface CronSummary {
   lastRunAt?: string | null;
 }
 
+interface CostsAnalysis {
+  optimizationScore: number;
+  cacheSavings: {
+    cacheTokens: number;
+    estimatedCostUsd: number;
+    savingsRatePct: number;
+  };
+  weekOverWeek: {
+    previous: { totalTokens: number; costUsd: number; sessions: number; cacheTokens: number };
+    current: { totalTokens: number; costUsd: number; sessions: number; cacheTokens: number };
+    deltas: { totalTokensPct: number; costUsdPct: number; sessionsPct: number; cacheTokensPct: number };
+  };
+  anomalies: Array<{
+    date: string;
+    totalTokens: number;
+    costUsd: number;
+    zScore: number;
+    reason: string;
+  }>;
+  insights: string[];
+}
+
 interface AlertRule {
   id: string;
   name: string;
@@ -112,6 +134,9 @@ export function Costs() {
   const [summary, setSummary] = useState<CostsSummary | null>(null);
   const [agentRows, setAgentRows] = useState<AgentSummary[]>([]);
   const [cronRows, setCronRows] = useState<CronSummary[]>([]);
+  const [analysis, setAnalysis] = useState<CostsAnalysis | null>(null);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [autoRefreshIntervalSec, setAutoRefreshIntervalSec] = useState(30);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -130,14 +155,16 @@ export function Costs() {
 
   const fetchSummary = useCallback(async () => {
     try {
-      const [s, a, c] = await Promise.all([
+      const [s, a, c, analysisData] = await Promise.all([
         hostApiFetch<CostsSummary>('/api/costs/summary?days=30'),
         hostApiFetch<AgentSummary[]>('/api/costs/by-agent'),
         hostApiFetch<CronSummary[]>('/api/costs/by-cron'),
+        hostApiFetch<CostsAnalysis>('/api/costs/analysis'),
       ]);
       setSummary(s);
       setAgentRows(Array.isArray(a) ? a : []);
       setCronRows(Array.isArray(c) ? c : []);
+      setAnalysis(analysisData ?? null);
     } catch {
       // non-critical
     }
@@ -145,6 +172,16 @@ export function Costs() {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
   useEffect(() => { void fetchSummary(); }, [fetchSummary]);
+  useEffect(() => {
+    if (activeTab !== 'realtime' || !autoRefreshEnabled) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      void fetchData();
+    }, autoRefreshIntervalSec * 1000);
+    return () => window.clearInterval(timerId);
+  }, [activeTab, autoRefreshEnabled, autoRefreshIntervalSec, fetchData]);
 
   const totalInput = entries.reduce((s, e) => s + e.inputTokens, 0);
   const totalOutput = entries.reduce((s, e) => s + e.outputTokens, 0);
@@ -166,6 +203,30 @@ export function Costs() {
         <h1 className="text-[15px] font-semibold text-[#000000]">费用 / 监控</h1>
         <div className="flex items-center gap-3">
           {activeTab === 'realtime' && (
+            <>
+              <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
+                <input
+                  type="checkbox"
+                  aria-label="Auto refresh"
+                  checked={autoRefreshEnabled}
+                  onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-[#c6c6c8]"
+                />
+                Auto refresh
+              </label>
+              <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
+                <span>Interval</span>
+                <select
+                  aria-label="Refresh interval"
+                  value={autoRefreshIntervalSec}
+                  onChange={(event) => setAutoRefreshIntervalSec(Number(event.target.value))}
+                  className="h-8 rounded-lg border border-[#c6c6c8] bg-[#f2f2f7] px-2 text-[12px] text-[#3c3c43] outline-none"
+                >
+                  <option value={15}>15s</option>
+                  <option value={30}>30s</option>
+                  <option value={60}>60s</option>
+                </select>
+              </label>
             <select
               value={limit}
               onChange={(e) => setLimit(Number(e.target.value))}
@@ -175,6 +236,7 @@ export function Costs() {
               <option value={200}>最近 200 条</option>
               <option value={500}>最近 500 条</option>
             </select>
+            </>
           )}
           <button
             type="button"
@@ -224,7 +286,14 @@ export function Costs() {
             modelRows={modelRows}
           />
         )}
-        {activeTab === 'dashboard' && <DashboardTab summary={summary} agentRows={agentRows} cronRows={cronRows} />}
+        {activeTab === 'dashboard' && (
+          <DashboardTab
+            summary={summary}
+            agentRows={agentRows}
+            cronRows={cronRows}
+            analysis={analysis}
+          />
+        )}
         {activeTab === 'usage' && <UsageTab agentRows={agentRows} />}
         {activeTab === 'alerts' && <AlertsTab />}
       </div>
@@ -342,10 +411,12 @@ function DashboardTab({
   summary,
   agentRows,
   cronRows,
+  analysis,
 }: {
   summary: CostsSummary | null;
   agentRows: AgentSummary[];
   cronRows: CronSummary[];
+  analysis: CostsAnalysis | null;
 }) {
   const [expandedCronId, setExpandedCronId] = useState<string | null>(null);
   const timeline = summary?.timeline ?? [];
@@ -391,6 +462,63 @@ function DashboardTab({
               <div className="mt-2 text-[12px] text-[#c6c6c8]">暂无数据</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {analysis && (
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
+            <p className="text-[13px] text-[#8e8e93]">Optimization Score</p>
+            <p className="mt-2 text-[30px] font-semibold text-[#111827]">{analysis.optimizationScore}</p>
+          </div>
+          <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
+            <p className="text-[13px] text-[#8e8e93]">Cache Savings</p>
+            <p className="mt-2 text-[24px] font-semibold text-[#111827]">{formatCost(analysis.cacheSavings.estimatedCostUsd)}</p>
+            <p className="mt-1 text-[12px] text-[#667085]">
+              {formatTokens(analysis.cacheSavings.cacheTokens)} tokens ({analysis.cacheSavings.savingsRatePct}%)
+            </p>
+          </div>
+          <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
+            <p className="text-[13px] text-[#8e8e93]">Week-over-week</p>
+            <p className="mt-2 text-[24px] font-semibold text-[#111827]">
+              {analysis.weekOverWeek.deltas.totalTokensPct > 0 ? '+' : ''}
+              {analysis.weekOverWeek.deltas.totalTokensPct}%
+            </p>
+            <p className="mt-1 text-[12px] text-[#667085]">
+              Cost {analysis.weekOverWeek.deltas.costUsdPct > 0 ? '+' : ''}
+              {analysis.weekOverWeek.deltas.costUsdPct}%
+            </p>
+          </div>
+        </div>
+      )}
+
+      {analysis && (analysis.anomalies.length > 0 || analysis.insights.length > 0) && (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
+            <p className="mb-3 text-[14px] font-semibold text-[#334155]">Anomalies</p>
+            {analysis.anomalies.length > 0 ? (
+              <div className="space-y-2">
+                {analysis.anomalies.map((row) => (
+                  <div key={`${row.date}-${row.reason}`} className="rounded-lg border border-[#f2f2f7] px-3 py-2">
+                    <p className="text-[12px] font-medium text-[#111827]">{row.date}</p>
+                    <p className="text-[12px] text-[#667085]">{row.reason}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#8e8e93]">No anomalies detected.</p>
+            )}
+          </div>
+          <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
+            <p className="mb-3 text-[14px] font-semibold text-[#334155]">Insights</p>
+            <div className="space-y-2">
+              {analysis.insights.map((insight) => (
+                <p key={insight} className="rounded-lg border border-[#f2f2f7] px-3 py-2 text-[12px] text-[#334155]">
+                  {insight}
+                </p>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

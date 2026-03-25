@@ -6,11 +6,10 @@
 import { useState, useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import { invokeIpc } from '@/lib/api-client';
-
-const isMac = window.electron?.platform === 'darwin';
+import { useSettingsStore } from '@/stores/settings';
 
 export function TitleBar() {
-  if (isMac) {
+  if (window.electron?.platform === 'darwin') {
     // macOS: just a drag region, traffic lights are native
     return <div className="drag-region h-10 shrink-0 border-b bg-background" />;
   }
@@ -20,6 +19,10 @@ export function TitleBar() {
 
 function WindowsTitleBar() {
   const [maximized, setMaximized] = useState(false);
+  const brandName = useSettingsStore((state) => state.brandName);
+  const brandIconDataUrl = useSettingsStore((state) => state.brandIconDataUrl);
+  const brandLogoDataUrl = useSettingsStore((state) => state.brandLogoDataUrl);
+  const brandMarkDataUrl = brandIconDataUrl ?? brandLogoDataUrl;
 
   useEffect(() => {
     // Check initial state
@@ -48,7 +51,14 @@ function WindowsTitleBar() {
     <div className="drag-region flex h-10 shrink-0 items-center justify-between border-b bg-background">
       {/* Left: App name */}
       <div className="no-drag flex items-center gap-2 pl-4 text-[13px] font-semibold text-foreground">
-        KTClaw
+        {brandMarkDataUrl ? (
+          <img
+            src={brandMarkDataUrl}
+            alt="Brand icon"
+            className="h-4 w-4 rounded-sm object-cover"
+          />
+        ) : null}
+        <span>{brandName}</span>
       </div>
 
       {/* Right: Window Controls */}

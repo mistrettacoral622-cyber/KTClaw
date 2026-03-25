@@ -457,4 +457,54 @@ describe('TaskKanban', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Approval review' })).toBeInTheDocument();
   });
+
+  it('retries runtime work as a child session and preserves lineage metadata', async () => {
+    agentsStoreState.agents = [{ id: 'planner-1', name: 'Planner' }];
+    localStorage.setItem('clawport-kanban', JSON.stringify([
+      {
+        id: 'ticket-runtime-retry',
+        title: 'Retry runtime task',
+        description: 'Need a follow-up run',
+        status: 'review',
+        priority: 'medium',
+        assigneeId: 'planner-1',
+        workState: 'failed',
+        runtimeSessionId: 'runtime-parent',
+        runtimeSessionKey: 'agent:planner-1:main:subagent:runtime-parent',
+        runtimeTranscript: ['First run failed'],
+        createdAt: '2026-03-25T00:00:00.000Z',
+        updatedAt: '2026-03-25T00:00:00.000Z',
+      },
+    ]));
+    hostApiFetchMock.mockResolvedValueOnce({
+      success: true,
+      session: {
+        id: 'runtime-child',
+        parentRuntimeId: 'runtime-parent',
+        rootRuntimeId: 'runtime-parent',
+        depth: 1,
+        sessionKey: 'agent:planner-1:main:subagent:runtime-parent:subagent:runtime-child',
+        parentSessionKey: 'agent:planner-1:main:subagent:runtime-parent',
+        transcript: ['Retry runtime task\n\nNeed a follow-up run'],
+        status: 'running',
+      },
+    });
+
+    render(<TaskKanban />);
+    fireEvent.click(screen.getByText('Retry runtime task'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry work' }));
+    });
+
+    const [, init] = hostApiFetchMock.mock.calls[0] as [string, { body?: string }];
+    expect(JSON.parse(String(init.body))).toEqual(expect.objectContaining({
+      parentRuntimeId: 'runtime-parent',
+    }));
+    expect(readStoredTicket('ticket-runtime-retry')).toEqual(expect.objectContaining({
+      runtimeSessionId: 'runtime-child',
+      runtimeParentSessionId: 'runtime-parent',
+      runtimeRootSessionId: 'runtime-parent',
+    }));
+  });
 });

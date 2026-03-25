@@ -8,6 +8,9 @@ const nodeTestInclude = [
   'tests/unit/comms-scripts.test.ts',
   'tests/unit/env-path.test.ts',
   'tests/unit/gateway-*.test.ts',
+  'tests/unit/i18n-parity.test.ts',
+  'tests/unit/mcp-*.test.ts',
+  'tests/unit/session-*.test.ts',
   'tests/unit/openclaw-*.test.ts',
   'tests/unit/token-usage*.test.ts',
 ];

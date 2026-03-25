@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { readFile, readdir, writeFile, stat, mkdir } from 'fs/promises';
+import { readFile, readdir, writeFile, stat, mkdir, rename, unlink } from 'fs/promises';
 import { existsSync, readFileSync } from 'fs';
 import { join, basename, dirname, resolve, relative, isAbsolute, posix, win32 } from 'path';
 import { homedir } from 'os';
@@ -13,6 +13,17 @@ import { extractMemoryFromMessages, type MemoryGuardLevel } from './memory-extra
 type MemoryFileCategory = 'evergreen' | 'daily' | 'other';
 type HealthSeverity = 'critical' | 'warning' | 'info' | 'ok';
 
+interface MemoryFileHighlight {
+  start: number;
+  end: number;
+  snippet: string;
+}
+
+interface MemoryFileSearch {
+  hitCount: number;
+  highlights: MemoryFileHighlight[];
+}
+
 interface MemoryFileInfo {
   label: string;
   path: string;
@@ -21,6 +32,15 @@ interface MemoryFileInfo {
   lastModified: string;
   sizeBytes: number;
   category: MemoryFileCategory;
+  scopeId: string;
+  writable: boolean;
+  search?: MemoryFileSearch;
+}
+
+interface MemoryScopeInfo {
+  id: string;
+  label: string;
+  workspaceDir: string;
 }
 
 interface MemoryConfig {
@@ -86,6 +106,8 @@ interface MemoryHealthSummary {
 
 // ── Workspace path ───────────────────────────────────────────────
 
+const COMPANION_FILES = ['AGENTS.md', 'HEARTBEAT.md', 'IDENTITY.md', 'SOUL.md', 'TOOLS.md', 'USER.md'] as const;
+
 function getWorkspaceDir(): string {
   // Try current layout first, then legacy
   const current = join(homedir(), '.openclaw', 'agents', 'main', 'workspace');
@@ -97,19 +119,88 @@ function isAbsolutePath(target: string): boolean {
   return isAbsolute(target) || posix.isAbsolute(target) || win32.isAbsolute(target);
 }
 
-function resolveWorkspaceFilePath(workspaceDir: string, requested: string): string | null {
+function normalizeRelativePath(requested: string): string | null {
   const trimmed = requested.trim();
   if (!trimmed) return null;
   if (trimmed.includes('\0')) return null;
   if (isAbsolutePath(trimmed)) return null;
+  const normalized = posix.normalize(trimmed.replace(/[\\]+/g, '/'));
+  if (!normalized || normalized === '.' || normalized === '..') return null;
+  if (normalized.startsWith('../')) return null;
+  return normalized.replace(/^\.\/+/, '');
+}
 
+function resolveWorkspaceFilePath(workspaceDir: string, requested: string): string | null {
+  const normalized = normalizeRelativePath(requested);
+  if (!normalized) return null;
   const workspaceRoot = resolve(workspaceDir);
-  const fullPath = resolve(workspaceRoot, trimmed);
+  const fullPath = resolve(workspaceRoot, normalized);
   const rel = relative(workspaceRoot, fullPath).replace(/[\\/]+/g, '/');
   if (rel === '' || (!rel.startsWith('../') && rel !== '..')) {
     return fullPath;
   }
   return null;
+}
+
+function toRelativeWorkspacePath(workspaceDir: string, fullPath: string): string | null {
+  const workspaceRoot = resolve(workspaceDir);
+  const rel = relative(workspaceRoot, resolve(fullPath)).replace(/[\\/]+/g, '/');
+  if (!rel || rel === '.' || rel === '..' || rel.startsWith('../')) return null;
+  return rel;
+}
+
+async function getMemoryScopes(): Promise<MemoryScopeInfo[]> {
+  const scopes: MemoryScopeInfo[] = [];
+  const openclawHome = join(homedir(), '.openclaw');
+  const agentsDir = join(openclawHome, 'agents');
+  const seenWorkspace = new Set<string>();
+
+  if (existsSync(agentsDir)) {
+    try {
+      const entries = await readdir(agentsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const scopeId = entry.name;
+        const workspaceDir = join(agentsDir, scopeId, 'workspace');
+        if (!existsSync(workspaceDir)) continue;
+        const resolvedPath = resolve(workspaceDir);
+        if (seenWorkspace.has(resolvedPath)) continue;
+        seenWorkspace.add(resolvedPath);
+        scopes.push({ id: scopeId, label: scopeId, workspaceDir });
+      }
+    } catch {
+      // Ignore unreadable agent directories.
+    }
+  }
+
+  const fallbackWorkspace = getWorkspaceDir();
+  if (existsSync(fallbackWorkspace)) {
+    const resolvedFallback = resolve(fallbackWorkspace);
+    if (!seenWorkspace.has(resolvedFallback)) {
+      scopes.push({ id: 'main', label: 'main', workspaceDir: fallbackWorkspace });
+    }
+  }
+
+  if (scopes.length === 0) {
+    scopes.push({ id: 'main', label: 'main', workspaceDir: fallbackWorkspace });
+  }
+
+  scopes.sort((a, b) => {
+    if (a.id === 'main' && b.id !== 'main') return -1;
+    if (b.id === 'main' && a.id !== 'main') return 1;
+    return a.id.localeCompare(b.id);
+  });
+
+  return scopes;
+}
+
+function selectScope(scopes: MemoryScopeInfo[], requestedScope: string | null): MemoryScopeInfo {
+  const requested = requestedScope?.trim();
+  if (requested) {
+    const match = scopes.find((scope) => scope.id === requested);
+    if (match) return match;
+  }
+  return scopes[0] ?? { id: 'main', label: 'main', workspaceDir: getWorkspaceDir() };
 }
 
 // ── Daily log helpers ────────────────────────────────────────────
@@ -140,55 +231,93 @@ function labelForFile(filename: string, fullPath: string, workspacePath: string)
 
 // ── File listing ─────────────────────────────────────────────────
 
-async function getMemoryFiles(workspacePath: string): Promise<MemoryFileInfo[]> {
-  const files: MemoryFileInfo[] = [];
-  const memoryDir = join(workspacePath, 'memory');
+function categoryForRelativePath(relativePath: string): MemoryFileCategory {
+  const file = basename(relativePath);
+  if (isDaily(file)) return 'daily';
+  if (/\.(md|json)$/i.test(file)) return 'evergreen';
+  return 'other';
+}
 
-  // 1. Root MEMORY.md
-  const rootMemory = join(workspacePath, 'MEMORY.md');
-  if (existsSync(rootMemory)) {
+async function getMemoryFiles(scope: MemoryScopeInfo, config: MemoryConfig): Promise<MemoryFileInfo[]> {
+  const files: MemoryFileInfo[] = [];
+  const seen = new Set<string>();
+  const workspacePath = scope.workspaceDir;
+
+  const addFile = async (
+    fullPath: string,
+    relativePath: string,
+    writable: boolean,
+    labelOverride?: string,
+  ): Promise<void> => {
+    const normalizedRelativePath = relativePath.replace(/[\\]+/g, '/');
+    if (seen.has(normalizedRelativePath)) return;
     try {
-      const content = await readFile(rootMemory, 'utf-8');
-      const s = await stat(rootMemory);
+      const fileStat = await stat(fullPath);
+      if (!fileStat.isFile()) return;
+      const content = await readFile(fullPath, 'utf-8');
       files.push({
-        label: 'Long-Term Memory',
-        path: rootMemory,
-        relativePath: 'MEMORY.md',
+        label: labelOverride ?? labelForFile(basename(fullPath), fullPath, workspacePath),
+        path: fullPath,
+        relativePath: normalizedRelativePath,
         content,
-        lastModified: s.mtime.toISOString(),
-        sizeBytes: s.size,
-        category: 'evergreen',
+        lastModified: fileStat.mtime.toISOString(),
+        sizeBytes: fileStat.size,
+        category: categoryForRelativePath(normalizedRelativePath),
+        scopeId: scope.id,
+        writable,
       });
-    } catch { /* skip */ }
+      seen.add(normalizedRelativePath);
+    } catch {
+      // Skip unreadable file entries.
+    }
+  };
+
+  await addFile(join(workspacePath, 'MEMORY.md'), 'MEMORY.md', true, 'Long-Term Memory');
+  for (const companion of COMPANION_FILES) {
+    await addFile(join(workspacePath, companion), companion, true, humanizeFilename(companion));
   }
 
-  // 2. memory/ directory
+  const memoryDir = join(workspacePath, 'memory');
   if (existsSync(memoryDir)) {
     try {
       const entries = await readdir(memoryDir);
       for (const entry of entries) {
-        if (!/\.(md|json)$/.test(entry)) continue;
-        const fullPath = join(memoryDir, entry);
-        try {
-          const s = await stat(fullPath);
-          if (!s.isFile()) continue;
-          const content = await readFile(fullPath, 'utf-8');
-          const category: MemoryFileCategory = isDaily(entry) ? 'daily' : 'evergreen';
-          files.push({
-            label: labelForFile(entry, fullPath, workspacePath),
-            path: fullPath,
-            relativePath: `memory/${entry}`,
-            content,
-            lastModified: s.mtime.toISOString(),
-            sizeBytes: s.size,
-            category,
-          });
-        } catch { /* skip */ }
+        if (!/\.(md|json)$/i.test(entry)) continue;
+        await addFile(join(memoryDir, entry), `memory/${entry}`, true);
       }
-    } catch { /* skip */ }
+    } catch {
+      // Ignore unreadable memory directory.
+    }
   }
 
-  // Sort: evergreen first, then by date descending
+  for (const rawExtraPath of config.memorySearch.extraPaths) {
+    if (typeof rawExtraPath !== 'string') continue;
+    const trimmed = rawExtraPath.trim();
+    if (!trimmed) continue;
+
+    let fullPath: string;
+    let relativePath: string;
+    let writable = false;
+    const normalizedRelative = normalizeRelativePath(trimmed);
+    if (normalizedRelative) {
+      fullPath = resolve(workspacePath, normalizedRelative);
+      relativePath = normalizedRelative;
+      writable = true;
+    } else if (isAbsolutePath(trimmed)) {
+      fullPath = resolve(trimmed);
+      relativePath = trimmed.replace(/[\\]+/g, '/');
+      const workspaceRelative = toRelativeWorkspacePath(workspacePath, fullPath);
+      if (workspaceRelative) {
+        relativePath = workspaceRelative;
+        writable = true;
+      }
+    } else {
+      continue;
+    }
+
+    await addFile(fullPath, relativePath, writable, humanizeFilename(basename(relativePath)));
+  }
+
   files.sort((a, b) => {
     if (a.category !== b.category) {
       if (a.category === 'evergreen') return -1;
@@ -198,6 +327,55 @@ async function getMemoryFiles(workspacePath: string): Promise<MemoryFileInfo[]> 
   });
 
   return files;
+}
+
+function collectSearchMetadata(content: string, query: string): MemoryFileSearch {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return { hitCount: 0, highlights: [] };
+  const haystack = content.toLowerCase();
+  const highlights: MemoryFileHighlight[] = [];
+  let hitCount = 0;
+  let cursor = 0;
+
+  while (cursor < haystack.length) {
+    const index = haystack.indexOf(needle, cursor);
+    if (index < 0) break;
+    hitCount += 1;
+    if (highlights.length < 8) {
+      const start = Math.max(0, index - 32);
+      const end = Math.min(content.length, index + needle.length + 32);
+      const snippet = content.slice(start, end).replace(/\s+/g, ' ');
+      highlights.push({
+        start: index,
+        end: index + needle.length,
+        snippet,
+      });
+    }
+    cursor = index + needle.length;
+  }
+
+  return { hitCount, highlights };
+}
+
+function applySearchQuery(
+  files: MemoryFileInfo[],
+  query: string,
+): { files: MemoryFileInfo[]; totalHits: number } {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) {
+    return { files, totalHits: 0 };
+  }
+
+  let totalHits = 0;
+  const filtered = files
+    .map((file) => {
+      const search = collectSearchMetadata(file.content, normalizedQuery);
+      totalHits += search.hitCount;
+      return { ...file, search };
+    })
+    .filter((file) => (file.search?.hitCount ?? 0) > 0);
+
+  return { files: filtered, totalHits };
 }
 
 // ── Config ───────────────────────────────────────────────────────
@@ -255,6 +433,43 @@ function getMemoryConfig(workspacePath: string): MemoryConfig {
 }
 
 // ── Status ───────────────────────────────────────────────────────
+
+function getWhitelistedRelativePaths(config: MemoryConfig): Set<string> {
+  const allowed = new Set<string>(['MEMORY.md']);
+  for (const companion of COMPANION_FILES) {
+    allowed.add(companion);
+  }
+  for (const extraPath of config.memorySearch.extraPaths) {
+    if (typeof extraPath !== 'string') continue;
+    const normalized = normalizeRelativePath(extraPath);
+    if (normalized) {
+      allowed.add(normalized);
+    }
+  }
+  return allowed;
+}
+
+function isWritePathAllowed(relativePath: string, config: MemoryConfig): boolean {
+  if (/^memory\/.+\.(md|json)$/i.test(relativePath)) {
+    return true;
+  }
+  return getWhitelistedRelativePaths(config).has(relativePath);
+}
+
+function normalizeMemoryContent(rawContent: string): string {
+  return rawContent.replace(/\r\n?/g, '\n');
+}
+
+async function writeFileAtomically(targetPath: string, content: string): Promise<void> {
+  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  await writeFile(tempPath, content, 'utf-8');
+  try {
+    await rename(tempPath, targetPath);
+  } catch (error) {
+    await unlink(tempPath).catch(() => {});
+    throw error;
+  }
+}
 
 const OPENCLAW_MAX_BUFFER = 1024 * 1024;
 
@@ -428,20 +643,40 @@ export async function handleMemoryRoutes(
 ): Promise<boolean> {
   // GET /api/memory — full dashboard response
   if (url.pathname === '/api/memory' && req.method === 'GET') {
-    const workspaceDir = getWorkspaceDir();
-    const files = await getMemoryFiles(workspaceDir);
-    const config = getMemoryConfig(workspaceDir);
+    const scopes = await getMemoryScopes();
+    const activeScope = selectScope(scopes, url.searchParams.get('scope'));
+    const query = (url.searchParams.get('q') ?? '').trim();
+    const config = getMemoryConfig(activeScope.workspaceDir);
+    const allFiles = await getMemoryFiles(activeScope, config);
+    const searchResult = applySearchQuery(allFiles, query);
     const status = await getMemoryStatus();
-    const stats = computeStats(files);
-    const health = computeHealth(files, config, status, stats);
-    sendJson(res, 200, { files, config, status, stats, health, workspaceDir });
+    const stats = computeStats(allFiles);
+    const health = computeHealth(allFiles, config, status, stats);
+    sendJson(res, 200, {
+      files: searchResult.files,
+      config,
+      status,
+      stats,
+      health,
+      workspaceDir: activeScope.workspaceDir,
+      scopes,
+      activeScope: activeScope.id,
+      search: {
+        query,
+        totalHits: searchResult.totalHits,
+        resultCount: searchResult.files.length,
+        totalFiles: allFiles.length,
+      },
+    });
     return true;
   }
 
   // GET /api/memory/file?name=FILENAME — read single file
   if (url.pathname === '/api/memory/file' && req.method === 'GET') {
     const name = url.searchParams.get('name');
-    const workspaceDir = getWorkspaceDir();
+    const scopes = await getMemoryScopes();
+    const activeScope = selectScope(scopes, url.searchParams.get('scope'));
+    const workspaceDir = activeScope.workspaceDir;
     const fullPath = name ? resolveWorkspaceFilePath(workspaceDir, name) : null;
     if (!name || !fullPath) {
       sendJson(res, 400, { error: 'Invalid file name' });
@@ -459,7 +694,13 @@ export async function handleMemoryRoutes(
 
   // PUT /api/memory/file — write file content
   if (url.pathname === '/api/memory/file' && req.method === 'PUT') {
-    let body: { relativePath?: string; name?: string; content?: string };
+    let body: {
+      relativePath?: string;
+      name?: string;
+      content?: string;
+      expectedMtime?: string;
+      scope?: string;
+    };
     try {
       body = JSON.parse(await readBody(req));
     } catch {
@@ -467,21 +708,60 @@ export async function handleMemoryRoutes(
       return true;
     }
     const relPath = body.relativePath ?? body.name;
+    const normalizedRelPath = typeof relPath === 'string' ? normalizeRelativePath(relPath) : null;
     const { content } = body;
     if (!relPath || typeof relPath !== 'string' || typeof content !== 'string') {
       sendJson(res, 400, { error: 'Invalid request' });
       return true;
     }
-    const workspaceDir = getWorkspaceDir();
-    const fullPath = resolveWorkspaceFilePath(workspaceDir, relPath);
+    const scopes = await getMemoryScopes();
+    const activeScope = selectScope(scopes, body.scope ?? url.searchParams.get('scope'));
+    const config = getMemoryConfig(activeScope.workspaceDir);
+    if (!normalizedRelPath) {
+      sendJson(res, 400, { error: 'Invalid request' });
+      return true;
+    }
+    if (!isWritePathAllowed(normalizedRelPath, config)) {
+      sendJson(res, 400, { error: 'Path is not allowed for writes' });
+      return true;
+    }
+    const fullPath = resolveWorkspaceFilePath(activeScope.workspaceDir, normalizedRelPath);
     if (!fullPath) {
       sendJson(res, 400, { error: 'Invalid request' });
       return true;
     }
     try {
+      const expectedMtime = typeof body.expectedMtime === 'string' ? body.expectedMtime.trim() : '';
+      if (expectedMtime) {
+        const expectedMs = new Date(expectedMtime).getTime();
+        if (!Number.isFinite(expectedMs)) {
+          sendJson(res, 400, { error: 'Invalid expectedMtime' });
+          return true;
+        }
+        try {
+          const currentStat = await stat(fullPath);
+          if (Math.abs(currentStat.mtime.getTime() - expectedMs) > 1) {
+            sendJson(res, 409, {
+              error: 'Stale write conflict: file has changed',
+              currentMtime: currentStat.mtime.toISOString(),
+            });
+            return true;
+          }
+        } catch (error) {
+          if ((error as { code?: string }).code === 'ENOENT') {
+            sendJson(res, 409, {
+              error: 'Stale write conflict: file no longer exists',
+              currentMtime: null,
+            });
+            return true;
+          }
+          throw error;
+        }
+      }
       await mkdir(dirname(fullPath), { recursive: true });
-      await writeFile(fullPath, content, 'utf-8');
-      sendJson(res, 200, { ok: true });
+      await writeFileAtomically(fullPath, normalizeMemoryContent(content));
+      const updated = await stat(fullPath);
+      sendJson(res, 200, { ok: true, lastModified: updated.mtime.toISOString() });
     } catch (err) {
       sendJson(res, 500, { error: String(err) });
     }

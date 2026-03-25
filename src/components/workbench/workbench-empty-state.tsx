@@ -5,12 +5,12 @@ import { useGatewayStore } from '@/stores/gateway';
 type WorkbenchEmptyStateProps = Record<string, never>;
 
 const quickActions = [
-  { label: '解释代码', prompt: '请解释这段代码的作用和原理' },
-  { label: '写单测', prompt: '为这个函数编写单元测试，覆盖边界情况' },
-  { label: '代码审查', prompt: '请帮我做代码审查，找出潜在的 bug 和改进点' },
-  { label: '优化性能', prompt: '分析并优化这段代码的性能瓶颈' },
-  { label: 'SQL 生成', prompt: '根据以下需求生成对应的 SQL 查询语句：' },
-  { label: '文档生成', prompt: '为这段代码生成清晰的注释和 API 文档' },
+  { label: '解释代码', prompt: '请解释这段代码的作用和原理', skillHints: ['code-assist', 'file-tools'] },
+  { label: '写单测', prompt: '为这个函数编写单元测试，覆盖边界情况', skillHints: ['python-env', 'code-assist'] },
+  { label: '代码审查', prompt: '请帮我做代码审查，找出潜在的 bug 和改进点', skillHints: ['code-assist'] },
+  { label: '优化性能', prompt: '分析并优化这段代码的性能瓶颈', skillHints: ['code-assist', 'terminal'] },
+  { label: 'SQL 生成', prompt: '根据以下需求生成对应的 SQL 查询语句：', skillHints: ['file-tools'] },
+  { label: '文档生成', prompt: '为这段代码生成清晰的注释和 API 文档', skillHints: ['code-assist', 'file-tools'] },
 ];
 
 const suggestions = [
@@ -37,15 +37,23 @@ const suggestions = [
 ];
 
 export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
-  const sendMessage = useChatStore((s) => s.sendMessage);
+  const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const isGatewayRunning = useGatewayStore((s) => s.status.state === 'running');
   const [selectedQuickActionIndex, setSelectedQuickActionIndex] = useState(0);
+  const [promptPanelOpen, setPromptPanelOpen] = useState(false);
+  const [promptDraft, setPromptDraft] = useState('');
 
   const selectedQuickAction = quickActions[selectedQuickActionIndex] ?? quickActions[0];
 
-  const runQuickAction = (prompt: string) => {
+  const openPromptPanel = (prompt: string) => {
     if (!isGatewayRunning) return;
-    void sendMessage(prompt);
+    setPromptDraft(prompt);
+    setPromptPanelOpen(true);
+  };
+
+  const fillComposer = () => {
+    setComposerDraft(promptDraft);
+    setPromptPanelOpen(false);
   };
 
   return (
@@ -82,7 +90,7 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
                 aria-pressed={isSelected}
                 onClick={() => {
                   setSelectedQuickActionIndex(index);
-                  runQuickAction(action.prompt);
+                  openPromptPanel(action.prompt);
                 }}
                 disabled={!isGatewayRunning}
                 className={`rounded-full border px-4 py-1.5 text-[13px] font-medium shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
@@ -105,7 +113,7 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
           <button
             type="button"
             aria-label="Use selected action"
-            onClick={() => runQuickAction(selectedQuickAction.prompt)}
+            onClick={() => openPromptPanel(selectedQuickAction.prompt)}
             disabled={!isGatewayRunning}
             className="shrink-0 rounded-lg border border-clawx-ac/40 bg-clawx-ac/10 px-3 py-1.5 text-[12px] font-semibold text-clawx-ac transition-all hover:bg-clawx-ac/15 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -120,7 +128,7 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
           <button
             key={suggestion.title}
             type="button"
-            onClick={() => isGatewayRunning && sendMessage(suggestion.description)}
+            onClick={() => isGatewayRunning && openPromptPanel(suggestion.description)}
             disabled={!isGatewayRunning}
             className={`flex flex-col gap-[6px] rounded-xl border border-black/[0.06] bg-white p-4 text-left shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all dark:border-white/10 dark:bg-white/[0.04] ${
               isGatewayRunning
@@ -136,6 +144,54 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
           </button>
         ))}
       </div>
+
+      {promptPanelOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-label="Quick action prompt"
+            className="w-full max-w-[560px] rounded-2xl border border-black/[0.08] bg-white p-5 text-left shadow-[0_20px_60px_rgba(0,0,0,0.16)]"
+          >
+            <div className="mb-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-[#6b7280]">Mapped skills</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(selectedQuickAction.skillHints ?? []).map((hint) => (
+                  <span key={hint} className="rounded-full border border-clawx-ac/20 bg-clawx-ac/5 px-3 py-1 text-[12px] font-medium text-clawx-ac">
+                    {hint}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="mb-2 text-[13px] font-medium text-[#111827]">{selectedQuickAction.label}</p>
+              <textarea
+                value={promptDraft}
+                onChange={(event) => setPromptDraft(event.target.value)}
+                rows={6}
+                className="w-full resize-none rounded-xl border border-black/[0.08] bg-[#f8fafc] px-4 py-3 text-[13px] outline-none focus:border-clawx-ac"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPromptPanelOpen(false)}
+                className="rounded-lg border border-black/[0.08] px-3 py-2 text-[13px] text-[#3c3c43] hover:bg-[#f2f2f7]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={fillComposer}
+                className="rounded-lg bg-clawx-ac px-3 py-2 text-[13px] font-medium text-white hover:bg-[#005fd6]"
+              >
+                Fill composer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

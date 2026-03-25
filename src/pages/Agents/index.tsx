@@ -14,6 +14,7 @@ import type { AgentSummary } from '@/types/agent';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 export function Agents() {
   const { t } = useTranslation('agents');
@@ -211,6 +212,20 @@ function AgentCard({
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'h-7 w-auto px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-all',
+                !agent.isDefault && 'opacity-0 group-hover:opacity-100',
+              )}
+              title={t('detail.title', { defaultValue: 'Agent detail' })}
+            >
+              <Link to={`/agents/${encodeURIComponent(agent.id)}`}>
+                {t('detail.linkLabel', { defaultValue: 'Details' })}
+              </Link>
+            </Button>
             <Button
               variant="ghost"
               size="icon"

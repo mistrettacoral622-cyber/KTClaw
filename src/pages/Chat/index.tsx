@@ -40,6 +40,7 @@ export function Chat() {
   const streamingMessage = useChatStore((s) => s.streamingMessage);
   const streamingTools = useChatStore((s) => s.streamingTools);
   const pendingFinal = useChatStore((s) => s.pendingFinal);
+  const isRunActive = sending;
   const currentAgentId = useChatStore((s) => s.currentAgentId);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const abortRun = useChatStore((s) => s.abortRun);
@@ -136,16 +137,21 @@ export function Chat() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-[52px] shrink-0 items-center justify-between gap-4 bg-white px-5 dark:bg-background">
           <div ref={agentPickerRef} className="relative flex min-w-0 items-center gap-[6px]">
-            <button
-              type="button"
-              onClick={() => setAgentPickerOpen((v) => !v)}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-[#f2f2f7]"
-            >
-              <h1 className="truncate text-[15px] font-semibold text-foreground">
-                {currentAgentName}
-              </h1>
-              <span className="text-[12px] text-[#8e8e93]">▾</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => setAgentPickerOpen((v) => !v)}
+            className="flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-[#f2f2f7]"
+          >
+            <h1 className="truncate text-[15px] font-semibold text-foreground">
+              {currentAgentName}
+            </h1>
+            <span className="text-[12px] text-[#8e8e93]">▾</span>
+          </button>
+          {isRunActive && (
+            <span className="text-[12px] font-medium text-muted-foreground whitespace-nowrap">
+              {currentAgentName} 正在思考中
+            </span>
+          )}
             {agentPickerOpen && agents.length > 0 && (
               <div className="absolute left-0 top-full z-50 mt-1 w-[200px] overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
                 {agents.map((agent) => (
@@ -253,6 +259,7 @@ export function Chat() {
                         showThinking={showThinking}
                         isStreaming
                         streamingTools={streamingTools}
+                        autoExpandThinking={hasStreamThinking}
                       />
                     )}
 

@@ -270,6 +270,29 @@
     "docs": "官网",
     "github": "GitHub"
   },
+  "skillsMcp": {
+    "overview": {
+      "title": "将 Skills 与 MCP 分开查看",
+      "description": "一个页签管理内置技能，另一个页签专注 KTClaw 可调用的 MCP 服务、runtime、工具发现与日志。",
+      "tabsAriaLabel": "Skills 与 MCP 视图切换"
+    },
+    "tabs": {
+      "skills": "Skills",
+      "mcp": "MCP"
+    },
+    "skillsCard": {
+      "title": "已安装内置技能 (Native Skills)",
+      "refresh": "↻ 刷新",
+      "gatewayWarning": "⚠ Gateway 未连接。请先连接 Gateway 再管理技能。",
+      "loading": "加载中...",
+      "empty": "暂无已安装技能",
+      "coreBadge": "核心",
+      "browseMarketplace": "浏览技能市场..."
+    },
+    "mcpCard": {
+      "title": "MCP 服务与 Runtime"
+    }
+  },
   "settingsCenter": {
     "groups": {
       "quickConfig": "快速配置",

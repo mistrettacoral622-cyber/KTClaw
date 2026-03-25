@@ -55,6 +55,10 @@ const INITIAL_NOTIFICATION_TIME = Date.now();
 export function Sidebar() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useSettingsStore((state) => state.setSidebarCollapsed);
+  const brandName = useSettingsStore((state) => state.brandName);
+  const brandLogoDataUrl = useSettingsStore((state) => state.brandLogoDataUrl);
+  const brandIconDataUrl = useSettingsStore((state) => state.brandIconDataUrl);
+  const brandMarkDataUrl = brandIconDataUrl ?? brandLogoDataUrl;
   const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
   const [nickname, setNickname] = useState(() => localStorage.getItem('clawx-user-nickname') || 'Administrator');
   const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('clawx-user-avatar') || '🐱');
@@ -296,6 +300,19 @@ export function Sidebar() {
           </button>
         )}
 
+        {!sidebarCollapsed ? (
+          <div className="min-w-0 flex flex-1 items-center gap-2 px-2">
+            {brandMarkDataUrl ? (
+              <img
+                src={brandMarkDataUrl}
+                alt="Brand logo"
+                className="h-5 w-5 shrink-0 rounded-sm object-cover"
+              />
+            ) : null}
+            <span className="truncate text-[12px] font-semibold text-[#3c3c43]">{brandName}</span>
+          </div>
+        ) : null}
+
         {!sidebarCollapsed && (
           <button
             type="button"
@@ -490,7 +507,7 @@ export function Sidebar() {
                 )}
               >
                 <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none">✦</span>
-                <span className="min-w-0 flex-1 truncate">KTClaw</span>
+                <span className="min-w-0 flex-1 truncate">{brandName}</span>
               </button>
               <div className="flex items-center gap-[10px] rounded-lg px-[10px] py-2 text-[14px] text-[#000000] transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
                 <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none">🔍</span>

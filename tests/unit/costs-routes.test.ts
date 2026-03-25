@@ -124,4 +124,96 @@ describe('costs routes', () => {
       }),
     ]);
   });
+
+  it('returns analysis aggregates with optimization score, anomalies, week-over-week deltas, cache savings, and insights', async () => {
+    const startDay = Date.UTC(2026, 2, 11);
+    const analysisEntries = Array.from({ length: 14 }, (_, index) => {
+      const isCurrentWeek = index >= 7;
+      const isAnomalyDay = index === 11;
+      const totalTokens = (isCurrentWeek ? 1400 : 900) + index * 15 + (isAnomalyDay ? 2600 : 0);
+      const cacheReadTokens = isCurrentWeek ? 120 : 60;
+      const cacheWriteTokens = isCurrentWeek ? 80 : 40;
+      const costUsd = Number((totalTokens * 0.00008).toFixed(6));
+      const cronJobId = isAnomalyDay
+        ? 'job-nightly-digest'
+        : index % 4 === 0
+          ? 'job-hourly-cleanup'
+          : undefined;
+
+      return {
+        timestamp: new Date(startDay + index * 86_400_000).toISOString(),
+        sessionId: `session-${index}`,
+        agentId: 'main',
+        cronJobId,
+        inputTokens: Math.round(totalTokens * 0.6),
+        outputTokens: Math.round(totalTokens * 0.3),
+        cacheReadTokens,
+        cacheWriteTokens,
+        totalTokens,
+        costUsd,
+      };
+    });
+
+    mocks.getRecentTokenUsageHistory.mockResolvedValue(analysisEntries);
+
+    const { handleCostsRoutes } = await import('@electron/api/routes/costs');
+    const ctx = {
+      gatewayManager: {
+        rpc: vi.fn(async (method: string) => {
+          if (method === 'cron.list') {
+            return {
+              jobs: [
+                { id: 'job-nightly-digest', name: 'Nightly Digest' },
+                { id: 'job-hourly-cleanup', name: 'Hourly Cleanup' },
+              ],
+            };
+          }
+          throw new Error(`Unexpected RPC method: ${method}`);
+        }),
+      },
+    } as never;
+
+    const handled = await handleCostsRoutes(
+      createRequest('GET'),
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/costs/analysis'),
+      ctx,
+    );
+
+    expect(handled).toBe(true);
+    expect(mocks.sendJson).toHaveBeenLastCalledWith(
+      expect.anything(),
+      200,
+      expect.objectContaining({
+        optimizationScore: expect.any(Number),
+        weekOverWeek: expect.objectContaining({
+          previous: expect.objectContaining({ totalTokens: expect.any(Number), costUsd: expect.any(Number) }),
+          current: expect.objectContaining({ totalTokens: expect.any(Number), costUsd: expect.any(Number) }),
+          deltas: expect.objectContaining({
+            totalTokensPct: expect.any(Number),
+            costUsdPct: expect.any(Number),
+            sessionsPct: expect.any(Number),
+            cacheTokensPct: expect.any(Number),
+          }),
+        }),
+        cacheSavings: expect.objectContaining({
+          cacheTokens: expect.any(Number),
+          estimatedCostUsd: expect.any(Number),
+          savingsRatePct: expect.any(Number),
+        }),
+        anomalies: expect.arrayContaining([
+          expect.objectContaining({
+            date: '2026-03-22',
+            totalTokens: expect.any(Number),
+            zScore: expect.any(Number),
+            reason: expect.stringContaining('Nightly Digest'),
+          }),
+        ]),
+        insights: expect.arrayContaining([
+          expect.stringMatching(/week over week/i),
+          expect.stringMatching(/cache/i),
+        ]),
+      }),
+    );
+  });
 });

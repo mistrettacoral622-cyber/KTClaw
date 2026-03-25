@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -42,6 +42,10 @@ describe('GET /api/memory and POST /api/memory/reindex', () => {
     workspaceDir = join(homeDir, '.openclaw', 'agents', 'main', 'workspace');
     await mkdir(workspaceDir, { recursive: true });
     mockHomedir.mockReturnValue(homeDir);
+    mockExecFile.mockImplementation((file, args, options, callback) => {
+      callback(null, JSON.stringify({ indexed: true, totalEntries: 3 }), '');
+      return {} as never;
+    });
   });
 
   afterEach(() => {
@@ -83,6 +87,118 @@ describe('GET /api/memory and POST /api/memory/reindex', () => {
     const [, statusCode, payload] = mockSendJson.mock.calls[0] as [unknown, number, { status: { indexed: boolean } }];
     expect(statusCode).toBe(200);
     expect(payload.status.indexed).toBe(true);
+  });
+
+  it('enumerates agent scopes plus companion and extraPath files for a selected scope', async () => {
+    const analystWorkspace = join(homeDir, '.openclaw', 'agents', 'analyst', 'workspace');
+    await mkdir(join(analystWorkspace, 'memory'), { recursive: true });
+    await mkdir(join(analystWorkspace, 'knowledge'), { recursive: true });
+    writeFileSync(join(analystWorkspace, 'memory', 'notes.md'), 'analyst notes', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'AGENTS.md'), 'agent profile', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'HEARTBEAT.md'), 'heartbeat', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'IDENTITY.md'), 'identity', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'SOUL.md'), 'soul', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'TOOLS.md'), 'tools', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'USER.md'), 'user', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'knowledge', 'brief.md'), 'extra scope notes', 'utf-8');
+    writeFileSync(
+      join(homeDir, '.openclaw', 'agents', 'analyst', 'openclaw.json'),
+      JSON.stringify({
+        agents: {
+          defaults: {
+            memorySearch: {
+              enabled: true,
+              extraPaths: ['knowledge/brief.md'],
+            },
+          },
+        },
+      }),
+      'utf-8',
+    );
+
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      { method: 'GET' } as IncomingMessage,
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory?scope=analyst'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockSendJson).toHaveBeenCalledTimes(1);
+    const [, statusCode, payload] = mockSendJson.mock.calls[0] as [
+      unknown,
+      number,
+      {
+        activeScope?: string;
+        scopes?: Array<{ id: string }>;
+        files?: Array<{ relativePath: string }>;
+      },
+    ];
+
+    expect(statusCode).toBe(200);
+    expect(payload.activeScope).toBe('analyst');
+    expect(payload.scopes?.map((scope) => scope.id)).toEqual(expect.arrayContaining(['main', 'analyst']));
+    expect(payload.files?.map((file) => file.relativePath)).toEqual(
+      expect.arrayContaining([
+        'AGENTS.md',
+        'HEARTBEAT.md',
+        'IDENTITY.md',
+        'SOUL.md',
+        'TOOLS.md',
+        'USER.md',
+        'knowledge/brief.md',
+      ]),
+    );
+  });
+
+  it('supports query filtering with hit counts and lightweight highlights', async () => {
+    const analystWorkspace = join(homeDir, '.openclaw', 'agents', 'analyst', 'workspace');
+    await mkdir(join(analystWorkspace, 'memory'), { recursive: true });
+    writeFileSync(join(analystWorkspace, 'memory', 'daily.md'), 'alpha item alpha done', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'AGENTS.md'), 'owns alpha workflows', 'utf-8');
+    writeFileSync(join(analystWorkspace, 'TOOLS.md'), 'tools only', 'utf-8');
+
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      { method: 'GET' } as IncomingMessage,
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory?scope=analyst&q=alpha'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockSendJson).toHaveBeenCalledTimes(1);
+    const [, statusCode, payload] = mockSendJson.mock.calls[0] as [
+      unknown,
+      number,
+      {
+        search?: { query?: string; totalHits?: number };
+        files?: Array<{
+          relativePath: string;
+          search?: {
+            hitCount?: number;
+            highlights?: Array<{
+              start: number;
+              end: number;
+              snippet: string;
+            }>;
+          };
+        }>;
+      },
+    ];
+
+    expect(statusCode).toBe(200);
+    expect(payload.search?.query).toBe('alpha');
+    expect(payload.search?.totalHits).toBeGreaterThan(0);
+    expect(payload.files?.every((file) => (file.search?.hitCount ?? 0) > 0)).toBe(true);
+    const highlighted = payload.files?.find((file) => (file.search?.highlights?.length ?? 0) > 0);
+    expect(highlighted).toBeDefined();
+    expect(highlighted?.search?.highlights?.[0]).toMatchObject({
+      start: expect.any(Number),
+      end: expect.any(Number),
+      snippet: expect.stringContaining('alpha'),
+    });
   });
 
   it('uses async execFile for reindex and returns ok on success', async () => {
