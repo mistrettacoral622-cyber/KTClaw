@@ -3,7 +3,7 @@
   "objective": "Build and polish the ClawX Electron + React workbench UI with full backend integration.",
   "current_phase": "execution",
   "current_focus": "PLAN-2026-03-24-PLATFORM-CLOSURE",
-  "last_updated": "2026-03-25T22:24:00+08:00",
+  "last_updated": "2026-03-25T23:36:00+08:00",
   "tasks": [
     {
       "id": "SESSION-8-001",
@@ -456,6 +456,20 @@
     {
       "id": "SESSION-28-003",
       "title": "Localize AskUserQuestion wizard shell to common locale keys",
+      "type": "feature",
+      "status": "done",
+      "priority": "P0"
+    },
+    {
+      "id": "SESSION-29-001",
+      "title": "Preserve structured runtime history and add Kanban child-run drill-down",
+      "type": "feature",
+      "status": "done",
+      "priority": "P1"
+    },
+    {
+      "id": "SESSION-29-002",
+      "title": "Stabilize Sidebar/Cron locale integration and targeted regression coverage",
       "type": "feature",
       "status": "done",
       "priority": "P0"

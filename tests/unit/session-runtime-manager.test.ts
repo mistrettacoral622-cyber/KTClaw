@@ -51,6 +51,10 @@ describe('SessionRuntimeManager', () => {
     expect(record.lastError).toBe('needs-human-approval');
     expect(record.toolSnapshot).toEqual([{ server: 'docs-server', name: 'write_docs' }]);
     expect(record.skillSnapshot).toEqual(['brainstorming', 'test-driven-development']);
+    expect(record.history).toEqual([
+      { role: 'user', content: 'Investigate failing tests' },
+      { role: 'assistant', content: [{ type: 'text', text: 'Waiting for approval from reviewer' }] },
+    ]);
     expect(record.transcript).toEqual([
       'Investigate failing tests',
       'Waiting for approval from reviewer',

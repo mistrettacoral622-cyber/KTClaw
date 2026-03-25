@@ -41,9 +41,9 @@ function isNoSuchProcessError(error: unknown): boolean {
 type GatewayCronJob = {
   id: string;
   name: string;
-  payload?: { message?: string; text?: string };
-  schedule: unknown;
-  delivery?: { mode?: string; channel?: string; to?: string };
+  payload: { kind: string; message?: string; text?: string };
+  schedule: { kind: string; expr?: string; everyMs?: number; at?: string; tz?: string };
+  delivery?: { mode: string; channel?: string; to?: string };
   failureAlertAfter?: number;
   failureAlertCooldownSeconds?: number;
   failureAlertChannel?: string;
@@ -52,7 +52,7 @@ type GatewayCronJob = {
   enabled: boolean;
   createdAtMs: number;
   updatedAtMs: number;
-  state?: {
+  state: {
     lastRunAtMs?: number;
     lastStatus?: string;
     lastError?: string;

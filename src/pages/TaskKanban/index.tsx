@@ -8,6 +8,8 @@ import { hostApiFetch } from '@/lib/host-api';
 import { useAgentsStore } from '@/stores/agents';
 import { useApprovalsStore, type ApprovalItem } from '@/stores/approvals';
 import type { AgentSummary } from '@/types/agent';
+import type { RawMessage } from '@/stores/chat';
+import { ChatMessage } from '@/pages/Chat/ChatMessage';
 import { AskUserQuestionWizard } from './AskUserQuestionWizard';
 
 /* ─── Types ─── */
@@ -35,6 +37,7 @@ interface KanbanTicket {
   runtimeSessionKey?: string;
   runtimeParentSessionKey?: string;
   runtimeLineageSessionKeys?: string[];
+  runtimeHistory?: RawMessage[];
   runtimeTranscript?: string[];
   runtimeChildSessionIds?: string[];
   createdAt: string;
@@ -50,6 +53,7 @@ interface RuntimeSessionResponse {
   depth?: number;
   childRuntimeIds?: string[];
   status?: string;
+  history?: RawMessage[];
   transcript?: string[];
   lastError?: string;
   error?: string;
@@ -167,6 +171,7 @@ function mapRuntimeSessionToTicketUpdates(ticket: KanbanTicket, session: Runtime
     runtimeSessionKey: session.sessionKey || ticket.runtimeSessionKey,
     runtimeParentSessionKey: session.parentSessionKey || ticket.runtimeParentSessionKey,
     runtimeLineageSessionKeys,
+    runtimeHistory: Array.isArray(session.history) ? session.history : ticket.runtimeHistory,
     runtimeTranscript: Array.isArray(session.transcript) ? session.transcript : ticket.runtimeTranscript,
     runtimeChildSessionIds: Array.isArray(session.childRuntimeIds) ? session.childRuntimeIds : ticket.runtimeChildSessionIds,
   };
@@ -241,6 +246,12 @@ function isSameTranscript(a?: string[], b?: string[]): boolean {
   return true;
 }
 
+function isSameHistory(a?: RawMessage[], b?: RawMessage[]): boolean {
+  if (a === b) return true;
+  if (!a || !b) return !a && !b;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 function hasRuntimeTicketChanges(ticket: KanbanTicket, updates: Partial<KanbanTicket>): boolean {
   if ('status' in updates && updates.status !== ticket.status) return true;
   if ('workState' in updates && updates.workState !== ticket.workState) return true;
@@ -253,9 +264,19 @@ function hasRuntimeTicketChanges(ticket: KanbanTicket, updates: Partial<KanbanTi
   if ('runtimeSessionKey' in updates && updates.runtimeSessionKey !== ticket.runtimeSessionKey) return true;
   if ('runtimeParentSessionKey' in updates && updates.runtimeParentSessionKey !== ticket.runtimeParentSessionKey) return true;
   if ('runtimeLineageSessionKeys' in updates && !isSameTranscript(ticket.runtimeLineageSessionKeys, updates.runtimeLineageSessionKeys)) return true;
+  if ('runtimeHistory' in updates && !isSameHistory(ticket.runtimeHistory, updates.runtimeHistory)) return true;
   if ('runtimeTranscript' in updates && !isSameTranscript(ticket.runtimeTranscript, updates.runtimeTranscript)) return true;
   if ('runtimeChildSessionIds' in updates && !isSameTranscript(ticket.runtimeChildSessionIds, updates.runtimeChildSessionIds)) return true;
   return false;
+}
+
+function buildRuntimeHistoryFromTranscript(transcript?: string[]): RawMessage[] {
+  return (transcript ?? [])
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .map((entry) => ({
+      role: 'assistant',
+      content: entry,
+    }));
 }
 
 function getTicketRuntimeSessionKeys(ticket: KanbanTicket): Set<string> {
@@ -863,6 +884,10 @@ function DetailPanel({
   const [runtimeChildren, setRuntimeChildren] = useState<RuntimeSessionResponse[]>([]);
   const [runtimeChildrenLoading, setRuntimeChildrenLoading] = useState(false);
   const [runtimeChildrenError, setRuntimeChildrenError] = useState<string | null>(null);
+  const [selectedRuntimeSessionId, setSelectedRuntimeSessionId] = useState<string | null>(ticket.runtimeSessionId ?? null);
+  const [selectedRuntimeSession, setSelectedRuntimeSession] = useState<RuntimeSessionResponse | null>(null);
+  const [selectedRuntimeLoading, setSelectedRuntimeLoading] = useState(false);
+  const [selectedRuntimeError, setSelectedRuntimeError] = useState<string | null>(null);
   const reviewText = reviewing?.toolInput
     ? JSON.stringify(reviewing.toolInput, null, 2)
     : (reviewing?.prompt ?? '');
@@ -880,6 +905,12 @@ function DetailPanel({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, reviewing, wizard]);
+
+  useEffect(() => {
+    setSelectedRuntimeSessionId(ticket.runtimeSessionId ?? null);
+    setSelectedRuntimeSession(null);
+    setSelectedRuntimeError(null);
+  }, [ticket.runtimeSessionId, ticket.runtimeHistory, ticket.runtimeTranscript]);
 
   useEffect(() => {
     if (!ticket.runtimeSessionId || !ticket.runtimeChildSessionIds || ticket.runtimeChildSessionIds.length === 0) {
@@ -917,6 +948,55 @@ function DetailPanel({
       cancelled = true;
     };
   }, [ticket.runtimeSessionId, ticket.runtimeChildSessionIds]);
+
+  const currentRuntimeView: RuntimeSessionResponse | null = selectedRuntimeSessionId
+    ? (
+      selectedRuntimeSessionId === ticket.runtimeSessionId
+        ? {
+          id: ticket.runtimeSessionId,
+          sessionKey: ticket.runtimeSessionKey,
+          parentRuntimeId: ticket.runtimeParentSessionId,
+          rootRuntimeId: ticket.runtimeRootSessionId,
+          depth: ticket.runtimeDepth,
+          parentSessionKey: ticket.runtimeParentSessionKey,
+          history: ticket.runtimeHistory,
+          transcript: ticket.runtimeTranscript,
+          childRuntimeIds: ticket.runtimeChildSessionIds,
+          status: ticket.workState,
+          lastError: ticket.workError,
+          result: ticket.workResult,
+        }
+        : selectedRuntimeSession
+    )
+    : null;
+
+  const currentRuntimeHistory = currentRuntimeView?.history && currentRuntimeView.history.length > 0
+    ? currentRuntimeView.history
+    : buildRuntimeHistoryFromTranscript(currentRuntimeView?.transcript);
+
+  const selectRuntimeSession = async (runtimeSessionId: string) => {
+    if (runtimeSessionId === ticket.runtimeSessionId) {
+      setSelectedRuntimeSessionId(runtimeSessionId);
+      setSelectedRuntimeSession(null);
+      setSelectedRuntimeError(null);
+      return;
+    }
+
+    setSelectedRuntimeLoading(true);
+    setSelectedRuntimeError(null);
+    setSelectedRuntimeSessionId(runtimeSessionId);
+    try {
+      const response = await hostApiFetch<{ success?: boolean; session?: RuntimeSessionResponse }>(
+        `/api/sessions/subagents/${encodeURIComponent(runtimeSessionId)}`,
+      );
+      setSelectedRuntimeSession(response.session ?? null);
+    } catch (error) {
+      setSelectedRuntimeSession(null);
+      setSelectedRuntimeError(String(error));
+    } finally {
+      setSelectedRuntimeLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/20" onClick={onClose}>
@@ -1041,7 +1121,15 @@ function DetailPanel({
                     ) : runtimeChildren.length > 0 ? (
                       <div className="flex flex-col gap-2">
                         {runtimeChildren.map((child) => (
-                          <div key={child.id} className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#475467] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={() => void selectRuntimeSession(child.id)}
+                            className={cn(
+                              'rounded-lg bg-white px-3 py-2 text-left text-[12px] text-[#475467] shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                              selectedRuntimeSessionId === child.id && 'ring-1 ring-[#007aff]',
+                            )}
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <span className="font-medium text-[#111827]">{child.id}</span>
                               <span className="text-[11px] text-[#8e8e93]">{child.status ?? 'unknown'}</span>
@@ -1049,29 +1137,58 @@ function DetailPanel({
                             {child.transcript && child.transcript.length > 0 && (
                               <p className="mt-1 truncate text-[11px] text-[#8e8e93]">{child.transcript.at(-1)}</p>
                             )}
-                          </div>
+                          </button>
                         ))}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
                         {ticket.runtimeChildSessionIds.map((childId) => (
-                          <div key={childId} className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#475467] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                          <button
+                            key={childId}
+                            type="button"
+                            onClick={() => void selectRuntimeSession(childId)}
+                            className={cn(
+                              'rounded-lg bg-white px-3 py-2 text-left text-[12px] text-[#475467] shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                              selectedRuntimeSessionId === childId && 'ring-1 ring-[#007aff]',
+                            )}
+                          >
                             {childId}
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
                   </div>
                 )}
                 <div className="mb-3 rounded-xl border border-black/[0.06] bg-[#fafafa] px-3 py-3">
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Transcript</p>
-                  <div className="flex flex-col gap-2">
-                    {(ticket.runtimeTranscript ?? []).map((entry, index) => (
-                      <div key={`${ticket.runtimeSessionId}-${index}`} className="rounded-lg bg-white px-3 py-2 text-[12px] text-[#3c3c43] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                        {entry}
-                      </div>
-                    ))}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">Transcript</p>
+                    {selectedRuntimeSessionId && selectedRuntimeSessionId !== ticket.runtimeSessionId && (
+                      <button
+                        type="button"
+                        onClick={() => void selectRuntimeSession(ticket.runtimeSessionId ?? '')}
+                        className="rounded-md border border-black/10 px-2 py-1 text-[11px] text-[#475467] hover:bg-white"
+                      >
+                        Back to latest run
+                      </button>
+                    )}
                   </div>
+                  {selectedRuntimeLoading ? (
+                    <p className="text-[12px] text-[#8e8e93]">Loading runtime detail...</p>
+                  ) : selectedRuntimeError ? (
+                    <p className="text-[12px] text-[#ef4444]">{selectedRuntimeError}</p>
+                  ) : currentRuntimeHistory.length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      {currentRuntimeHistory.map((message, index) => (
+                        <ChatMessage
+                          key={`${selectedRuntimeSessionId ?? ticket.runtimeSessionId ?? 'runtime'}-${index}`}
+                          message={message}
+                          showThinking
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[12px] text-[#8e8e93]">No runtime history yet.</p>
+                  )}
                 </div>
                 <div className="mb-2 flex gap-2">
                   <input

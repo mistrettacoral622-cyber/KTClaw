@@ -1,8 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Cron } from '@/pages/Cron';
+import cronLocaleZh from '@/i18n/locales/zh/cron.json';
 
 const hostApiFetchMock = vi.fn();
+
+const getCronTranslation = (key: string): string => {
+  const segments = key.split('.');
+  const value = segments.reduce<unknown>((current, segment) => {
+    if (current && typeof current === 'object' && segment in current) {
+      return (current as Record<string, unknown>)[segment];
+    }
+    return undefined;
+  }, cronLocaleZh as unknown);
+  return typeof value === 'string' ? value : key;
+};
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => getCronTranslation(key),
+  }),
+}));
 
 const jobs = [
   {
@@ -87,7 +105,8 @@ describe('Cron page richer detail views', () => {
     render(<Cron />);
 
     expect(screen.getByText('Release Check')).toBeInTheDocument();
-    expect(screen.getByText(/Delivery: feishu/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Delivery:').length).toBeGreaterThan(0);
+    expect(screen.getByText(/feishu → release-room/i)).toBeInTheDocument();
     expect(screen.getByText(/release-room/i)).toBeInTheDocument();
     expect(screen.getByText(/Channel delivery failed/i)).toBeInTheDocument();
   });
@@ -114,7 +133,7 @@ describe('Cron page richer detail views', () => {
     fireEvent.click(screen.getAllByRole('button', { name: '详情' })[0]);
 
     expect(await screen.findByText('运行详情')).toBeInTheDocument();
-    expect(screen.getByText(/Delivery: feishu/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Delivery:').length).toBeGreaterThan(0);
     expect(screen.getByText('isolated')).toBeInTheDocument();
 
     await waitFor(() => {

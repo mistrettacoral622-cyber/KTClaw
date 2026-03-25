@@ -78,5 +78,126 @@
         "monthlyAtDay": "Monthly on day {{day}} at {{time}}",
         "dailyAt": "Daily at {{time}}",
         "unknown": "Unknown"
+    },
+    "header": {
+        "title": "Scheduled tasks",
+        "subtitle": "Automate AI workflows with scheduled tasks",
+        "summary": "{{total}} tasks · {{enabled}} enabled",
+        "lastUpdated": "Last refreshed: {{time}}",
+        "loading": "Loading tasks...",
+        "error": "Failed to load tasks"
+    },
+    "actions": {
+        "refresh": "Refresh",
+        "newTask": "New task"
+    },
+    "tabs": {
+        "overview": "Overview",
+        "schedule": "Schedule",
+        "pipelines": "Pipelines"
+    },
+    "filters": {
+        "all": "All tasks",
+        "failed": "Failed",
+        "enabled": "Enabled"
+    },
+    "status": {
+        "deliveryIssue": "A config or delivery error was detected. Please review delivery settings."
+    },
+    "overview": {
+        "badges": {
+            "success": "Last success",
+            "failed": "Last failed"
+        },
+        "labels": {
+            "delivery": "Delivery:",
+            "sessionTarget": "Session target:",
+            "alertAfter": "Alert after {{count}} failures",
+            "chatOnly": "Chat only",
+            "sessionTargetDefault": "default"
+        },
+        "timestamps": {
+            "next": "Next",
+            "last": "Last"
+        },
+        "actions": {
+            "run": "Run now",
+            "edit": "Edit",
+            "pause": "Pause",
+            "resume": "Resume",
+            "delete": "Delete"
+        }
+    },
+    "scheduleDetails": {
+        "weekdays": {
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "sun": "Sun"
+        },
+        "empty": {
+            "title": "No scheduled tasks",
+            "description": "Create a task and we will show it in the weekly view.",
+            "hint": "Tasks can send messages, run checks, or notify other teams."
+        },
+        "upcoming": {
+            "title": "Upcoming runs",
+            "emptyTitle": "No upcoming runs",
+            "emptyDesc": "Scheduled tasks will appear here once they have a next run."
+        }
+    },
+    "pipelines": {
+        "stats": {
+            "total": "Total tasks",
+            "ran": "Ran",
+            "success": "Success",
+            "failed": "Failed",
+            "successRate": "Success rate"
+        },
+        "empty": {
+            "title": "No run records yet",
+            "description": "Trigger a task and we will log its execution.",
+            "hint": "Once a task runs, you can inspect the history here."
+        },
+        "table": {
+            "task": "Task",
+            "schedule": "Schedule",
+            "lastRun": "Last run",
+            "duration": "Duration",
+            "status": "Status",
+            "model": "Model",
+            "summary": "Summary",
+            "actions": "Actions"
+        },
+        "labels": {
+            "triggerHint": "Trigger → Agent → Delivery"
+        },
+        "details": {
+            "title": "Run details",
+            "close": "Close",
+            "loading": "Loading run history...",
+            "noRecords": "No run history yet",
+            "labels": {
+                "delivery": "Delivery:",
+                "sessionTarget": "Session target:",
+                "schedule": "Schedule:",
+                "nextRun": "Next run:"
+            },
+            "status": {
+                "success": "Success",
+                "failed": "Failed"
+            }
+        },
+        "buttons": {
+            "run": "Run",
+            "details": "Details"
+        }
+    },
+    "common": {
+        "loading": "Loading...",
+        "unknown": "—"
     }
 }

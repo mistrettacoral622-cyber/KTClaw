@@ -2297,3 +2297,46 @@ Focus: P0 i18n closure
 - P0 i18n now mainly remains in Cron / TaskKanban shell / Sidebar
 - runtime / registry still lacks structured runtime history + Kanban child-run drill-down
 - Channels still needs deeper multi-user isolation / capability runtime work
+
+---
+
+[2026-03-25 23:36 +08:00] Session 29: Structured Runtime History + Kanban Drill-down
+Focus: Wave 2 runtime/kanban deeper linkage + keep Cron/Sidebar locale work buildable
+
+### Completed
+1. `electron/services/session-runtime-manager.ts`
+   - runtime records now preserve structured `history` alongside legacy `transcript`
+   - hydration / persistence / refresh paths all normalize and retain structured runtime messages
+   - added single-record `get()` support for drill-down fetches
+
+2. `electron/api/routes/sessions.ts`
+   - added `GET /api/sessions/subagents/:id`
+   - existing spawn/list/steer/wait/kill routes continue to return backward-compatible `transcript`, now with `history`
+
+3. `src/pages/TaskKanban/index.tsx`
+   - tickets now persist `runtimeHistory`
+   - detail panel can switch between latest run and child runs
+   - child-run cards trigger runtime detail fetches instead of only showing passive IDs
+   - transcript panel now renders structured runtime history with chat thinking/tool UI and falls back to transcript strings when needed
+
+4. Tests
+   - expanded `tests/unit/session-runtime-manager.test.ts`
+   - expanded `tests/unit/session-routes-runtime.test.ts`
+   - expanded `tests/unit/task-kanban.test.tsx`
+
+5. Cron / Sidebar stabilization
+   - repaired the in-progress Cron locale refactor so page, tests, typecheck, lint, and build stay green
+   - resolved Sidebar type/test issues introduced by the partial i18n pass
+   - expanded `src/i18n/locales/zh/cron.json` with the currently-consumed keys
+
+### Verification
+- `pnpm run typecheck` -> pass
+- `pnpm exec tsc -p tsconfig.node.json --noEmit` -> pass
+- `pnpm run lint` -> pass
+- `pnpm exec vitest run tests/unit/session-runtime-manager.test.ts tests/unit/session-routes-runtime.test.ts tests/unit/task-kanban.test.tsx tests/unit/cron-page.test.tsx tests/unit/workbench-sidebar.test.tsx --project node --project jsdom` -> pass
+- `pnpm run build:vite` -> pass
+
+### Remaining
+- P0 i18n still has substantial shell cleanup left in TaskKanban and Sidebar, plus further Cron strings beyond the currently-consumed keys
+- runtime / registry still needs deeper skill bridge / tool execution path / richer tree drill-down beyond the first structured history batch
+- Channels still needs deeper multi-user isolation / capability runtime work

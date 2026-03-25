@@ -9,6 +9,17 @@ export type RuntimeSessionStatus =
   | 'killed';
 export type RuntimeSessionMode = 'session' | 'thread';
 
+export interface RuntimeHistoryMessage {
+  role: string;
+  content: unknown;
+  timestamp?: number;
+  id?: string;
+  toolCallId?: string;
+  toolName?: string;
+  details?: unknown;
+  isError?: boolean;
+}
+
 export interface RuntimeSessionRecord {
   id: string;
   parentSessionKey: string;
@@ -27,6 +38,7 @@ export interface RuntimeSessionRecord {
   lastError?: string;
   createdAt: string;
   updatedAt: string;
+  history: RuntimeHistoryMessage[];
   transcript: string[];
   childRuntimeIds: string[];
   toolSnapshot: Array<{ server: string; name: string }>;
@@ -57,6 +69,7 @@ interface RuntimeSessionSnapshot {
 }
 
 interface RuntimeHistorySnapshot {
+  history: RuntimeHistoryMessage[];
   transcript: string[];
   status?: string;
   runId?: string;
@@ -123,6 +136,7 @@ export class SessionRuntimeManager {
       status: 'running',
       createdAt: now,
       updatedAt: now,
+      history: [{ role: 'user', content: input.prompt }],
       transcript: [input.prompt],
       childRuntimeIds: [],
       toolSnapshot: capabilitySnapshot.toolSnapshot,
@@ -210,6 +224,18 @@ export class SessionRuntimeManager {
   }
 
   async wait(id: string): Promise<RuntimeSessionRecord | null> {
+    await this.ensureHydrated();
+    const existing = this.sessions.get(id);
+    if (!existing) return null;
+    return await this.refreshRecord(id, {
+      fallbackStatus: existing.status,
+      fallbackTranscript: existing.transcript,
+      fallbackRunId: existing.runId,
+      fallbackLastError: existing.lastError,
+    });
+  }
+
+  async get(id: string): Promise<RuntimeSessionRecord | null> {
     await this.ensureHydrated();
     const existing = this.sessions.get(id);
     if (!existing) return null;
@@ -339,6 +365,7 @@ export class SessionRuntimeManager {
       lastError: this.extractFirstString(row, ['lastError', 'error', 'errorMessage']),
       createdAt: this.resolveUpdatedAt([this.coerceIsoDate(row.createdAt)]),
       updatedAt: this.resolveUpdatedAt([this.coerceIsoDate(row.updatedAt), this.coerceIsoDate(row.createdAt)]),
+      history: this.normalizeRuntimeHistory(row.history),
       transcript: this.normalizeStringArray(row.transcript),
       childRuntimeIds: this.normalizeStringArray(row.childRuntimeIds),
       toolSnapshot: this.normalizeToolSnapshot(row.toolSnapshot),
@@ -374,6 +401,44 @@ export class SessionRuntimeManager {
         return { server, name };
       })
       .filter((item): item is { server: string; name: string } => item != null);
+  }
+
+  private normalizeRuntimeHistory(value: unknown): RuntimeHistoryMessage[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((item) => this.normalizeRuntimeHistoryMessage(item))
+      .filter((item): item is RuntimeHistoryMessage => item != null);
+  }
+
+  private normalizeRuntimeHistoryMessage(value: unknown): RuntimeHistoryMessage | null {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      return { role: 'assistant', content: trimmed };
+    }
+    if (typeof value !== 'object' || value == null) {
+      return null;
+    }
+
+    const row = value as Record<string, unknown>;
+    const role = this.extractFirstString(row, ['role']) ?? 'assistant';
+    const content = row.content ?? row.message ?? row.text;
+    if (content === undefined) {
+      return null;
+    }
+
+    return {
+      role,
+      content,
+      timestamp: typeof row.timestamp === 'number' ? row.timestamp : undefined,
+      id: this.extractFirstString(row, ['id']),
+      toolCallId: this.extractFirstString(row, ['toolCallId', 'tool_call_id']),
+      toolName: this.extractFirstString(row, ['toolName', 'tool_name']),
+      details: row.details,
+      isError: typeof row.isError === 'boolean' ? row.isError : undefined,
+    };
   }
 
   private async persistSessions(): Promise<void> {
@@ -417,6 +482,7 @@ export class SessionRuntimeManager {
     return {
       ...record,
       attachments: [...record.attachments],
+      history: record.history.map((message) => ({ ...message })),
       transcript: [...record.transcript],
       childRuntimeIds: [...record.childRuntimeIds],
       toolSnapshot: record.toolSnapshot.map((tool) => ({ ...tool })),
@@ -500,6 +566,7 @@ export class SessionRuntimeManager {
         ?? history.lastError
         ?? options.fallbackLastError
         ?? existing.lastError,
+      history: history.history.length > 0 ? history.history : existing.history,
       transcript: history.transcript.length > 0 ? history.transcript : options.fallbackTranscript,
       updatedAt: this.resolveUpdatedAt([
         sessionSnapshot?.updatedAt,
@@ -543,7 +610,11 @@ export class SessionRuntimeManager {
     const payload = await this.gatewayRpc<unknown>('chat.history', { sessionKey, limit: 200 });
     const messageItems = this.extractArray(payload, ['messages', 'history'])
       ?? (Array.isArray(payload) ? payload : []);
+    const history = messageItems
+      .map((message) => this.normalizeRuntimeHistoryMessage(message))
+      .filter((item): item is RuntimeHistoryMessage => item != null);
     return {
+      history,
       transcript: messageItems
         .map((message) => this.extractTranscriptLine(message))
         .filter((line): line is string => Boolean(line)),

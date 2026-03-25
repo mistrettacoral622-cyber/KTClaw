@@ -585,4 +585,116 @@ describe('TaskKanban', () => {
     expect(screen.getByText('runtime-child-2')).toBeInTheDocument();
     expect(screen.getByText(/child run 1 complete/)).toBeInTheDocument();
   });
+
+  it('renders structured runtime history with thinking and tool cards', async () => {
+    localStorage.setItem('clawport-kanban', JSON.stringify([
+      {
+        id: 'ticket-structured-history',
+        title: 'Inspect structured history',
+        description: 'Show thinking and tools',
+        status: 'review',
+        priority: 'medium',
+        workState: 'done',
+        runtimeSessionId: 'runtime-structured',
+        runtimeHistory: [
+          {
+            role: 'assistant',
+            content: [
+              { type: 'thinking', thinking: 'Need to inspect the workspace first.' },
+              { type: 'text', text: 'Collected the initial state.' },
+              { type: 'tool_use', id: 'tool-1', name: 'ShellExec', input: { command: 'dir' } },
+              { type: 'tool_result', id: 'tool-1', name: 'ShellExec', content: 'Listed the workspace files.' },
+            ],
+          },
+        ],
+        runtimeTranscript: ['Collected the initial state.'],
+        createdAt: '2026-03-25T00:00:00.000Z',
+        updatedAt: '2026-03-25T00:00:00.000Z',
+      },
+    ]));
+
+    render(<TaskKanban />);
+    fireEvent.click(screen.getByText('Inspect structured history'));
+
+    expect(await screen.findByText('思考过程')).toBeInTheDocument();
+    expect(screen.getByText('ShellExec')).toBeInTheDocument();
+    expect(screen.getByText(/Collected the initial state/)).toBeInTheDocument();
+  });
+
+  it('switches the runtime detail view when a child run is selected', async () => {
+    localStorage.setItem('clawport-kanban', JSON.stringify([
+      {
+        id: 'ticket-child-switch',
+        title: 'Switch child run',
+        description: 'Open child drill-down',
+        status: 'review',
+        priority: 'medium',
+        workState: 'done',
+        runtimeSessionId: 'runtime-parent',
+        runtimeSessionKey: 'agent:planner-1:main:subagent:runtime-parent',
+        runtimeChildSessionIds: ['runtime-child-1'],
+        runtimeHistory: [
+          {
+            role: 'assistant',
+            content: 'Parent run summary',
+          },
+        ],
+        runtimeTranscript: ['Parent run summary'],
+        createdAt: '2026-03-25T00:00:00.000Z',
+        updatedAt: '2026-03-25T00:00:00.000Z',
+      },
+    ]));
+
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/sessions/subagents') {
+        return {
+          success: true,
+          sessions: [
+            {
+              id: 'runtime-parent',
+              sessionKey: 'agent:planner-1:main:subagent:runtime-parent',
+              status: 'completed',
+              transcript: ['Parent run summary'],
+              childRuntimeIds: ['runtime-child-1'],
+            },
+            {
+              id: 'runtime-child-1',
+              sessionKey: 'agent:planner-1:main:subagent:runtime-parent:subagent:runtime-child-1',
+              status: 'completed',
+              transcript: ['Child run output'],
+            },
+          ],
+        };
+      }
+      if (path === '/api/sessions/subagents/runtime-child-1') {
+        return {
+          success: true,
+          session: {
+            id: 'runtime-child-1',
+            sessionKey: 'agent:planner-1:main:subagent:runtime-parent:subagent:runtime-child-1',
+            status: 'completed',
+            history: [
+              {
+                role: 'assistant',
+                content: 'Child run output',
+              },
+            ],
+            transcript: ['Child run output'],
+          },
+        };
+      }
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    render(<TaskKanban />);
+    fireEvent.click(screen.getByText('Switch child run'));
+
+    expect(await screen.findByText('Parent run summary')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /runtime-child-1/i }));
+
+    await waitFor(() => {
+      expect(hostApiFetchMock).toHaveBeenCalledWith('/api/sessions/subagents/runtime-child-1');
+    });
+    expect((await screen.findAllByText('Child run output')).length).toBeGreaterThan(0);
+  });
 });

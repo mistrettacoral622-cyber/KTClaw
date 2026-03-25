@@ -90,16 +90,43 @@ vi.mock('@/lib/api-client', () => ({
   invokeIpc: vi.fn(),
 }));
 
+const mockTranslations: Record<string, string> = {
+  'common:sidebar.settings': 'Settings',
+  'common:sidebar.clones': 'Clones',
+  'common:sidebar.channels': 'Channels',
+  'common:sidebar.teams': 'Team management',
+  'common:sidebar.tasks': 'Tasks',
+  'common:sidebar.addClone': 'Add clone',
+  'common:sidebar.addChannel': 'Add channel',
+  'common:sidebar.selectedCount': '{{count}} selected',
+  'common:sidebar.batchSelect': 'Batch select',
+  'common:sidebar.pinSession': 'Pin session',
+  'common:sidebar.unpinSession': 'Unpin session',
+  'common:sidebar.exportMarkdown': 'Export Markdown',
+  'common:sidebar.notifications': 'Notifications',
+  'common:sidebar.noNotifications': 'No notifications',
+  'common:sidebar.openSearch': 'Open search',
+  'common:sidebar.newSession': 'New session',
+  'common:sidebar.toggleSidebar': 'Toggle sidebar',
+  'common:sidebar.taskBoard': 'Task board',
+  'common:sidebar.taskSchedule': 'Task schedule',
+  'common:sidebar.memoryKnowledge': 'Memory knowledge base',
+  'common:sidebar.costUsage': 'Cost usage',
+  'common:sidebar.teamOverview': 'Team overview',
+  'common:sidebar.teamMap': 'Team map',
+  'common:sidebar.profile': 'Profile',
+  'common:sidebar.selectAvatar': 'Select avatar',
+  'common:sidebar.nickname': 'Nickname',
+  'common:sidebar.nicknamePlaceholder': 'Enter nickname...',
+  'common:actions.confirm': 'Confirm',
+  'common:actions.delete': 'Delete',
+  'common:actions.cancel': 'Cancel',
+  'common:sidebar.deleteSessionConfirm': 'Confirm deletion',
+};
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      if (key === 'common:sidebar.settings') return '设置';
-      if (key === 'common:actions.confirm') return '确认';
-      if (key === 'common:actions.delete') return '删除';
-      if (key === 'common:actions.cancel') return '取消';
-      if (key === 'common:sidebar.deleteSessionConfirm') return '确认删除';
-      return key;
-    },
+    t: (key: string) => mockTranslations[key] ?? key,
   }),
 }));
 
@@ -118,10 +145,10 @@ describe('workbench sidebar', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('分身')).toBeInTheDocument();
-    expect(screen.getByText('团队管理')).toBeInTheDocument();
-    expect(screen.getByText('CHANNEL 频道')).toBeInTheDocument();
-    expect(screen.getByText('任务')).toBeInTheDocument();
+    expect(screen.getByText('Clones')).toBeInTheDocument();
+    expect(screen.getByText('Team management')).toBeInTheDocument();
+    expect(screen.getByText('Channels')).toBeInTheDocument();
+    expect(screen.getByText('Tasks')).toBeInTheDocument();
     expect(screen.getByText('Alpha Session')).toBeInTheDocument();
   });
 

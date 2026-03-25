@@ -81,6 +81,25 @@ describe('session runtime routes', () => {
       success: true,
       sessions: [expect.objectContaining({ parentSessionKey: 'agent:main:main' })],
     });
+
+    const spawnedSession = (mocks.sendJson.mock.calls[0]?.[2] as { session?: { id: string } })?.session;
+    expect(spawnedSession?.id).toBeDefined();
+
+    const detailHandled = await handleSessionRoutes(
+      createRequest('GET'),
+      {} as ServerResponse,
+      new URL(`http://127.0.0.1:3210/api/sessions/subagents/${spawnedSession?.id}`),
+      ctx,
+    );
+
+    expect(detailHandled).toBe(true);
+    expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, {
+      success: true,
+      session: expect.objectContaining({
+        id: spawnedSession?.id,
+        history: [expect.objectContaining({ role: 'assistant', content: 'history-from-gateway' })],
+      }),
+    });
   });
 
   it('supports steer, wait, and kill routes for a spawned runtime session', async () => {

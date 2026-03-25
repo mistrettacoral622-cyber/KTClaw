@@ -120,6 +120,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const isOnChat = useLocation().pathname === '/';
   const { t } = useTranslation(['common', 'chat']);
+  const tSidebar = (key: string, options?: Record<string, unknown>) => t(`common:sidebar.${key}`, options);
   const [sessionToDelete, setSessionToDelete] = useState<{ key: string; label: string } | null>(null);
   const [batchMode, setBatchMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -210,11 +211,11 @@ export function Sidebar() {
   }, []);
 
   const groupLabels = {
-    clones: '分身',
-    teams: '团队管理',
-    channels: 'CHANNEL 频道',
-    tasks: '任务',
-    settings: t('common:sidebar.settings'),
+    clones: tSidebar('clones'),
+    teams: tSidebar('teams'),
+    channels: tSidebar('channels'),
+    tasks: tSidebar('tasks'),
+    settings: tSidebar('settings'),
   };
 
   const getSessionLabel = (key: string, displayName?: string, label?: string) =>

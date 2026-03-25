@@ -94,10 +94,12 @@ tail -30 continue/progress.txt
   - Session 28：Channels 页面与新 Feishu wizard 文案迁回 locale；`Channels` 这批新增/残留硬编码完成一轮收口
   - Session 28：Agent detail 新增 backend-owned `/api/agents/:agentId/cron-relations`，并可 deep link 到对应 Cron pipeline detail
   - Session 28c：`AskUserQuestionWizard` 外壳文案迁回 `common` locale，P0 i18n 收口进一步前推到 Cron / TaskKanban / Sidebar
+  - Session 29：runtime records 保留 structured `history`，`/api/sessions/subagents/:id` 支持单 run drill-down，TaskKanban detail 可在 parent/latest/child runs 间切换并渲染 thinking/tool 结构化历史
+  - Session 29：修复并稳定 Cron / Sidebar 这轮 locale 接线，保证当前改动在 typecheck / lint / build / targeted vitest 下全部通过
 - 因此下面旧清单里，涉及上述能力的"剩余"描述请以本段为准，不要重复实现已完成部分。
 - 当前真正还缺的重点：
   - P0 i18n：继续清理 Cron / TaskKanban / Sidebar 等剩余历史硬编码文案
-  - Runtime / registry：tool execution path / deeper skill bridge / structured runtime history / runtime tree drill-down
+  - Runtime / registry：tool execution path / deeper skill bridge / runtime tree drill-down 进一步深化
   - Channels：multi-user isolation deeper capability runtime
   - Wave 5：update / UX / a11y / 工程治理
 
@@ -150,7 +152,7 @@ tail -30 continue/progress.txt
   - active runtime approval polling
   - detail panel child run list（不再只显示 child count）
 - 剩余：
-  - 更深的 agent work / retry / 状态联动（structured runtime history、child run 切换/钻取、tool/thinking 结构化展示）
+  - 更深的 agent work / retry / 状态联动（runtime tree drill-down 继续深化、更多 lineage / subtree 交互）
 
 #### 6. Cron 深化
 
