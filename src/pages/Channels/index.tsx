@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { hostApiFetch } from '@/lib/host-api';
+import { subscribeHostEvent } from '@/lib/host-events';
 import { useChannelsStore } from '@/stores/channels';
 import { useSettingsStore } from '@/stores/settings';
 import { FeishuOnboardingWizard } from '@/components/channels/FeishuOnboardingWizard';
@@ -141,10 +142,7 @@ export function Channels() {
       `/api/channels/workbench/messages?conversationId=${encodeURIComponent(conversationId)}`,
     );
     setConversation(response.conversation ?? null);
-    setMessages((prev) => {
-      const nextMessages = (response.messages ?? []).filter(isVisibleConversationMessage);
-      return nextMessages.length > 0 ? nextMessages : prev;
-    });
+    setMessages((response.messages ?? []).filter(isVisibleConversationMessage));
   };
 
   useEffect(() => {
@@ -220,6 +218,24 @@ export function Channels() {
     };
   }, [activeChannel, selectedConversationId]);
 
+  useEffect(() => {
+    if (!selectedConversationId) return undefined;
+
+    return subscribeHostEvent('gateway:notification', () => {
+      void hostApiFetch<{ sessions?: ChannelSyncSession[] }>(
+        `/api/channels/workbench/sessions?channelType=${encodeURIComponent(activeChannel)}`,
+      ).then((response) => {
+        const sortedSessions = [...(response.sessions ?? [])].sort((left, right) => {
+          if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
+          return Date.parse(right.latestActivityAt ?? '') - Date.parse(left.latestActivityAt ?? '');
+        });
+        setSessions(sortedSessions);
+      }).catch(() => undefined);
+
+      void loadConversation(selectedConversationId).catch(() => undefined);
+    });
+  }, [activeChannel, selectedConversationId]);
+
   const handleAdd = async () => {
     if (!addName.trim()) return;
     if (addType === 'feishu') {
@@ -247,21 +263,9 @@ export function Channels() {
         method: 'POST',
         body: JSON.stringify({ text, conversationId: selectedConversationId }),
       });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `local-${Date.now()}`,
-          role: 'agent',
-          authorName: conversation?.visibleAgentId || 'KTClaw',
-          createdAt: new Date().toISOString(),
-          content: text,
-        },
-      ]);
       setComposerValue('');
       setTestResult({ ok: true, msg: t('feedback.sentWithText', { text, defaultValue: `已发送：${text}` }) });
-      window.setTimeout(() => {
-        void loadConversation(selectedConversationId);
-      }, 1200);
+      await loadConversation(selectedConversationId);
     } catch (error) {
       setTestResult({ ok: false, msg: String(error) });
     }

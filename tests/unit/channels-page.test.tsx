@@ -6,6 +6,7 @@ const {
   hostApiFetchMock,
   channelsStoreState,
   settingsState,
+  hostEventSubscribers,
 } = vi.hoisted(() => ({
   hostApiFetchMock: vi.fn(),
   channelsStoreState: {
@@ -34,6 +35,7 @@ const {
   settingsState: {
     defaultModel: 'GLM-5',
   },
+  hostEventSubscribers: new Map<string, (payload: unknown) => void>(),
 }));
 
 vi.mock('@/lib/host-api', () => ({
@@ -46,6 +48,15 @@ vi.mock('@/stores/channels', () => ({
 
 vi.mock('@/stores/settings', () => ({
   useSettingsStore: (selector: (state: typeof settingsState) => unknown) => selector(settingsState),
+}));
+
+vi.mock('@/lib/host-events', () => ({
+  subscribeHostEvent: (eventName: string, handler: (payload: unknown) => void) => {
+    hostEventSubscribers.set(eventName, handler);
+    return () => {
+      hostEventSubscribers.delete(eventName);
+    };
+  },
 }));
 
 function buildWorkbenchFixtures() {
@@ -173,6 +184,7 @@ function buildWorkbenchFixtures() {
 describe('Channels sync workbench', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hostEventSubscribers.clear();
     channelsStoreState.channels = [
       {
         id: 'feishu-default',
@@ -273,6 +285,79 @@ describe('Channels sync workbench', () => {
     });
 
     expect(input).toHaveValue('hello from channel');
+  });
+
+  it('does not append a fake local reply while waiting for runtime-backed refresh', async () => {
+    const fixtures = buildWorkbenchFixtures();
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/channels/capabilities') return fixtures.capabilities;
+      if (path === '/api/channels/workbench/sessions?channelType=feishu') return fixtures.sessions;
+      if (path === '/api/channels/workbench/messages?conversationId=feishu-conv-devops') return fixtures.messages;
+      if (path.includes('/send')) return { success: true, runId: 'run-feishu-send-1' };
+      return { success: true };
+    });
+
+    render(<Channels />);
+    const input = await screen.findByPlaceholderText('在群聊发送消息（将同步至飞书）...');
+    fireEvent.change(input, { target: { value: 'hello from channel' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(hostApiFetchMock).toHaveBeenCalledWith(
+        '/api/channels/feishu-default/send',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ text: 'hello from channel', conversationId: 'feishu-conv-devops' }),
+        }),
+      );
+    });
+
+    expect(screen.queryByText('hello from channel')).not.toBeInTheDocument();
+    expect(input).toHaveValue('');
+  });
+
+  it('refreshes the selected conversation immediately when gateway notifications arrive', async () => {
+    const fixtures = buildWorkbenchFixtures();
+    const updatedMessages = {
+      success: true,
+      conversation: fixtures.messages.conversation,
+      messages: [
+        ...fixtures.messages.messages,
+        {
+          id: 'msg-agent-3',
+          role: 'agent',
+          authorName: 'KTClaw',
+          createdAt: '2026-03-26T09:03:00.000Z',
+          content: 'runtime-generated reply',
+        },
+      ],
+    };
+    let messageLoads = 0;
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/channels/capabilities') return fixtures.capabilities;
+      if (path === '/api/channels/workbench/sessions?channelType=feishu') return fixtures.sessions;
+      if (path === '/api/channels/workbench/messages?conversationId=feishu-conv-devops') {
+        messageLoads += 1;
+        return messageLoads >= 2 ? updatedMessages : fixtures.messages;
+      }
+      return { success: true };
+    });
+
+    render(<Channels />);
+    await screen.findByText('query_k8s_logs');
+
+    const notificationHandler = hostEventSubscribers.get('gateway:notification');
+    expect(notificationHandler).toBeTypeOf('function');
+
+    notificationHandler?.({
+      method: 'agent',
+      params: {
+        sessionKey: 'agent:main:main',
+        phase: 'completed',
+      },
+    });
+
+    expect(await screen.findByText('runtime-generated reply')).toBeInTheDocument();
   });
 
   it('opens channel controls in a settings drawer without replacing the chat pane', async () => {
