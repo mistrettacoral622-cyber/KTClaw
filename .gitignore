@@ -68,3 +68,4 @@ docs/pr-session-notes-*.md
 .specstory/
 .gstack/
 .npm-cache/
+.worktrees/
