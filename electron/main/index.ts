@@ -59,29 +59,50 @@ const WINDOWS_APP_USER_MODEL_ID = 'app.clawx.desktop';
 // set `"disable-hardware-acceleration": false` in the app config (future).
 app.disableHardwareAcceleration();
 
-// Linux sandbox compatibility for restricted environments (e.g. Kylin V11, UOS,
-// and other domestic Linux distros that disable unprivileged user namespaces).
+// Linux rendering compatibility for restricted environments (Kylin V10/V11, UOS,
+// and other domestic/government distros with hardened kernel policies).
 //
-// On these systems the Chromium renderer process cannot create the required
-// user namespace isolation, causing the GPU/renderer process to be killed
-// immediately — which manifests as a persistent white/blank screen.
+// Root causes of the white-screen on Kylin V11:
 //
-// Applying --no-sandbox + --disable-setuid-sandbox at the app level ensures
-// the renderer starts reliably on kernels where:
-//   kernel.unprivileged_userns_clone = 0  (Debian/Kylin hardening)
-//   AppArmor restrict_unprivileged_userns (Ubuntu 24.04+)
-//   SELinux policy blocks unshare calls (some RPM-based distros)
+//  1. SANDBOX: kernel.unprivileged_userns_clone=0 prevents Chromium from
+//     creating user-namespace isolation, killing the renderer/GPU process
+//     immediately → window appears but stays white.
+//     Fix: --no-sandbox + --disable-setuid-sandbox
 //
-// This is equivalent to what VS Code, Chrome, and most Electron apps
-// recommend for enterprise/government Linux environments.
+//  2. GPU PROCESS: Even with sandbox disabled, a separate GPU process can
+//     fail to start on headless/restricted systems, also causing a white window.
+//     Fix: --in-process-gpu   (merges GPU code into the renderer process)
+//
+//  3. GL BACKEND: app.disableHardwareAcceleration() relies on SwiftShader
+//     (software rasterizer) as its rendering fallback. We must NOT add
+//     --disable-software-rasterizer — that kills SwiftShader and leaves
+//     Chromium with zero rendering backends, causing a permanent white screen.
+//     Fix: --use-gl=swiftshader  (explicitly selects the SwiftShader path)
+//
+//  4. DISPLAY SERVER: Kylin V11 ships a Wayland compositor by default but
+//     Electron's Wayland support on older distro kernels is unstable.
+//     Forcing X11 (via XWayland which is always available) is more reliable.
+//     Fix: --ozone-platform=x11
+//
+// All four flags work together. Removing any one of them may re-introduce
+// a white screen on Kylin or similar restricted Linux environments.
 if (process.platform === 'linux') {
+  // ① Bypass sandbox — kernel blocks user-namespace creation on Kylin V10/V11
   app.commandLine.appendSwitch('no-sandbox');
   app.commandLine.appendSwitch('disable-setuid-sandbox');
-  // Keep the GPU process disabled for consistency with disableHardwareAcceleration
-  app.commandLine.appendSwitch('disable-gpu');
-  app.commandLine.appendSwitch('disable-gpu-compositing');
-  // Force software rasterizer so rendering works without a functional GPU stack
-  app.commandLine.appendSwitch('disable-software-rasterizer', '');
+
+  // ② Merge GPU process into renderer — avoids separate GPU process startup
+  //    failure on systems with no GPU or restricted process spawning
+  app.commandLine.appendSwitch('in-process-gpu');
+
+  // ③ Force SwiftShader software GL — the only reliable rendering backend
+  //    when hardware GPU is disabled. Must NOT use --disable-software-rasterizer
+  //    here because that would kill this exact fallback.
+  app.commandLine.appendSwitch('use-gl', 'swiftshader');
+
+  // ④ Force X11 backend — more stable than Wayland on Kylin V11 and older
+  //    modified Ubuntu kernels where ozone-wayland can crash the compositor
+  app.commandLine.appendSwitch('ozone-platform', 'x11');
 }
 
 // On Linux, set CHROME_DESKTOP so Chromium can find the correct .desktop file.
