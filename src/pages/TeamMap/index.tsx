@@ -538,10 +538,15 @@ function OperationsRail({
     soulMd: '',
   });
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [workspaceDraft, setWorkspaceDraft] = useState<{ agentsMd: string; soulMd: string } | null>(null);
+  const [workspaceSaving, setWorkspaceSaving] = useState(false);
+  const [workspaceSaved, setWorkspaceSaved] = useState(false);
 
   useEffect(() => {
     if (!agent) return;
     setWorkspaceLoading(true);
+    setWorkspaceDraft(null);
+    setWorkspaceSaved(false);
     Promise.all([
       hostApiFetch<{ success: boolean; content: string; exists: boolean }>(
         `/api/agents/${encodeURIComponent(agent.id)}/workspace/AGENTS.md`,
@@ -557,6 +562,38 @@ function OperationsRail({
       setWorkspaceLoading(false);
     });
   }, [agent?.id]); // re-fetch when selected agent changes
+
+  const isDirty = workspaceDraft !== null && (
+    workspaceDraft.agentsMd !== workspaceFiles.agentsMd ||
+    workspaceDraft.soulMd !== workspaceFiles.soulMd
+  );
+
+  const handleSaveWorkspace = async () => {
+    if (!agent || !workspaceDraft || workspaceSaving) return;
+    setWorkspaceSaving(true);
+    try {
+      await Promise.all([
+        hostApiFetch(`/api/agents/${encodeURIComponent(agent.id)}/workspace/AGENTS.md`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: workspaceDraft.agentsMd }),
+        }),
+        hostApiFetch(`/api/agents/${encodeURIComponent(agent.id)}/workspace/SOUL.md`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: workspaceDraft.soulMd }),
+        }),
+      ]);
+      setWorkspaceFiles({ agentsMd: workspaceDraft.agentsMd, soulMd: workspaceDraft.soulMd });
+      setWorkspaceDraft(null);
+      setWorkspaceSaved(true);
+      setTimeout(() => setWorkspaceSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save workspace files:', err);
+    } finally {
+      setWorkspaceSaving(false);
+    }
+  };
 
   if (!agent) {
     return (
@@ -679,8 +716,11 @@ function OperationsRail({
               </div>
               <textarea
                 className="w-full h-40 p-4 text-xs font-mono text-slate-600 bg-transparent resize-none rounded-b-[20px] border-none outline-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400/30 transition-shadow"
-                value={workspaceLoading ? 'Loading...' : workspaceFiles.agentsMd}
-                readOnly
+                value={workspaceLoading ? 'Loading...' : (workspaceDraft?.agentsMd ?? workspaceFiles.agentsMd)}
+                onChange={(e) => setWorkspaceDraft((prev) => ({
+                  agentsMd: e.target.value,
+                  soulMd: prev?.soulMd ?? workspaceFiles.soulMd,
+                }))}
                 spellCheck={false}
               />
             </div>
@@ -692,11 +732,32 @@ function OperationsRail({
               </div>
               <textarea
                 className="w-full h-28 p-4 text-xs font-mono text-slate-600 bg-transparent resize-none rounded-b-[20px] border-none outline-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-400/30 transition-shadow"
-                value={workspaceLoading ? 'Loading...' : workspaceFiles.soulMd}
-                readOnly
+                value={workspaceLoading ? 'Loading...' : (workspaceDraft?.soulMd ?? workspaceFiles.soulMd)}
+                onChange={(e) => setWorkspaceDraft((prev) => ({
+                  agentsMd: prev?.agentsMd ?? workspaceFiles.agentsMd,
+                  soulMd: e.target.value,
+                }))}
                 spellCheck={false}
               />
             </div>
+
+            {(isDirty || workspaceSaved) && (
+              <div className="flex items-center gap-3">
+                {isDirty && (
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveWorkspace()}
+                    disabled={workspaceSaving}
+                    className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {workspaceSaving ? 'Saving...' : 'Save'}
+                  </button>
+                )}
+                {workspaceSaved && (
+                  <span className="text-xs font-medium text-emerald-600">Saved</span>
+                )}
+              </div>
+            )}
 
             <div className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700">Model Override</span>

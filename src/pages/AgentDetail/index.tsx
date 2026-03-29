@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAgentsStore } from '@/stores/agents';
 import { hostApiFetch } from '@/lib/host-api';
+import { cn } from '@/lib/utils';
 import type { AgentCronRelation, CronJob } from '@/types/cron';
 import type { AgentChatAccess, AgentTeamRole } from '@/types/agent';
 
@@ -350,6 +351,90 @@ function CronSection({ agentId }: CronSectionProps) {
   );
 }
 
+/* ─── Skills Panel ─── */
+
+function SkillsPanel({ agentId }: { agentId: string }) {
+  const { t } = useTranslation('agents');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [skillContent, setSkillContent] = useState<string>('');
+  const [skillLoading, setSkillLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    setSelectedSkill(null);
+    setSkillContent('');
+    hostApiFetch<{ success: boolean; skills: string[] }>(
+      `/api/agents/${encodeURIComponent(agentId)}/workspace/skills`,
+    )
+      .then((r) => { setSkills(r.success ? r.skills : []); })
+      .catch(() => setSkills([]))
+      .finally(() => setLoading(false));
+  }, [agentId]);
+
+  const loadSkill = async (skillName: string) => {
+    setSelectedSkill(skillName);
+    setSkillLoading(true);
+    try {
+      const r = await hostApiFetch<{ success: boolean; content: string; exists: boolean }>(
+        `/api/agents/${encodeURIComponent(agentId)}/workspace/skills/${encodeURIComponent(skillName)}`,
+      );
+      setSkillContent(r.content ?? '');
+    } catch {
+      setSkillContent('');
+    } finally {
+      setSkillLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-[24px] border border-slate-200/80 bg-white p-6 shadow-sm">
+      <h2 className="text-[18px] font-semibold text-slate-900">
+        {t('detail.skills', { defaultValue: 'Skills' })}
+      </h2>
+      {loading && <p className="mt-4 text-[13px] text-slate-400">Loading skills...</p>}
+      {!loading && skills.length === 0 && (
+        <p className="mt-4 text-[13px] text-slate-400">
+          {t('detail.noSkills', { defaultValue: 'No skills configured.' })}
+        </p>
+      )}
+      {!loading && skills.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <button
+                key={skill}
+                type="button"
+                onClick={() => void loadSkill(skill)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  selectedSkill === skill
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                )}
+              >
+                {skill}
+              </button>
+            ))}
+          </div>
+          {selectedSkill && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              {skillLoading ? (
+                <p className="text-xs text-slate-400">Loading...</p>
+              ) : (
+                <pre className="whitespace-pre-wrap text-xs text-slate-700 font-mono">
+                  {skillContent || '(empty)'}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export function AgentDetail() {
@@ -602,6 +687,7 @@ export function AgentDetail() {
       </div>
 
       <CronSection agentId={agent.id} />
+      <SkillsPanel agentId={agent.id} />
     </div>
   );
 }
