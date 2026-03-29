@@ -149,7 +149,10 @@ jobs:
         if: matrix.platform == 'win'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm run package:win:ci
+        run: |
+          pnpm run package:prepare
+          npx electron-builder --win --x64 --publish never
+          npx electron-builder --win --arm64 --publish never
 
       - name: Build Linux
         if: matrix.platform == 'linux'
@@ -158,21 +161,40 @@ jobs:
         run: pnpm run package:linux:ci
 
       # Upload artifacts
-      - name: Upload ${{ matrix.name }} Installers
+      - name: Upload ${{ matrix.name }} Installers (x64 / x86_64)
         uses: actions/upload-artifact@v4
         with:
-          name: KTClaw-${{ matrix.platform }}
+          name: KTClaw-${{ matrix.platform }}-x64
           path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/*.rpm
-            release/*.blockmap
+            release/*x64*.dmg
+            release/*x64*.zip
+            release/*x64*.exe
+            release/*x86_64*.AppImage
+            release/*amd64*.AppImage
+            release/*x86_64*.deb
+            release/*amd64*.deb
+            release/*x86_64*.rpm
+            release/*amd64*.rpm
+            release/*x64*.blockmap
+            release/*x86_64*.blockmap
             release/*.yml
             !release/builder-debug.yml
-          if-no-files-found: error
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload ${{ matrix.name }} Installers (arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: KTClaw-${{ matrix.platform }}-arm64
+          path: |
+            release/*arm64*.dmg
+            release/*arm64*.zip
+            release/*arm64*.exe
+            release/*arm64*.AppImage
+            release/*arm64*.deb
+            release/*arm64*.rpm
+            release/*arm64*.blockmap
+          if-no-files-found: warn
           retention-days: 14
 
   # ── Summary ─────────────────────────────────────────────────────
