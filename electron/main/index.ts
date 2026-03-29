@@ -62,47 +62,50 @@ app.disableHardwareAcceleration();
 // Linux rendering compatibility for restricted environments (Kylin V10/V11, UOS,
 // and other domestic/government distros with hardened kernel policies).
 //
-// Root causes of the white-screen on Kylin V11:
+// Root causes of the white-screen on Kylin V11 (vendor 1d17 = Jingjia cx4 GPU):
 //
 //  1. SANDBOX: kernel.unprivileged_userns_clone=0 prevents Chromium from
 //     creating user-namespace isolation, killing the renderer/GPU process
 //     immediately → window appears but stays white.
 //     Fix: --no-sandbox + --disable-setuid-sandbox
 //
-//  2. GPU PROCESS: Even with sandbox disabled, a separate GPU process can
-//     fail to start on headless/restricted systems, also causing a white window.
-//     Fix: --in-process-gpu   (merges GPU code into the renderer process)
+//  2. GPU PROCESS: Even with sandbox disabled, the separate Chromium GPU
+//     process can crash on unsupported hardware (Jingjia cx4 has no Mesa GL).
+//     Fix: --in-process-gpu merges GPU code into the renderer process so
+//     there is no separate GPU process to crash.
 //
-//  3. GL BACKEND: app.disableHardwareAcceleration() relies on SwiftShader
-//     (software rasterizer) as its rendering fallback. We must NOT add
-//     --disable-software-rasterizer — that kills SwiftShader and leaves
-//     Chromium with zero rendering backends, causing a permanent white screen.
-//     Fix: --use-gl=swiftshader  (explicitly selects the SwiftShader path)
+//  3. GL BACKEND: app.disableHardwareAcceleration() is called above and
+//     automatically routes Chromium to the bundled SwiftShader software
+//     renderer. Do NOT set --use-gl=swiftshader manually — it is soft-
+//     deprecated in Chromium 132 (Electron 40) and conflicts with
+//     disableHardwareAcceleration(). Let the API handle it.
 //
-//  4. DISPLAY SERVER: Kylin V11 ships a Wayland compositor by default but
-//     Electron's Wayland support on older distro kernels is unstable.
-//     Forcing X11 (via XWayland which is always available) is more reliable.
+//  4. SHARED MEMORY: /dev/shm is often restricted (small quota) on Kylin V11
+//     enterprise machines. Chromium uses /dev/shm for its renderer IPC; if it
+//     runs out, the renderer freezes on a white frame.
+//     Fix: --disable-dev-shm-usage falls back to /tmp instead.
+//
+//  5. DISPLAY SERVER: Confirmed X11 session from UA string in logs, but Kylin
+//     V11 may boot into a Wayland compositor. Forcing ozone X11 ensures the
+//     app always runs under XWayland rather than native Wayland, which is more
+//     stable on the cx4 driver stack.
 //     Fix: --ozone-platform=x11
-//
-// All four flags work together. Removing any one of them may re-introduce
-// a white screen on Kylin or similar restricted Linux environments.
 if (process.platform === 'linux') {
-  // ① Bypass sandbox — kernel blocks user-namespace creation on Kylin V10/V11
+  // ① Bypass kernel sandbox restrictions (Kylin V10/V11, UOS, hardened Debian)
   app.commandLine.appendSwitch('no-sandbox');
   app.commandLine.appendSwitch('disable-setuid-sandbox');
 
-  // ② Merge GPU process into renderer — avoids separate GPU process startup
-  //    failure on systems with no GPU or restricted process spawning
+  // ② Avoid separate GPU process launch — Jingjia cx4 causes that process to
+  //    exit immediately, leaving the renderer with no compositing backend
   app.commandLine.appendSwitch('in-process-gpu');
 
-  // ③ Force SwiftShader software GL — the only reliable rendering backend
-  //    when hardware GPU is disabled. Must NOT use --disable-software-rasterizer
-  //    here because that would kill this exact fallback.
-  app.commandLine.appendSwitch('use-gl', 'swiftshader');
+  // ③ Prevent /dev/shm exhaustion — renderer falls back to /tmp
+  app.commandLine.appendSwitch('disable-dev-shm-usage');
 
-  // ④ Force X11 backend — more stable than Wayland on Kylin V11 and older
-  //    modified Ubuntu kernels where ozone-wayland can crash the compositor
+  // ④ Force X11/XWayland mode — avoids Wayland ozone crash on cx4 driver
   app.commandLine.appendSwitch('ozone-platform', 'x11');
+  // Note: SwiftShader software rendering is activated automatically by
+  // app.disableHardwareAcceleration() above — no need for --use-gl=swiftshader
 }
 
 // On Linux, set CHROME_DESKTOP so Chromium can find the correct .desktop file.
