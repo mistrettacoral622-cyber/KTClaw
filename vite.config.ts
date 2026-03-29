@@ -59,5 +59,34 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress expected dynamic import warnings for store circular dependency lazy-loading
+        if (warning.message && warning.message.includes('dynamic import will not move module into another chunk')) {
+          return;
+        }
+        warn(warning);
+      },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react/') || id.includes('react-dom/') || id.includes('scheduler/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@radix-ui/')) {
+              return 'vendor-radix';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('shiki') || id.includes('remark') || id.includes('rehype') || id.includes('katex')) {
+              return 'vendor-markdown';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
 });
