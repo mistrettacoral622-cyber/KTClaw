@@ -69,6 +69,9 @@ describe('AgentDetail page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes('/workspace/skills')) {
+        return { success: true, skills: [] };
+      }
       if (path === '/api/agents/researcher/cron-relations') {
         return {
           relations: [
@@ -152,6 +155,9 @@ describe('AgentDetail page', () => {
     expect(screen.getByDisplayValue('worker')).toBeInTheDocument();
     expect(screen.getByDisplayValue('leader_only')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Research and evidence synthesis')).toBeInTheDocument();
+    expect(
+      screen.getByText('This agent is blocked from normal direct chat and should be contacted through its leader.'),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(hostApiFetchMock).toHaveBeenCalledWith('/api/agents/researcher/cron-relations');
@@ -205,5 +211,55 @@ describe('AgentDetail page', () => {
         reportsTo: 'main',
       });
     });
+  });
+
+  it('renders Skills section with skill buttons', async () => {
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes('/workspace/skills') && !path.match(/\/workspace\/skills\/[^/]+$/)) {
+        return { success: true, skills: ['researcher', 'code-review'] };
+      }
+      if (path.includes('/cron-relations')) return { relations: [] };
+      return { success: true };
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/agents/main']}>
+        <Routes>
+          <Route path="/agents/:agentId" element={<AgentDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(agentsStoreState.fetchAgents).toHaveBeenCalled();
+    });
+
+    // 'code-review' is only in the skills panel, so use it as anchor
+    expect(await screen.findByText('code-review')).toBeInTheDocument();
+    // 'researcher' appears as skill chip button (role="button")
+    const skillButtons = screen.getAllByRole('button', { name: 'researcher' });
+    expect(skillButtons.length).toBeGreaterThan(0);
+  });
+
+  it('shows empty state when no skills', async () => {
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path.includes('/workspace/skills')) return { success: true, skills: [] };
+      if (path.includes('/cron-relations')) return { relations: [] };
+      return { success: true };
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/agents/main']}>
+        <Routes>
+          <Route path="/agents/:agentId" element={<AgentDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(agentsStoreState.fetchAgents).toHaveBeenCalled();
+    });
+
+    expect(await screen.findByText('No skills configured.')).toBeInTheDocument();
   });
 });
