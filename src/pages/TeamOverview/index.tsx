@@ -10,7 +10,7 @@ import { deriveTeamWorkVisibility, type TeamMemberWorkVisibility } from '@/lib/t
 import { buildLeaderProgressBrief } from '@/lib/team-progress-brief';
 import { useTeamRuntime } from '@/hooks/use-team-runtime';
 
-import { Bot, UserCog, Code, Database, Zap, Cpu, MessageSquare, Mail, MessageCircle, Plus, Columns, Network, Radio } from 'lucide-react';
+import { Bot, UserCog, Code, Database, Zap, Cpu, MessageSquare, Mail, MessageCircle, Plus, Columns, Network, Radio, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AVATAR_COLORS = [
@@ -173,6 +173,24 @@ export function TeamOverview() {
     () => deriveTeamWorkVisibility(agents, sessionLastActivity, runtimeByAgent),
     [agents, sessionLastActivity, runtimeByAgent],
   );
+
+  const { groups, ungrouped, useGrouped } = useMemo(() => {
+    const leaders = agents.filter((a) => a.teamRole === 'leader');
+    const grps = leaders.map((leader) => ({
+      leader,
+      members: agents.filter((a) => a.reportsTo === leader.id),
+    }));
+    const ungrp = agents.filter(
+      (a) => a.teamRole !== 'leader' && !a.reportsTo,
+    );
+    // Per D-06: fall through to flat list if only 1 group and no ungrouped
+    const shouldGroup = grps.length > 1 || (grps.length === 1 && ungrp.length > 0);
+    return { groups: grps, ungrouped: ungrp, useGrouped: shouldGroup };
+  }, [agents]);
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (id: string) =>
+    setCollapsedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const teamBrief = useMemo(
     () => buildLeaderProgressBrief({
@@ -392,19 +410,50 @@ export function TeamOverview() {
                   <h3 className="mt-1 text-xl font-semibold text-slate-900">{t('teamOverview.sections.membersSubtitle')}</h3>
                 </div>
               </div>
-              <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-                {agents.map((agent, idx) => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    idx={idx}
-                    lastActivity={sessionLastActivity[agent.mainSessionKey]}
-                    ownedEntryPoints={getOwnedEntryPoints(agent, channelOwners, configuredChannelTypes)}
-                    workVisibility={workVisibility[agent.id]}
-                    onDelete={() => void deleteAgent(agent.id)}
-                  />
-                ))}
-              </div>
+              {useGrouped ? (
+                <div className="space-y-6">
+                  {groups.map(({ leader, members }) => (
+                    <LeaderGroup
+                      key={leader.id}
+                      leader={leader}
+                      members={members}
+                      collapsed={!!collapsedGroups[leader.id]}
+                      onToggle={() => toggleGroup(leader.id)}
+                      agents={agents}
+                      sessionLastActivity={sessionLastActivity}
+                      channelOwners={channelOwners}
+                      configuredChannelTypes={configuredChannelTypes}
+                      workVisibility={workVisibility}
+                      deleteAgent={deleteAgent}
+                    />
+                  ))}
+                  {ungrouped.length > 0 && (
+                    <StandaloneGroup
+                      agents={ungrouped}
+                      allAgents={agents}
+                      sessionLastActivity={sessionLastActivity}
+                      channelOwners={channelOwners}
+                      configuredChannelTypes={configuredChannelTypes}
+                      workVisibility={workVisibility}
+                      deleteAgent={deleteAgent}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+                  {agents.map((agent, idx) => (
+                    <AgentCard
+                      key={agent.id}
+                      agent={agent}
+                      idx={idx}
+                      lastActivity={sessionLastActivity[agent.mainSessionKey]}
+                      ownedEntryPoints={getOwnedEntryPoints(agent, channelOwners, configuredChannelTypes)}
+                      workVisibility={workVisibility[agent.id]}
+                      onDelete={() => void deleteAgent(agent.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -418,6 +467,131 @@ export function TeamOverview() {
           />
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function LeaderGroup({
+  leader,
+  members,
+  collapsed,
+  onToggle,
+  agents,
+  sessionLastActivity,
+  channelOwners,
+  configuredChannelTypes,
+  workVisibility,
+  deleteAgent,
+}: {
+  leader: AgentSummary;
+  members: AgentSummary[];
+  collapsed: boolean;
+  onToggle: () => void;
+  agents: AgentSummary[];
+  sessionLastActivity: Record<string, number>;
+  channelOwners: Record<string, string>;
+  configuredChannelTypes: string[];
+  workVisibility: Record<string, TeamMemberWorkVisibility>;
+  deleteAgent: (id: string) => Promise<void>;
+}) {
+  const leaderIdx = agents.indexOf(leader);
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-200/60 px-5 py-3">
+      <div
+        className="flex items-center gap-3 cursor-pointer select-none"
+        onClick={onToggle}
+        role="button"
+        aria-expanded={!collapsed}
+      >
+        {collapsed
+          ? <ChevronRight className="h-4 w-4 text-slate-400" />
+          : <ChevronDown className="h-4 w-4 text-slate-400" />
+        }
+        <span className="text-sm font-semibold text-slate-900">{leader.name}</span>
+        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+          {members.length}
+        </span>
+      </div>
+      {!collapsed && (
+        <div className="mt-4 space-y-4">
+          <div className="border-blue-200 bg-blue-50/30 rounded-2xl p-1">
+            <AgentCard
+              agent={leader}
+              idx={leaderIdx >= 0 ? leaderIdx : 0}
+              lastActivity={sessionLastActivity[leader.mainSessionKey]}
+              ownedEntryPoints={getOwnedEntryPoints(leader, channelOwners, configuredChannelTypes)}
+              workVisibility={workVisibility[leader.id]}
+              onDelete={() => void deleteAgent(leader.id)}
+            />
+          </div>
+          {members.length > 0 && (
+            <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3 mt-4">
+              {members.map((member) => {
+                const memberIdx = agents.indexOf(member);
+                return (
+                  <AgentCard
+                    key={member.id}
+                    agent={member}
+                    idx={memberIdx >= 0 ? memberIdx : 0}
+                    lastActivity={sessionLastActivity[member.mainSessionKey]}
+                    ownedEntryPoints={getOwnedEntryPoints(member, channelOwners, configuredChannelTypes)}
+                    workVisibility={workVisibility[member.id]}
+                    onDelete={() => void deleteAgent(member.id)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StandaloneGroup({
+  agents: ungroupedAgents,
+  allAgents,
+  sessionLastActivity,
+  channelOwners,
+  configuredChannelTypes,
+  workVisibility,
+  deleteAgent,
+}: {
+  agents: AgentSummary[];
+  allAgents: AgentSummary[];
+  sessionLastActivity: Record<string, number>;
+  channelOwners: Record<string, string>;
+  configuredChannelTypes: string[];
+  workVisibility: Record<string, TeamMemberWorkVisibility>;
+  deleteAgent: (id: string) => Promise<void>;
+}) {
+  const { t } = useTranslation('common');
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-200/60 px-5 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold text-slate-900">
+          {t('teamOverview.groups.standalone', { defaultValue: 'Independent' })}
+        </span>
+        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+          {ungroupedAgents.length}
+        </span>
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3 mt-4">
+        {ungroupedAgents.map((agent) => {
+          const agentIdx = allAgents.indexOf(agent);
+          return (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              idx={agentIdx >= 0 ? agentIdx : 0}
+              lastActivity={sessionLastActivity[agent.mainSessionKey]}
+              ownedEntryPoints={getOwnedEntryPoints(agent, channelOwners, configuredChannelTypes)}
+              workVisibility={workVisibility[agent.id]}
+              onDelete={() => void deleteAgent(agent.id)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
