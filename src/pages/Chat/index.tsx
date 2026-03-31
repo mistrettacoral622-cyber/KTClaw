@@ -6,13 +6,14 @@
  */
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSettingsStore } from '@/stores/settings';
-import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, PanelRight, FileText, Bot } from 'lucide-react';
 import { useChatStore, type RawMessage } from '@/stores/chat';
 import { hostApiFetch } from '@/lib/host-api';
 import { toast } from 'sonner';
 import { useGatewayStore } from '@/stores/gateway';
 import { useAgentsStore } from '@/stores/agents';
+import { useRightPanelStore } from '@/stores/rightPanelStore';
+import { useSettingsStore } from '@/stores/settings';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { WorkbenchEmptyState } from '@/components/workbench/workbench-empty-state';
 import { ContextRail } from '@/components/workbench/context-rail';
@@ -36,9 +37,9 @@ export function Chat() {
   const navigate = useNavigate();
   const gatewayStatus = useGatewayStore((s) => s.status);
   const isGatewayRunning = gatewayStatus.state === 'running';
-
   const rightPanelMode = useSettingsStore((s) => s.rightPanelMode);
   const setRightPanelMode = useSettingsStore((s) => s.setRightPanelMode);
+  const openPanel = useRightPanelStore((s) => s.openPanel);
 
   const messages = useChatStore((s) => s.messages);
   const currentSessionKey = useChatStore((s) => s.currentSessionKey);
@@ -103,6 +104,14 @@ export function Chat() {
   useEffect(() => {
     void fetchAgents();
   }, [fetchAgents]);
+
+  useEffect(() => {
+    if (currentSessionKey || agents.length === 0) return;
+    const mainAgent = agents.find((agent) => agent.isDefault) ?? agents.find((agent) => agent.id === 'main') ?? null;
+    if (mainAgent?.mainSessionKey) {
+      switchSession(mainAgent.mainSessionKey);
+    }
+  }, [agents, currentSessionKey, switchSession]);
 
   // Push notification to the bell when system-injected reminder messages arrive
   const notifiedKeysRef = useRef(new Set<string>());
@@ -230,62 +239,34 @@ export function Chat() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {!isEmpty && messages.length >= 2 && (
-              <button
-                type="button"
-                onClick={() => void handleExtractMemory()}
-                disabled={extracting || sending}
-                className="rounded-lg border border-black/10 bg-white px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:bg-[#f9f9f9] hover:border-black/15 hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] disabled:opacity-50"
-                title="将本次对话要点提取到记忆库"
-              >
-                {extracting ? '提取中…' : '🧠 记忆'}
-              </button>
-            )}
             <button
               type="button"
-              onClick={() => setRightPanelMode(rightPanelMode === 'files' ? null : 'files')}
+              aria-label={t('common:rightPanel.openFiles', { defaultValue: 'Open files panel' })}
+              onClick={() => openPanel('file', currentAgentId ?? undefined)}
               className={cn(
-                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 rightPanelMode === 'files'
-                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
-                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent hover:text-accent-foreground',
               )}
             >
-              📄 {t('common:workbench.files')}
+              <FileText className="h-4 w-4" strokeWidth={1.5} />
+              <span>{t('common:workbench.files')}</span>
             </button>
             <button
               type="button"
-              onClick={() => setRightPanelMode(rightPanelMode === 'session' ? null : 'session')}
+              aria-label={t('common:rightPanel.openAgent', { defaultValue: 'Open agent panel' })}
+              onClick={() => openPanel('agent', currentAgentId ?? undefined)}
               className={cn(
-                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
-                rightPanelMode === 'session'
-                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
-                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
-              )}
-            >
-              🗂 {t('common:workbench.session')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setRightPanelMode(rightPanelMode === 'agent' ? null : 'agent')}
-              className={cn(
-                'rounded-lg border px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)] active:scale-[0.98] active:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 rightPanelMode === 'agent'
-                  ? 'border-[#ff6a00]/30 bg-[#ff6a00]/10 hover:bg-[#ff6a00]/15'
-                  : 'border-black/10 bg-white hover:bg-[#f9f9f9] hover:border-black/15',
+                  ? 'bg-accent text-accent-foreground'
+                  : 'hover:bg-accent hover:text-accent-foreground',
               )}
             >
-              🤖 {t('common:workbench.agent')}
+              <Bot className="h-4 w-4" strokeWidth={1.5} />
+              <span>{t('common:workbench.agent')}</span>
             </button>
-            {(currentAgent?.teamRole === 'leader' || currentAgent?.isDefault) && (
-              <button
-                type="button"
-                onClick={() => setTeamBriefOpen((open) => !open)}
-                className="rounded-lg border border-black/10 bg-white px-3 py-[5px] text-[13px] font-medium text-black shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-[1px] hover:bg-[#f9f9f9] hover:border-black/15 hover:shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
-              >
-                {t('common:teamBrief.open')}
-              </button>
-            )}
           </div>
         </div>
 
@@ -355,7 +336,7 @@ export function Chat() {
               </div>
             )}
 
-            <div className="px-2 pb-2">
+            <div className="px-2 pb-2 pt-6">
               <ChatInput
                 onSend={handleSendMessage}
                 onStop={abortRun}
