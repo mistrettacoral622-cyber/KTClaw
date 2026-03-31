@@ -39,6 +39,23 @@ export interface RawMessage {
   isError?: boolean;
   /** Local-only: file metadata for user-uploaded attachments (not sent to/from Gateway) */
   _attachedFiles?: AttachedFileMeta[];
+
+  /** Task creation metadata (for agent-generated task proposals) */
+  _taskProposal?: {
+    title: string;
+    description: string;
+    assigneeId?: string;
+    priority?: 'low' | 'medium' | 'high';
+    teamId?: string;
+    teamName?: string;
+    deadline?: string;
+  };
+
+  /** Task anchor metadata (for confirmed task cards) */
+  _taskAnchor?: {
+    taskId: string;
+    title: string;
+  };
 }
 
 /** Content block inside a message */

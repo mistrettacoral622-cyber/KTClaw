@@ -8,10 +8,12 @@ import { Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Fil
 import { createPortal } from 'react-dom';
 import MarkdownContent from './MarkdownContent';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { invokeIpc } from '@/lib/api-client';
 import type { RawMessage, AttachedFileMeta } from '@/stores/chat';
 import { extractText, extractThinking, extractImages, extractToolGroups, formatTimestamp, isSystemInjectedUserMessage } from './message-utils';
+import { TaskCreationBubble } from './TaskCreationBubble';
 
 interface ChatMessageProps {
   message: RawMessage;
@@ -59,6 +61,7 @@ export const ChatMessage = memo(function ChatMessage({
 
   const attachedFiles = message._attachedFiles || [];
   const [lightboxImg, setLightboxImg] = useState<{ src: string; fileName: string; filePath?: string; base64?: string; mimeType?: string } | null>(null);
+  const [showTaskBubble, setShowTaskBubble] = useState(true);
 
   // Never render tool result messages in chat UI
   if (isToolResult) return null;
@@ -67,6 +70,52 @@ export const ChatMessage = memo(function ChatMessage({
   // the assistant's response already contains the user-facing content.
   if (isSystemInjectedUserMessage(message)) return null;
   if (hasOnlyCronToolActivity && !hasText && !visibleThinking && images.length === 0 && attachedFiles.length === 0) return null;
+
+  // Render task creation bubble (per D-21)
+  if (message._taskProposal && showTaskBubble) {
+    return (
+      <div className="flex justify-start mb-4">
+        <TaskCreationBubble
+          title={message._taskProposal.title}
+          description={message._taskProposal.description}
+          assigneeId={message._taskProposal.assigneeId}
+          priority={message._taskProposal.priority}
+          teamId={message._taskProposal.teamId}
+          teamName={message._taskProposal.teamName}
+          deadline={message._taskProposal.deadline}
+          onConfirm={() => {
+            // Update message to show anchor instead of bubble
+            setShowTaskBubble(false);
+          }}
+          onCancel={() => {
+            setShowTaskBubble(false);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Render task anchor card (per D-24)
+  if (message._taskAnchor) {
+    return (
+      <div className="flex justify-start mb-4">
+        <Card className="inline-block max-w-md p-3 bg-accent/10 border-accent">
+          <p className="text-sm font-medium text-accent-foreground">✓ 任务已创建</p>
+          <p className="text-xs text-muted-foreground mt-1">{message._taskAnchor.title}</p>
+          <Button
+            size="sm"
+            variant="link"
+            className="mt-2 p-0 h-auto text-xs"
+            onClick={() => {
+              window.location.href = '/kanban';
+            }}
+          >
+            查看看板 →
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   const hasStreamingToolStatus = isStreaming && streamingTools.length > 0;
   if (!hasText && !visibleThinking && images.length === 0 && visibleTools.length === 0 && attachedFiles.length === 0 && !hasStreamingToolStatus) return null;
