@@ -170,7 +170,7 @@ function AgentRow({ agent, tasks, allAgents, onTaskClick }: AgentRowProps) {
   );
 }
 
-export default function TaskKanban() {
+export function TaskKanban() {
   const { t } = useTranslation();
   const agents = useAgentsStore((s) => s.agents) || [];
   const fetchAgents = useAgentsStore((s) => s.fetchAgents);
