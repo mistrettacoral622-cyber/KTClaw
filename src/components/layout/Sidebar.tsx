@@ -12,7 +12,6 @@ import {
   Search,
   Settings,
   Trash2,
-  Upload,
   Users,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -132,6 +131,9 @@ export function Sidebar() {
   const [sessionsOpen, setSessionsOpen] = useState(true);
   const [sessionSearch, setSessionSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
+  const [nickname, setNickname] = useState(() => localStorage.getItem('clawx-user-nickname') || 'Administrator');
+  const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('clawx-user-avatar') || '👤');
 
   const tSidebar = (key: string, defaultValue?: string) =>
     t(`common:sidebar.${key}`, { defaultValue });
@@ -397,10 +399,15 @@ export function Sidebar() {
         <div className="flex h-[52px] shrink-0 items-center gap-[10px] px-4 transition-colors hover:bg-[#e5e5ea] dark:hover:bg-white/[0.04]">
           {!sidebarCollapsed && (
             <>
-              <div className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] flex items-center justify-center text-[18px]">
-                👤
-              </div>
-              <span className="flex-1 truncate text-[13px] font-medium">Administrator</span>
+              <button
+                type="button"
+                aria-label={tSidebar('selectAvatar', 'Select avatar')}
+                onClick={() => setAvatarPopupOpen(true)}
+                className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] flex items-center justify-center text-[18px] transition-colors hover:ring-2 hover:ring-clawx-ac/40"
+              >
+                {selectedAvatar}
+              </button>
+              <span className="flex-1 truncate text-[13px] font-medium">{nickname}</span>
               <button
                 type="button"
                 aria-label={tSidebar('settingsAria', 'Settings')}
@@ -413,25 +420,17 @@ export function Sidebar() {
             </>
           )}
         </div>
-
-        {/* Upload File Button */}
-        <div className="border-t border-[#c6c6c8] pt-2 dark:border-white/10">
-          <button
-            type="button"
-            aria-label={tSidebar('uploadFile', 'Upload file')}
-            onClick={handleUploadClick}
-            className={cn(
-              'flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-[#000000] transition-colors hover:bg-[#e5e5ea]',
-              sidebarCollapsed && 'justify-center px-2',
-            )}
-          >
-            <Upload className="h-4 w-4 shrink-0" />
-            {!sidebarCollapsed ? (
-              <span className="ml-2 truncate">{tSidebar('uploadFile', 'Upload file')}</span>
-            ) : null}
-          </button>
-        </div>
       </div>
+
+      {avatarPopupOpen && (
+        <AvatarPopup
+          nickname={nickname}
+          avatar={selectedAvatar}
+          onNicknameChange={(v) => { setNickname(v); localStorage.setItem('clawx-user-nickname', v); }}
+          onAvatarChange={(v) => { setSelectedAvatar(v); localStorage.setItem('clawx-user-avatar', v); }}
+          onClose={() => setAvatarPopupOpen(false)}
+        />
+      )}
 
       {searchOpen ? (
         <GlobalSearchModal
@@ -443,5 +442,113 @@ export function Sidebar() {
         />
       ) : null}
     </aside>
+  );
+}
+
+const AVATAR_OPTIONS = [
+  { emoji: '🐱', label: 'avatarCat' },
+  { emoji: '🐶', label: 'avatarDog' },
+  { emoji: '🦊', label: 'avatarFox' },
+  { emoji: '🐻', label: 'avatarBear' },
+  { emoji: '🐼', label: 'avatarPanda' },
+  { emoji: '🐰', label: 'avatarRabbit' },
+  { emoji: '🦁', label: 'avatarLion' },
+  { emoji: '🐯', label: 'avatarTiger' },
+  { emoji: '🐸', label: 'avatarFrog' },
+];
+
+function AvatarPopup({
+  nickname,
+  avatar,
+  onNicknameChange,
+  onAvatarChange,
+  onClose,
+}: {
+  nickname: string;
+  avatar: string;
+  onNicknameChange: (v: string) => void;
+  onAvatarChange: (v: string) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation('common');
+  const tSidebar = (key: string, options?: Record<string, unknown>) => t(`sidebar.${key}`, options);
+  const [selectedAvatar, setSelectedAvatar] = useState(avatar);
+  const [draft, setDraft] = useState(nickname);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-start" onClick={onClose}>
+      <div
+        className="absolute bottom-[60px] left-2 w-[260px] overflow-hidden rounded-[18px] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.18)] ring-1 ring-black/[0.06]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3">
+          <span className="text-[14px] font-semibold text-[#000000]">{tSidebar('profile')}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f2f2f7] text-[12px] text-[#3c3c43] hover:bg-[#e5e5ea]"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Current avatar preview */}
+        <div className="flex flex-col items-center py-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f7] text-[32px]">
+            {selectedAvatar}
+          </div>
+          <span className="mt-2 text-[13px] font-medium text-[#000000]">{draft || nickname}</span>
+        </div>
+
+        {/* Avatar grid */}
+        <div className="grid grid-cols-3 gap-2 px-4 pb-3">
+          {AVATAR_OPTIONS.map((opt) => (
+            <button
+              key={opt.emoji}
+              type="button"
+              onClick={() => setSelectedAvatar(opt.emoji)}
+              className={cn(
+                'flex flex-col items-center gap-1 rounded-xl py-2 text-[22px] transition-colors',
+                selectedAvatar === opt.emoji
+                  ? 'bg-clawx-ac/10 ring-1 ring-clawx-ac/40'
+                  : 'hover:bg-[#f2f2f7]',
+              )}
+            >
+              {opt.emoji}
+              <span className="text-[10px] text-[#8e8e93]">{tSidebar(opt.label)}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Nickname input */}
+        <div className="border-t border-black/[0.06] px-4 py-3">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.5px] text-[#8e8e93]">
+            {tSidebar('nickname')}
+          </label>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={tSidebar('nicknamePlaceholder')}
+            className="w-full rounded-lg border border-black/10 bg-[#f2f2f7] px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac focus:bg-white"
+          />
+        </div>
+
+        {/* Save button */}
+        <div className="px-4 pb-4">
+          <button
+            type="button"
+            onClick={() => {
+              if (draft.trim()) onNicknameChange(draft.trim());
+              onAvatarChange(selectedAvatar);
+              onClose();
+            }}
+            className="w-full rounded-full bg-clawx-ac py-2 text-[13px] font-semibold text-white hover:bg-[#0062cc]"
+          >
+            {t('common:actions.save')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
