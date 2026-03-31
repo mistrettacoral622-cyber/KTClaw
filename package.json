@@ -86,6 +86,11 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@fullcalendar/core": "^6.1.15",
+        "@fullcalendar/daygrid": "^6.1.15",
+        "@fullcalendar/interaction": "^6.1.15",
+        "@fullcalendar/react": "^6.1.15",
+        "@fullcalendar/timegrid": "^6.1.15",
         "@larksuite/openclaw-lark": "2026.3.12",
         "@playwright/test": "^1.58.2",
         "@radix-ui/react-dialog": "^1.1.15",
