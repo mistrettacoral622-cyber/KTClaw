@@ -1,6 +1,6 @@
 /**
  * Task Kanban Page - Phase 02 Redesign
- * 4-column Agent swimlane layout with team task support
+ * Modern card-based Kanban layout with Agent swimlanes
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -28,18 +28,16 @@ const COLUMNS: { key: TaskStatus; label: string }[] = [
 ];
 
 function getTaskBorderColor(task: KanbanTask): string {
-  // Priority: team/employee > priority > status
-  if (task.isTeamTask) return 'border-l-purple-500';
-
-  // Priority-based colors
-  if (task.priority === 'high') return 'border-l-blue-600';
-
-  // Status-based colors
-  if (task.status === 'in-progress') return 'border-l-green-500';
+  // Status-based colors for left border
+  if (task.status === 'todo') return 'border-l-purple-500';
+  if (task.status === 'in-progress') return 'border-l-cyan-500';
   if (task.status === 'review') return 'border-l-orange-500';
+  if (task.status === 'done') return 'border-l-gray-400';
+  return 'border-l-gray-300';
+}
 
-  // Default: employee task color
-  return 'border-l-cyan-500';
+function getAgentBorderColor(isTeam: boolean): string {
+  return isTeam ? 'border-l-purple-500' : 'border-l-cyan-500';
 }
 
 function getPriorityLabel(priority: TaskPriority): string {
@@ -62,28 +60,65 @@ function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <Card
       className={cn(
-        'bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 border-l-[6px]',
+        'bg-white rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer p-4 border-l-4',
         getTaskBorderColor(task),
-        isDone && 'opacity-60'
+        isDone && 'opacity-70'
       )}
       onClick={() => onClick(task)}
     >
       <h3 className={cn(
-        "text-base font-semibold mb-2 line-clamp-2",
-        isDone && "line-through text-gray-400"
+        "text-gray-800 font-medium mb-2 line-clamp-2",
+        isDone && "line-through text-gray-500"
       )}>
         {task.isTeamTask && task.teamName && `团队${task.teamName}：`}
         {task.title}
       </h3>
       <div className="space-y-1">
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-400">
           优先级: {getPriorityLabel(task.priority)}
         </div>
         {task.deadline && (
-          <div className="text-sm text-gray-500">
-            {isDone ? '完成时间' : '截止时间'}: {new Date(task.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
+          <div className="text-sm text-gray-400">
+            {new Date(task.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
           </div>
         )}
+      </div>
+    </Card>
+  );
+}
+
+interface AgentCardProps {
+  agent: AgentSummary;
+  isTeam: boolean;
+}
+
+function AgentCard({ agent, isTeam }: AgentCardProps) {
+  return (
+    <Card
+      className={cn(
+        'bg-gray-50 rounded-lg p-4 border-l-4 flex flex-col items-center gap-3',
+        getAgentBorderColor(isTeam)
+      )}
+    >
+      <Avatar className="h-12 w-12">
+        <AvatarFallback className={cn(
+          'text-base font-semibold',
+          isTeam ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
+        )}>
+          {agent.name.slice(0, 2)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="text-center">
+        <p className="text-gray-800 font-semibold mb-1">{agent.name}</p>
+        <Badge
+          variant="outline"
+          className={cn(
+            'text-xs px-2 py-0.5',
+            isTeam ? 'border-purple-400 text-purple-700 bg-purple-50' : 'border-cyan-400 text-cyan-700 bg-cyan-50'
+          )}
+        >
+          {isTeam ? 'Team' : '员工'}
+        </Badge>
       </div>
     </Card>
   );
@@ -110,52 +145,35 @@ function AgentRow({ agent, tasks, onTaskClick }: AgentRowProps) {
   const isTeam = agent.teamRole === 'leader';
 
   return (
-    <div className="flex gap-6 border-b border-gray-100 py-6 min-h-[140px]">
-      {/* Agent Info Column */}
-      <div className="w-[140px] shrink-0 flex flex-col items-center gap-3">
-        <Avatar className="h-12 w-12">
-          <AvatarFallback className={cn(
-            'text-base font-semibold',
-            isTeam ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
-          )}>
-            {agent.name.slice(0, 2)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="text-center">
-          <p className="text-sm font-semibold mb-1">{agent.name}</p>
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-xs px-2 py-0.5',
-              isTeam ? 'border-purple-400 text-purple-700 bg-purple-50' : 'border-cyan-400 text-cyan-700 bg-cyan-50'
-            )}
-          >
-            {isTeam ? 'Team' : '员工'}
-          </Badge>
-        </div>
+    <div className="flex gap-4 py-4">
+      {/* Agent Info Card */}
+      <div className="w-[160px] shrink-0">
+        <AgentCard agent={agent} isTeam={isTeam} />
       </div>
 
-      {/* Task Columns */}
-      {COLUMNS.map((col) => {
-        const columnTasks = tasksByStatus.get(col.key) || [];
-        return (
-          <div key={col.key} className="flex-1 min-w-[260px] max-w-[320px]">
-            {columnTasks.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {columnTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} onClick={onTaskClick} />
-                ))}
-              </div>
-            ) : (
-              !hasAnyTasks && col.key === 'todo' && (
-                <div className="text-center py-6">
-                  <p className="text-sm text-gray-400">空闲中</p>
+      {/* Task Columns with light background */}
+      <div className="flex-1 flex gap-4 bg-gray-50 rounded-lg p-4">
+        {COLUMNS.map((col) => {
+          const columnTasks = tasksByStatus.get(col.key) || [];
+          return (
+            <div key={col.key} className="flex-1 min-w-[240px]">
+              {columnTasks.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {columnTasks.map((task) => (
+                    <TaskCard key={task.id} task={task} onClick={onTaskClick} />
+                  ))}
                 </div>
-              )
-            )}
-          </div>
-        );
-      })}
+              ) : (
+                !hasAnyTasks && col.key === 'todo' && (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-gray-400">空闲中</p>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -203,9 +221,9 @@ export function TaskKanban() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-full overflow-hidden bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div>
           <h1 className="text-2xl font-semibold">任务看板</h1>
           <p className="text-sm text-gray-500">{inProgressCount} 个进行中的任务</p>
@@ -231,19 +249,21 @@ export function TaskKanban() {
         </div>
 
         {/* Board View */}
-        <TabsContent value="board" className="flex-1 overflow-auto m-0 p-6">
+        <TabsContent value="board" className="flex-1 overflow-auto m-0 p-4">
           {/* Column Headers */}
-          <div className="flex gap-6 mb-4 sticky top-0 bg-gray-50 pb-3 z-10">
-            <div className="w-[140px] shrink-0" />
-            {COLUMNS.map((col) => (
-              <div key={col.key} className="flex-1 min-w-[260px] max-w-[320px]">
-                <h2 className="text-base font-bold text-gray-800">{col.label}</h2>
-              </div>
-            ))}
+          <div className="flex gap-4 mb-4">
+            <div className="w-[160px] shrink-0" />
+            <div className="flex-1 flex gap-4 bg-gray-50 rounded-lg p-4">
+              {COLUMNS.map((col) => (
+                <div key={col.key} className="flex-1 min-w-[240px]">
+                  <h2 className="text-base font-bold text-gray-800">{col.label}</h2>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Agent Rows */}
-          <div className="space-y-0">
+          <div className="space-y-3">
             {Array.isArray(agents) && agents.length > 0 ? (
               agents.map((agent) => (
                 <AgentRow
