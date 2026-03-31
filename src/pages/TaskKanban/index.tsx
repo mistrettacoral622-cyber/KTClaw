@@ -57,22 +57,32 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, onClick }: TaskCardProps) {
+  const isDone = task.status === 'done';
+
   return (
     <Card
       className={cn(
-        'bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer p-3 border-l-4',
-        getTaskBorderColor(task)
+        'bg-white rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-4 border-l-[6px]',
+        getTaskBorderColor(task),
+        isDone && 'opacity-60'
       )}
       onClick={() => onClick(task)}
     >
-      <h3 className="text-sm font-medium mb-1 line-clamp-2">
+      <h3 className={cn(
+        "text-base font-semibold mb-2 line-clamp-2",
+        isDone && "line-through text-gray-400"
+      )}>
         {task.isTeamTask && task.teamName && `团队${task.teamName}：`}
         {task.title}
       </h3>
-      <div className="flex items-center gap-2 text-xs text-gray-500">
-        <span>优先级: {getPriorityLabel(task.priority)}</span>
+      <div className="space-y-1">
+        <div className="text-sm text-gray-600">
+          优先级: {getPriorityLabel(task.priority)}
+        </div>
         {task.deadline && (
-          <span>• {new Date(task.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}</span>
+          <div className="text-sm text-gray-500">
+            {isDone ? '完成时间' : '截止时间'}: {new Date(task.deadline).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })}
+          </div>
         )}
       </div>
     </Card>
@@ -100,17 +110,26 @@ function AgentRow({ agent, tasks, onTaskClick }: AgentRowProps) {
   const isTeam = agent.teamRole === 'leader';
 
   return (
-    <div className="flex gap-3 border-b border-gray-100 py-4 min-h-[120px]">
+    <div className="flex gap-6 border-b border-gray-100 py-6 min-h-[140px]">
       {/* Agent Info Column */}
-      <div className="w-[150px] shrink-0 flex flex-col items-center gap-2">
-        <Avatar className="h-10 w-10">
-          <AvatarFallback className={cn(isTeam ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700')}>
+      <div className="w-[140px] shrink-0 flex flex-col items-center gap-3">
+        <Avatar className="h-12 w-12">
+          <AvatarFallback className={cn(
+            'text-base font-semibold',
+            isTeam ? 'bg-purple-100 text-purple-700' : 'bg-cyan-100 text-cyan-700'
+          )}>
             {agent.name.slice(0, 2)}
           </AvatarFallback>
         </Avatar>
         <div className="text-center">
-          <p className="text-sm font-medium">{agent.name}</p>
-          <Badge variant="outline" className={cn('text-xs mt-1', isTeam ? 'border-purple-500 text-purple-700' : 'border-cyan-500 text-cyan-700')}>
+          <p className="text-sm font-semibold mb-1">{agent.name}</p>
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-xs px-2 py-0.5',
+              isTeam ? 'border-purple-400 text-purple-700 bg-purple-50' : 'border-cyan-400 text-cyan-700 bg-cyan-50'
+            )}
+          >
             {isTeam ? 'Team' : '员工'}
           </Badge>
         </div>
@@ -120,16 +139,16 @@ function AgentRow({ agent, tasks, onTaskClick }: AgentRowProps) {
       {COLUMNS.map((col) => {
         const columnTasks = tasksByStatus.get(col.key) || [];
         return (
-          <div key={col.key} className="flex-1 min-w-[240px] max-w-[300px]">
+          <div key={col.key} className="flex-1 min-w-[260px] max-w-[320px]">
             {columnTasks.length > 0 ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {columnTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onClick={onTaskClick} />
                 ))}
               </div>
             ) : (
               !hasAnyTasks && col.key === 'todo' && (
-                <div className="text-center py-4">
+                <div className="text-center py-6">
                   <p className="text-sm text-gray-400">空闲中</p>
                 </div>
               )
@@ -212,13 +231,13 @@ export function TaskKanban() {
         </div>
 
         {/* Board View */}
-        <TabsContent value="board" className="flex-1 overflow-auto m-0 p-4">
+        <TabsContent value="board" className="flex-1 overflow-auto m-0 p-6">
           {/* Column Headers */}
-          <div className="flex gap-3 mb-2 sticky top-0 bg-gray-50 pb-2 z-10">
-            <div className="w-[150px] shrink-0" />
+          <div className="flex gap-6 mb-4 sticky top-0 bg-gray-50 pb-3 z-10">
+            <div className="w-[140px] shrink-0" />
             {COLUMNS.map((col) => (
-              <div key={col.key} className="flex-1 min-w-[240px] max-w-[300px]">
-                <h2 className="text-sm font-semibold text-gray-700">{col.label}</h2>
+              <div key={col.key} className="flex-1 min-w-[260px] max-w-[320px]">
+                <h2 className="text-base font-bold text-gray-800">{col.label}</h2>
               </div>
             ))}
           </div>
@@ -235,36 +254,11 @@ export function TaskKanban() {
                 />
               ))
             ) : (
-              <div className="text-center py-12 text-gray-400">
-                <p>暂无 Agent</p>
-                <p className="text-sm mt-1">在员工广场创建 Agent 后显示</p>
+              <div className="text-center py-16 text-gray-400">
+                <p className="text-base">暂无 Agent</p>
+                <p className="text-sm mt-2">在员工广场创建 Agent 后显示</p>
               </div>
             )}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-6 pt-4 border-t border-gray-200 flex items-center gap-6 text-xs text-gray-600">
-            <span className="font-medium">图例：</span>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded border-2 border-purple-500" />
-              <span>团队</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded border-2 border-cyan-500" />
-              <span>员工</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 bg-blue-600" />
-              <span>高优</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 bg-green-500" />
-              <span>进行</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5 bg-orange-500" />
-              <span>审查</span>
-            </div>
           </div>
         </TabsContent>
 
