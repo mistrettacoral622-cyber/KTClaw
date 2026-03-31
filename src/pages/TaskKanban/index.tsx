@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ManualTaskForm } from './ManualTaskForm';
+import { CalendarView } from './CalendarView';
 
 const COLUMNS: { key: TaskStatus; label: string }[] = [
   { key: 'todo', label: '待办' },
@@ -251,10 +252,7 @@ export default function TaskKanban() {
           </div>
         </TabsContent>
         <TabsContent value="calendar" className="flex-1 overflow-auto m-0">
-          <div className="p-4 text-center text-muted-foreground">
-            <p>日程视图</p>
-            <p className="text-sm">将在后续计划中实现</p>
-          </div>
+          <CalendarView />
         </TabsContent>
       </Tabs>
       <ManualTaskForm open={manualFormOpen} onOpenChange={setManualFormOpen} />

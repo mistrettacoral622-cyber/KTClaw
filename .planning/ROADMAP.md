@@ -62,8 +62,8 @@
 Plans:
 - [x] 02-01-PLAN.md — Board structure: 4 columns, Agent swimlanes, team task styling
 - [x] 02-02-PLAN.md — Calendar view: FullCalendar integration, week/month/year views
-- [ ] 02-03-PLAN.md — Task interactions: detail panel, click/hover, drag-and-drop
-- [ ] 02-04-PLAN.md — Chat integration: task creation bubbles, anchor cards, manual entry
+- [x] 02-03-PLAN.md — Task interactions: detail panel, click/hover, drag-and-drop
+- [x] 02-04-PLAN.md — Chat integration: task creation bubbles, anchor cards, manual entry
 **Depends on:** Phase 1
 **Canonical refs:**
 - `.planning/PRODUCT-RESTRUCTURE.md` §四（任务看板）
