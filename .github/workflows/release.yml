@@ -124,8 +124,11 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=6144
         run: |
           pnpm run package:prepare
-          npx electron-builder --win --x64 --publish never
-          npx electron-builder --win --arm64 --publish never
+          # Use pnpm's binary resolution instead of npx/npm on Windows.
+          # This keeps electron-builder running under the pnpm-managed install
+          # and avoids npm-based dependency tree collection fallbacks.
+          pnpm exec electron-builder --win --x64 --publish never
+          pnpm exec electron-builder --win --arm64 --publish never
 
       # Linux specific steps
       - name: Build Linux
