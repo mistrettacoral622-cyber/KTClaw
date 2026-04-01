@@ -74,39 +74,41 @@ export function SessionItem({
 
         {/* Content */}
         <div className="min-w-0 flex-1">
-          {/* Name and time row */}
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span className="truncate font-medium">{displayName}</span>
-              {isPinned && (
-                <Pin
-                  className="h-3.5 w-3.5 shrink-0 text-primary"
-                  aria-label="Pinned session"
-                />
-              )}
-            </div>
-            {relativeTime && (
-              <span className="text-xs text-muted-foreground shrink-0">
-                {relativeTime}
-              </span>
+          {/* Name row */}
+          <div className="flex items-center gap-2 mb-1">
+            <span className="truncate font-medium">{displayName}</span>
+            {isPinned && (
+              <Pin
+                className="h-3.5 w-3.5 shrink-0 text-primary"
+                aria-label="Pinned session"
+              />
             )}
           </div>
 
-          {/* Message preview and badges row */}
+          {/* Message preview and time row */}
           <div className="flex items-center justify-between gap-2">
-            {messagePreview && (
-              <p className="truncate text-xs text-muted-foreground flex-1">
-                {messagePreview}
-              </p>
-            )}
-            {session.unreadCount && session.unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="h-5 min-w-[20px] px-1.5 text-xs shrink-0"
-              >
-                {session.unreadCount > 99 ? '99+' : session.unreadCount}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {messagePreview && (
+                <p className="truncate text-xs text-muted-foreground">
+                  {messagePreview}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {session.unreadCount && session.unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="h-5 min-w-[20px] px-1.5 text-xs"
+                >
+                  {session.unreadCount > 99 ? '99+' : session.unreadCount}
+                </Badge>
+              )}
+              {relativeTime && (
+                <span className="text-xs text-muted-foreground">
+                  {relativeTime}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </button>
