@@ -1229,11 +1229,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
               .map((session) => [session.key, session.updatedAt!]),
           );
 
-          // Merge unread counts into sessions
+          // Merge unread counts and agent statuses into sessions
           const unreadCounts = get().sessionUnreadCounts;
+          const agentStatuses = useAgentsStore.getState().agentStatuses;
           const sessionsWithUnread = sessionsWithCurrent.map((session) => ({
             ...session,
             unreadCount: unreadCounts[session.key] || 0,
+            agentStatus: session.agentId ? agentStatuses[session.agentId] || 'online' : 'online',
           }));
 
           set((state) => ({
@@ -2141,10 +2143,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => {
       const newCounts = { ...state.sessionUnreadCounts };
       delete newCounts[key];
+      const agentStatuses = useAgentsStore.getState().agentStatuses;
       return {
         sessionUnreadCounts: newCounts,
         sessions: state.sessions.map((session) =>
-          session.key === key ? { ...session, unreadCount: 0 } : session
+          session.key === key
+            ? {
+                ...session,
+                unreadCount: 0,
+                agentStatus: session.agentId ? agentStatuses[session.agentId] || 'online' : 'online',
+              }
+            : session
         ),
       };
     });
@@ -2165,10 +2174,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Save to localStorage
       saveUnreadCounts(newCounts);
 
+      const agentStatuses = useAgentsStore.getState().agentStatuses;
+
       return {
         sessionUnreadCounts: newCounts,
         sessions: state.sessions.map((session) =>
-          session.key === key ? { ...session, unreadCount: newCount } : session
+          session.key === key
+            ? {
+                ...session,
+                unreadCount: newCount,
+                agentStatus: session.agentId ? agentStatuses[session.agentId] || 'online' : 'online',
+              }
+            : session
         ),
       };
     });
@@ -2181,11 +2198,13 @@ if (typeof window !== 'undefined') {
     if (event.key === 'ktclaw-session-unread-counts' && event.newValue) {
       try {
         const newCounts = JSON.parse(event.newValue);
+        const agentStatuses = useAgentsStore.getState().agentStatuses;
         useChatStore.setState((state) => ({
           sessionUnreadCounts: newCounts,
           sessions: state.sessions.map((session) => ({
             ...session,
             unreadCount: newCounts[session.key] || 0,
+            agentStatus: session.agentId ? agentStatuses[session.agentId] || 'online' : 'online',
           })),
         }));
       } catch {
