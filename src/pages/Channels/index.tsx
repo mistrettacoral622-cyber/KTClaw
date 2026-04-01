@@ -557,8 +557,15 @@ export function Channels() {
         method: 'POST',
         body: JSON.stringify({ text, conversationId: convId, identity: sendIdentity }),
       });
-      // Replace optimistic with polled messages
-      await loadConversation(convId);
+      // Mark optimistic message as sent (remove optimistic flag)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === optimisticId
+            ? { ...m, optimistic: false }
+            : m,
+        ),
+      );
+      // Poll for new messages in background to get server-side message
       window.setTimeout(() => { void loadConversation(convId); }, 1000);
       window.setTimeout(() => { void loadConversation(convId); }, 2500);
       window.setTimeout(() => { void loadConversation(convId); }, 5000);
