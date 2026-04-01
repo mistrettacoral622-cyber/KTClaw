@@ -18,9 +18,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
 import { SessionItem } from '@/components/sessions/SessionItem';
+import { SessionSearchModal } from '@/components/sessions/SessionSearchModal';
 import { cn } from '@/lib/utils';
 import { usePinnedSessions } from '@/lib/pinned-sessions';
-import { searchSessions } from '@/lib/session-search';
 import { useAgentsStore } from '@/stores/agents';
 import { useChannelsStore } from '@/stores/channels';
 import { useChatStore } from '@/stores/chat';
@@ -132,8 +132,7 @@ export function Sidebar() {
 
   const [channelsOpen, setChannelsOpen] = useState(false);
   const [sessionsOpen, setSessionsOpen] = useState(true);
-  const [sessionSearch, setSessionSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
   const [nickname, setNickname] = useState(() => localStorage.getItem('clawx-user-nickname') || 'Administrator');
@@ -141,14 +140,6 @@ export function Sidebar() {
 
   const tSidebar = (key: string, defaultValue?: string) =>
     t(`common:sidebar.${key}`, { defaultValue });
-
-  // Debounce search input (300ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(sessionSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [sessionSearch]);
 
   useEffect(() => {
     void fetchAgents();
@@ -203,17 +194,9 @@ export function Sidebar() {
     return map;
   }, [currentSessionKey, messages]);
 
-  // Filter sessions using search function
-  const filteredSessions = useMemo(() => {
-    if (!debouncedSearch.trim()) {
-      return sessions;
-    }
-    return searchSessions(sessions, debouncedSearch, agents, sessionMessagesMap);
-  }, [sessions, debouncedSearch, agents, sessionMessagesMap]);
-
   // Sort sessions (pinned first, then by activity)
   const sortedSessions = useMemo(() => {
-    return [...filteredSessions].sort((left, right) => {
+    return [...sessions].sort((left, right) => {
       const leftPinned = pinnedSessionKeySet.has(left.key);
       const rightPinned = pinnedSessionKeySet.has(right.key);
       if (leftPinned !== rightPinned) {
@@ -225,7 +208,7 @@ export function Sidebar() {
         (sessionLastActivity[left.key] ?? left.updatedAt ?? 0)
       );
     });
-  }, [filteredSessions, pinnedSessionKeySet, sessionLastActivity]);
+  }, [sessions, pinnedSessionKeySet, sessionLastActivity]);
 
   // Get message preview for each session
   const getMessagePreview = (sessionKey: string): string => {
@@ -337,25 +320,40 @@ export function Sidebar() {
         </div>
 
         <div className="mt-4 space-y-2">
-          <SectionHeader
-            icon={MessageSquare}
-            label={tSidebar('sessions', 'Sessions')}
-            open={sessionsOpen}
-            onToggle={() => setSessionsOpen((current) => !current)}
-            collapsed={sidebarCollapsed}
-          />
+          {/* Sessions Header with Search Icon */}
+          <div className="flex h-11 w-full items-center gap-3 rounded-xl px-3">
+            <button
+              type="button"
+              aria-label={tSidebar('sessions', 'Sessions')}
+              onClick={() => setSessionsOpen((current) => !current)}
+              className="flex flex-1 items-center gap-3 text-sm font-medium transition-colors hover:bg-[#e5e5ea] rounded-xl px-0"
+            >
+              <MessageSquare className="h-4 w-4 shrink-0" />
+              {!sidebarCollapsed ? (
+                <>
+                  <span className="flex-1 truncate text-left">{tSidebar('sessions', 'Sessions')}</span>
+                  <ChevronRight
+                    className={cn(
+                      'h-4 w-4 shrink-0 text-[#8e8e93] transition-transform',
+                      sessionsOpen && 'rotate-90',
+                    )}
+                  />
+                </>
+              ) : null}
+            </button>
+            {!sidebarCollapsed && (
+              <button
+                type="button"
+                aria-label="Search sessions"
+                onClick={() => setSessionSearchOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8e8e93] transition-colors hover:bg-[#e5e5ea]"
+              >
+                <Search className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           {!sidebarCollapsed && sessionsOpen ? (
             <div className="space-y-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8e8e93]" />
-                <input
-                  value={sessionSearch}
-                  onChange={(event) => setSessionSearch(event.target.value)}
-                  placeholder={tSidebar('searchSessions', 'Search sessions...')}
-                  className="h-10 w-full rounded-xl border border-black/10 bg-white pl-9 pr-3 text-sm text-[#000000] outline-none transition-colors focus:border-ring placeholder:text-[#8e8e93]"
-                />
-              </div>
-
               {sortedSessions.length > 0 ? (
                 <div className="space-y-2">
                   {sortedSessions.map((session) => {
@@ -388,9 +386,7 @@ export function Sidebar() {
                 </div>
               ) : (
                 <p className="px-3 py-2 text-sm text-muted-foreground">
-                  {debouncedSearch.trim()
-                    ? tSidebar('noMatchingSessions', '未找到匹配的会话')
-                    : tSidebar('noSessions', 'No sessions')}
+                  {tSidebar('noSessions', 'No sessions')}
                 </p>
               )}
             </div>
@@ -445,6 +441,11 @@ export function Sidebar() {
           onNavigate={(path) => navigate(path)}
         />
       ) : null}
+
+      <SessionSearchModal
+        isOpen={sessionSearchOpen}
+        onClose={() => setSessionSearchOpen(false)}
+      />
     </aside>
   );
 }
