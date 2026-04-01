@@ -50,23 +50,33 @@ export function AgentPanel() {
   return (
     <motion.div
       initial={false}
-      animate={{ width: collapsed ? 60 : 320 }}
-      className="fixed right-0 top-0 h-full bg-white border-l border-slate-200 shadow-lg z-10"
+      animate={{ width: collapsed ? 72 : 360 }}
+      className="shrink-0 bg-white border-l border-slate-200/80 shadow-xl flex flex-col"
     >
-      {/* 折叠/展开按钮 */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        aria-label={collapsed ? 'expand' : 'collapse'}
-        className="absolute top-4 left-4 p-2 rounded-lg hover:bg-slate-100 transition-colors"
-      >
-        {collapsed ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-      </button>
+      {/* 头部 */}
+      <div className="h-16 border-b border-slate-200/60 flex items-center justify-between px-5">
+        {!collapsed && (
+          <h3 className="text-base font-semibold text-slate-900">
+            可用 Agent
+          </h3>
+        )}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? 'expand' : 'collapse'}
+          className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-600"
+        >
+          {collapsed ? (
+            <ChevronLeft className="w-5 h-5" />
+          ) : (
+            <ChevronRight className="w-5 h-5" />
+          )}
+        </button>
+      </div>
 
-      {!collapsed && (
-        <div className="flex flex-col h-full pt-16 px-4 pb-4">
-          <h3 className="text-lg font-semibold mb-4">可用 Agent</h3>
-
-          <div className="flex-1 overflow-y-auto space-y-3">
+      {/* 内容区 */}
+      {!collapsed ? (
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="space-y-2.5">
             {agents.map(agent => (
               <DraggableAgentCard
                 key={agent.id}
@@ -76,11 +86,27 @@ export function AgentPanel() {
             ))}
           </div>
         </div>
-      )}
-
-      {collapsed && (
-        <div className="flex items-center justify-center h-full">
-          <Bot className="w-6 h-6 text-slate-400" />
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-8">
+          <Bot className="w-7 h-7 text-slate-400" />
+          <div className="flex flex-col gap-2">
+            {agents.slice(0, 3).map(agent => {
+              const initials = agent.name
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+              return (
+                <div
+                  key={agent.id}
+                  className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium"
+                >
+                  {initials}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </motion.div>
@@ -111,32 +137,38 @@ function DraggableAgentCard({ agent, teamCount }: { agent: AgentSummary; teamCou
       style={style}
       {...listeners}
       {...attributes}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
       className={cn(
-        "p-4 rounded-xl border border-slate-200 bg-white cursor-grab active:cursor-grabbing transition-opacity",
-        isDragging && "opacity-50"
+        "p-4 rounded-xl border-2 bg-white cursor-grab active:cursor-grabbing transition-all",
+        isDragging
+          ? "opacity-50 border-blue-300"
+          : "border-slate-200 hover:border-blue-300 hover:shadow-md"
       )}
     >
       <div className="flex items-center gap-3">
-        <Avatar className="h-10 w-10">
+        <Avatar className="h-11 w-11 ring-2 ring-slate-100">
           {agent.avatar ? (
             <img src={agent.avatar} alt={agent.name} className="object-cover" />
           ) : (
-            <AvatarFallback className="bg-blue-100 text-blue-600 text-sm font-medium">
+            <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 text-sm font-semibold">
               {initials}
             </AvatarFallback>
           )}
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{agent.name}</p>
-          <p className="text-xs text-slate-500 truncate">{agent.persona}</p>
+          <p className="font-semibold text-sm text-slate-900 truncate">{agent.name}</p>
+          <p className="text-xs text-slate-500 truncate">{agent.persona || '暂无描述'}</p>
         </div>
       </div>
 
       {/* 团队徽章 (per D-17) */}
       {teamCount > 0 && (
-        <Badge variant="secondary" className="mt-2">
-          {teamCount} 个团队
-        </Badge>
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <Badge variant="secondary" className="text-xs font-medium">
+            已加入 {teamCount} 个团队
+          </Badge>
+        </div>
       )}
     </motion.div>
   );

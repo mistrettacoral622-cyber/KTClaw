@@ -98,38 +98,36 @@ export function CreateTeamZone() {
     setDescription('');
   };
 
-  // 空状态：虚线框 + 提示文字 (per D-11)
-  if (!leader && members.length === 0) {
-    return (
-      <div className="absolute left-8 top-1/2 -translate-y-1/2 w-80 z-10">
-        <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center bg-white/80 backdrop-blur-sm">
-          <Network className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-700 mb-2">
+  // 创建区域 - 固定在左侧的专属 Dropzone (per D-11, D-12)
+  return (
+    <div className="sticky top-0 h-fit">
+      <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 rounded-2xl border-2 border-dashed border-blue-200/60 p-6 shadow-sm">
+        {/* 标题 */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1">
             创建新团队
           </h3>
           <p className="text-sm text-slate-500">
-            从右侧拖拽 Agent 到这里开始创建团队
+            拖拽 Agent 到下方区域
           </p>
         </div>
-      </div>
-    );
-  }
-
-  // 展开状态：Leader 区 + 成员区 (per D-12)
-  return (
-    <div className="absolute left-8 top-1/2 -translate-y-1/2 w-96 z-10">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-6 space-y-6">
         {/* Leader 区 */}
         <div>
-          <h4 className="text-sm font-semibold text-slate-700 mb-3">
-            Leader（限 1 人）
-          </h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-slate-700">
+              Leader
+            </h4>
+            <span className="text-xs text-slate-400">限 1 人</span>
+          </div>
           <div
             ref={setLeaderRef}
             className={cn(
-              "min-h-[80px] rounded-xl border-2 border-dashed p-4",
-              isOverLeader ? "border-blue-500 bg-blue-50" : "border-slate-300",
-              leader && "border-solid border-blue-200 bg-blue-50"
+              "min-h-[100px] rounded-xl border-2 p-4 transition-all",
+              isOverLeader
+                ? "border-blue-400 bg-blue-50/50 border-solid"
+                : leader
+                  ? "border-blue-200 bg-white border-solid"
+                  : "border-dashed border-slate-300 bg-white/50"
             )}
           >
             {leader ? (
@@ -138,10 +136,27 @@ export function CreateTeamZone() {
                 onRemove={() => setLeader(null)}
               />
             ) : (
-              <p className="text-sm text-slate-400 text-center">
-                拖拽 Agent 到这里设为 Leader
-              </p>
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+                  <span className="text-2xl">👤</span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  拖拽 Agent 到这里
+                </p>
+              </div>
             )}
+          </div>
+        </div>
+
+        {/* 分隔线 */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 px-3 text-xs text-slate-400">
+              然后
+            </span>
           </div>
         </div>
 
@@ -152,7 +167,7 @@ export function CreateTeamZone() {
               成员
             </h4>
             {members.length < 3 && (
-              <span className="text-xs text-amber-600">
+              <span className="text-xs text-amber-600 font-medium">
                 建议至少 2-3 人
               </span>
             )}
@@ -160,9 +175,12 @@ export function CreateTeamZone() {
           <div
             ref={setMemberRef}
             className={cn(
-              "min-h-[120px] rounded-xl border-2 border-dashed p-4",
-              isOverMember ? "border-blue-500 bg-blue-50" : "border-slate-300",
-              members.length > 0 && "border-solid border-slate-200"
+              "min-h-[140px] rounded-xl border-2 p-4 transition-all",
+              isOverMember
+                ? "border-blue-400 bg-blue-50/50 border-solid"
+                : members.length > 0
+                  ? "border-slate-200 bg-white border-solid"
+                  : "border-dashed border-slate-300 bg-white/50"
             )}
           >
             {members.length > 0 ? (
@@ -176,80 +194,97 @@ export function CreateTeamZone() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400 text-center">
-                拖拽 Agent 到这里添加成员
-              </p>
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <p className="text-sm text-slate-400">
+                  拖拽多个 Agent 到这里
+                </p>
+              </div>
             )}
           </div>
         </div>
 
         {/* 确认按钮 */}
-        <button
-          onClick={() => setShowConfirmForm(true)}
-          disabled={!leader || members.length === 0 || showConfirmForm}
-          className="w-full py-3 rounded-xl bg-blue-600 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
-        >
-          {showConfirmForm ? '填写信息...' : '创建团队'}
-        </button>
+        {!showConfirmForm && (
+          <button
+            onClick={() => setShowConfirmForm(true)}
+            disabled={!leader || members.length === 0}
+            className={cn(
+              "w-full py-3.5 rounded-xl font-semibold transition-all",
+              leader && members.length > 0
+                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            )}
+          >
+            创建团队
+          </button>
+        )}
 
         {/* 确认表单 (per D-14) */}
-        {showConfirmForm && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 p-6 rounded-xl bg-slate-50 border border-slate-200"
-          >
-            <h4 className="text-sm font-semibold text-slate-700 mb-4">
-              确认创建团队
-            </h4>
+        <AnimatePresence>
+          {showConfirmForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 p-5 rounded-xl bg-white border border-slate-200 shadow-sm space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900">
+                  确认创建团队
+                </h4>
 
-            {/* 团队名称输入 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                团队名称
-              </label>
-              <input
-                type="text"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="输入团队名称"
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
-              />
-            </div>
+                {/* 团队名称输入 */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-2">
+                    团队名称
+                  </label>
+                  <input
+                    type="text"
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    placeholder="输入团队名称"
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm"
+                  />
+                </div>
 
-            {/* 职责描述（可选） */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                职责描述（可选）
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="描述团队的职责和目标"
-                rows={3}
-                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
-              />
-            </div>
+                {/* 职责描述（可选） */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-2">
+                    职责描述 <span className="text-slate-400">(可选)</span>
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="描述团队的职责和目标"
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none resize-none transition-all text-sm"
+                  />
+                </div>
 
-            {/* 按钮 */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                disabled={creating}
-                className="flex-1 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={creating || !teamName.trim()}
-                className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {creating ? '创建中...' : '确认创建'}
-              </button>
-            </div>
-          </motion.div>
-        )}
+                {/* 按钮 */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleCancel}
+                    disabled={creating}
+                    className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors text-sm"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={creating || !teamName.trim()}
+                    className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm shadow-sm"
+                  >
+                    {creating ? '创建中...' : '确认创建'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

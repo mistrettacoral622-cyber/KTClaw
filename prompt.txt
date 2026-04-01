@@ -1,19 +1,33 @@
-关于主界面（Chat 视图）的 UI 体验，目前的布局结构没问题，但在视觉聚焦和交互细节上不够现代。请帮我按照一流 AI 产品的标准（如 Shadcn UI 规范）对以下几个部分进行优化：
+请根据 03-CONTEXT.md 中的设计决策，重新调整和美化「团队总览」页面的 UI 布局。目前的界面视觉效果较差，且没有严格遵循文档中的布局规范。请重点进行以下重构：
 
-1. 优化对话区 (Chat Messages) 阅读体验
-- 限制对话内容宽度：目前 AI 的气泡在宽屏下横向拉伸过长。请在 `ChatMessage` 及其外层容器中加入最大宽度限制（例如使用 `max-w-3xl` 或 `max-w-4xl`），并使用 `mx-auto` 让对话流在主区域中居中。
-- 修复内联代码/路径的高亮样式：目前 Markdown 渲染出的路径（如 C:\Users\...）是红色字体，容易引起误解（像报错）。请在 Markdown 渲染组件中，将 `code` 标签（非代码块的 inline code）样式统一改为：`bg-muted text-foreground px-1.5 py-0.5 rounded-md text-sm font-mono border border-border/50`。
+1. 页面整体布局结构优化
 
-2. 重构底部输入区 (Input Area)
-- 迁移模型指示器：目前右下角的 `deepseek-chat` 标签嵌在输入框内部，容易遮挡长文本。请将其移出输入框容器，放到输入框的上方左侧，或者放到输入框正下方的免责声明文字旁边。
-- 增强输入框质感：给输入框外层容器加上更明显的阴影和聚焦态交互：`shadow-sm border border-input focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all bg-background`。
+左侧主内容区：背景应保持统一的浅灰色调，确保与卡片形成对比。
 
-3. 整理顶部 Header
-- 右侧的“文件”和“Agent”按钮目前使用了灰底，显得有些厚重。请把它们统一替换为 Shadcn Button 的 `variant="ghost"` 或 `variant="outline"`，让顶部更通透。
-- 建议将其配套的图标换成 `lucide-react` 中类似 `PanelRight` 这种明确表达“打开右侧面板”语义的图标。
+右侧 Agent 面板 (D-08, D-09)：面板需要有清晰的边界或阴影与主内容区分开。确保它具备折叠/展开功能，Agent 卡片样式需要更精致（例如增加 hover 态、边框变色等）。
 
-4. 优化左侧侧边栏 (Sidebar) 细节
-- 强化选中状态：目前左侧选中的会话（如 KTClaw）视觉对比度不够。请修改选中态的样式，例如加深背景色（`bg-accent text-accent-foreground`），或者在左侧加上一条主题色边框（`border-l-4 border-primary`），让当前上下文一目了然。
-- 统一图标：排查侧边栏的图标（任务看板、团队总览等），确保全部使用 `lucide-react`，并且统一 `strokeWidth`（建议设为 1.5 ），保持线条粗细一致。
+2. 彻底重构空状态引导 (D-19)
 
-请按上述要求排查对应的文件（如 Chat/index.tsx, ChatMessage.tsx, 侧边栏和 Header 组件等），并直接修改 Tailwind 类名和组件结构。
+当前「还没有团队」的提示和「创建新团队」的虚线框并排显示，显得十分怪异。
+
+当团队数量为 0 时，页面中心只应该显示一个精美的大型引导卡片。
+
+卡片内容需包含：一个更有设计感的空状态图标、大标题「还没有团队」、描述文字「从右侧拖拽 Agent 到左侧创建区来创建第一个团队」，并预留动画演示的位置。
+
+3. 规范「创建新团队」区域 (D-11, D-12)
+
+这个区域不应该像一个普通的团队卡片一样混排。它应该是一个固定在左侧或顶部的专属拖拽目标区（Dropzone）。
+
+请使用更柔和的虚线边框、浅色背景（如底色带一点点蓝或主色调的极浅色），使其看起来明显是一个「可放入」的区域。
+
+视觉上提前规划好 Leader 区和成员区的分隔线或占位符，即使目前还没有完全实现拖拽逻辑，UI 上也需要体现出「Leader」和「Members」的位置差异。
+
+4. 提升整体 UI 质感与排版
+
+使用 Tailwind CSS 优化间距（padding/margin），增加呼吸感（参考 D-02）。
+
+文字排版需要层级分明，加粗大标题，淡化次要说明文字（使用 text-muted-foreground 等）。
+
+去除所有生硬的线条，多使用柔和的圆角（rounded-xl或rounded-2xl）和轻微的阴影（shadow-sm）。
+
+请优先完成静态 UI 的极致打磨，确保它符合一个现代化、极简风的 SaaS 级产品标准，完成布局后再逐步引入复杂的交互逻辑。
