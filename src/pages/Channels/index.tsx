@@ -9,6 +9,10 @@ import { useSettingsStore } from '@/stores/settings';
 import { FeishuOnboardingWizard } from '@/components/channels/FeishuOnboardingWizard';
 import { WeChatOnboardingWizard } from '@/components/channels/WeChatOnboardingWizard';
 import { BotRail } from '@/components/channels/BotRail';
+import { BotBindingModal } from '@/components/channels/BotBindingModal';
+import { DingTalkConfigPage } from '@/components/channels/DingTalkConfigPage';
+import { WeComConfigPage } from '@/components/channels/WeComConfigPage';
+import { QQConfigPage } from '@/components/channels/QQConfigPage';
 import MarkdownContent from '@/pages/Chat/MarkdownContent';
 import {
   CHANNEL_ICONS,
@@ -181,6 +185,10 @@ export function Channels() {
   const [feishuWizardOpen, setFeishuWizardOpen] = useState(false);
   const [feishuWizardInitialName, setFeishuWizardInitialName] = useState('');
   const [wechatWizardOpen, setWechatWizardOpen] = useState(false);
+  const [bindingModalOpen, setBindingModalOpen] = useState(false);
+  const [bindingBotId, setBindingBotId] = useState<string | null>(null);
+  const [configPageOpen, setConfigPageOpen] = useState(false);
+  const [configPageType, setConfigPageType] = useState<'dingtalk' | 'wecom' | 'qqbot'>('dingtalk');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [runtimeCapabilities, setRuntimeCapabilities] = useState<Record<string, ChannelRuntimeCapability>>({});
@@ -448,6 +456,27 @@ export function Channels() {
       setWechatWizardOpen(true);
       return;
     }
+    if (addType === 'dingtalk') {
+      setAddOpen(false);
+      setAddName('');
+      setConfigPageType('dingtalk');
+      setConfigPageOpen(true);
+      return;
+    }
+    if (addType === 'wecom') {
+      setAddOpen(false);
+      setAddName('');
+      setConfigPageType('wecom');
+      setConfigPageOpen(true);
+      return;
+    }
+    if (addType === 'qqbot') {
+      setAddOpen(false);
+      setAddName('');
+      setConfigPageType('qqbot');
+      setConfigPageOpen(true);
+      return;
+    }
     setAddLoading(true);
     try {
       await addChannel({ type: addType, name: addName.trim() });
@@ -535,7 +564,8 @@ export function Channels() {
         }}
         onBotSettings={(botId) => {
           setActiveChannelId(botId);
-          setSettingsOpen(true);
+          setBindingBotId(botId);
+          setBindingModalOpen(true);
         }}
       />
 
@@ -989,65 +1019,42 @@ export function Channels() {
         </div>
       )}
 
-      {settingsOpen && selectedChannel && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/20" onClick={() => setSettingsOpen(false)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="频道设置"
-            className="flex h-full w-[360px] flex-col bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex h-[56px] items-center justify-between border-b border-black/[0.06] px-5">
-              <div>
-                <h3 className="text-[15px] font-semibold text-[#111827]">频道设置</h3>
-                <p className="text-[12px] text-[#8e8e93]">{selectedChannel.name}</p>
-              </div>
-              <button type="button" className="text-[18px] text-[#8e8e93]" onClick={() => setSettingsOpen(false)}>×</button>
-            </div>
+      {bindingModalOpen && bindingBotId && (
+        <BotBindingModal
+          botId={bindingBotId}
+          onClose={() => {
+            setBindingModalOpen(false);
+            setBindingBotId(null);
+          }}
+          onBound={() => {
+            void fetchChannels();
+          }}
+        />
+      )}
 
-            <div className="flex flex-col gap-5 overflow-y-auto px-5 py-5">
-              <div className="rounded-2xl border border-black/[0.06] p-4">
-                <p className="mb-3 text-[12px] font-medium text-[#8e8e93]">配置控制</p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedChannel.status === 'connected' ? (
-                    <button type="button" onClick={() => void disconnectChannel(selectedChannel.id)} className="rounded-xl border border-black/10 px-3 py-2 text-[13px] text-[#3c3c43]">断开连接</button>
-                  ) : (
-                    <button type="button" onClick={() => void connectChannel(selectedChannel.id)} className="rounded-xl bg-[#0f172a] px-3 py-2 text-[13px] text-white">连接</button>
-                  )}
-                  <button type="button" onClick={() => void handleTest()} className="rounded-xl border border-black/10 px-3 py-2 text-[13px] text-[#3c3c43]">发送测试</button>
-                  <button type="button" onClick={() => void deleteChannel(selectedChannel.id)} className="rounded-xl border border-[#ef4444]/30 px-3 py-2 text-[13px] text-[#ef4444]">删除</button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-black/[0.06] p-4">
-                <p className="mb-3 text-[12px] font-medium text-[#8e8e93]">配置字段</p>
-                <div className="flex flex-col gap-3">
-                  {selectedMeta.configFields.map((field) => (
-                    <div key={field.key} className="flex items-center justify-between gap-4">
-                      <span className="text-[13px] text-[#3c3c43]">{getDrawerFieldLabel(field.key, t(field.label))}</span>
-                      <span className="font-mono text-[12px] text-[#8e8e93]">
-                        {field.type === 'password' ? '••••••••' : field.label.includes('appId') ? 'cli_******' : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {selectedRuntimeCapability && (
-                <div className="rounded-2xl border border-black/[0.06] p-4">
-                  <p className="mb-3 text-[12px] font-medium text-[#8e8e93]">Runtime capabilities</p>
-                  <p className="text-[13px] text-[#3c3c43]">
-                    Actions: {selectedRuntimeCapability.availableActions.join(', ')}
-                  </p>
-                  <p className="mt-1 text-[12px] text-[#8e8e93]">
-                    Schema: {selectedRuntimeCapability.configSchemaSummary.totalFieldCount} fields (required {selectedRuntimeCapability.configSchemaSummary.requiredFieldCount})
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+      {configPageOpen && configPageType === 'dingtalk' && (
+        <DingTalkConfigPage
+          onBack={async () => {
+            await fetchChannels();
+            setConfigPageOpen(false);
+          }}
+        />
+      )}
+      {configPageOpen && configPageType === 'wecom' && (
+        <WeComConfigPage
+          onBack={async () => {
+            await fetchChannels();
+            setConfigPageOpen(false);
+          }}
+        />
+      )}
+      {configPageOpen && configPageType === 'qqbot' && (
+        <QQConfigPage
+          onBack={async () => {
+            await fetchChannels();
+            setConfigPageOpen(false);
+          }}
+        />
       )}
 
       {addOpen && (
