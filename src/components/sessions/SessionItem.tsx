@@ -1,6 +1,7 @@
 /**
  * SessionItem Component
  * Displays a rich session item with avatar, name, preview, time, unread badge, and agent status.
+ * Optimized layout following D-15 to D-21 design decisions.
  */
 
 import { Pin, Trash2 } from 'lucide-react';
@@ -37,88 +38,96 @@ export function SessionItem({
     : label;
   const relativeTime = formatRelativeTime(session.updatedAt);
 
-  // Agent status color
+  // Agent status color (D-18)
   const statusColor = {
     online: 'bg-green-500',
     offline: 'bg-gray-400',
     busy: 'bg-yellow-500',
   }[session.agentStatus || 'offline'];
 
+  // Show unread badge only when count > 0 (D-17)
+  const showUnreadBadge = session.unreadCount && session.unreadCount > 0;
+
   return (
     <div className="group relative">
       <button
         type="button"
         className={cn(
-          'flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left text-sm transition-colors',
+          'flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
           isActive
-            ? 'bg-accent text-accent-foreground font-medium border-l-4 border-primary'
-            : 'text-[#000000] hover:bg-[#e5e5ea]',
+            ? 'bg-accent border-l-2 border-primary'
+            : 'hover:bg-[#f2f2f7]',
         )}
         onClick={onClick}
       >
-        {/* Avatar with status indicator */}
+        {/* Avatar with status indicator (D-18) */}
         <div className="relative shrink-0">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-muted text-xs font-medium">
+            <AvatarFallback className="bg-muted text-sm font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
-          {/* Agent status dot */}
+          {/* Agent status dot with white ring */}
           <div
             className={cn(
-              'absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white',
+              'absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-white',
               statusColor,
             )}
           />
         </div>
 
-        {/* Content */}
+        {/* Content - Two-row structure (D-15, D-16) */}
         <div className="min-w-0 flex-1">
-          {/* Name row */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="truncate font-medium">{displayName}</span>
-            {isPinned && (
-              <Pin
-                className="h-3.5 w-3.5 shrink-0 text-primary"
-                aria-label="Pinned session"
-              />
+          {/* Row 1: Title + Time (D-21: title must truncate) */}
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="truncate text-sm font-medium text-[#000000]">
+                {displayName}
+              </span>
+              {isPinned && (
+                <Pin
+                  className="h-3 w-3 shrink-0 text-[#007aff]"
+                  fill="currentColor"
+                  aria-label="Pinned"
+                />
+              )}
+            </div>
+            {/* Time - hidden on hover when action buttons appear */}
+            {relativeTime && (
+              <span className="text-xs text-[#8e8e93] shrink-0 group-hover:opacity-0 transition-opacity">
+                {relativeTime}
+              </span>
             )}
           </div>
 
-          {/* Message preview and time row */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              {messagePreview && (
-                <p className="truncate text-xs text-muted-foreground">
-                  {messagePreview}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {session.unreadCount && session.unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="h-5 min-w-[20px] px-1.5 text-xs"
-                >
-                  {session.unreadCount > 99 ? '99+' : session.unreadCount}
-                </Badge>
-              )}
-              {relativeTime && (
-                <span className="text-xs text-muted-foreground">
-                  {relativeTime}
-                </span>
-              )}
-            </div>
+          {/* Row 2: Message preview + Unread badge (D-15, D-17) */}
+          <div className="flex items-center gap-2">
+            {messagePreview && (
+              <p className="truncate text-xs text-[#8e8e93] flex-1">
+                {messagePreview}
+              </p>
+            )}
+            {showUnreadBadge && (
+              <Badge
+                variant="destructive"
+                className="h-5 min-w-[20px] px-1.5 text-[11px] font-medium shrink-0"
+              >
+                {session.unreadCount! > 99 ? '99+' : session.unreadCount}
+              </Badge>
+            )}
           </div>
         </div>
       </button>
 
-      {/* Action buttons (visible on hover) */}
-      <div className="absolute right-2 top-2 flex items-center gap-1">
+      {/* Action buttons with gradient mask (D-21: visible on hover) */}
+      <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Gradient mask to prevent text overlap */}
+        <div className="absolute inset-y-0 -left-8 w-8 bg-gradient-to-r from-transparent to-[#f2f2f7] pointer-events-none" />
+
         <button
           type="button"
           aria-label={isPinned ? 'Unpin' : 'Pin'}
-          className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-accent-foreground group-hover:opacity-100"
+          className="relative z-10 rounded-md p-1.5 text-[#8e8e93] bg-white shadow-sm hover:bg-[#e5e5ea] hover:text-[#3c3c43] transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onPinToggle();
@@ -129,7 +138,7 @@ export function SessionItem({
         <button
           type="button"
           aria-label="Delete"
-          className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-accent-foreground group-hover:opacity-100"
+          className="relative z-10 rounded-md p-1.5 text-[#8e8e93] bg-white shadow-sm hover:bg-[#e5e5ea] hover:text-[#ef4444] transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();
