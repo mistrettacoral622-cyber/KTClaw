@@ -173,7 +173,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Data model extension + collapsible groups UI
 - [x] 07-02-PLAN.md — Search functionality + session item redesign
-- [ ] 07-03-PLAN.md — Unread count & Agent status integration
+- [x] 07-03-PLAN.md — Unread count & Agent status integration
 ### Phase 8: Settings Convergence
 
 **Goal:** 重构设置中心，收敛为 9 项真正有价值的设置，整合记忆知识库和费用用量。

@@ -251,7 +251,7 @@ export function Sidebar() {
         sidebarCollapsed ? 'w-16 px-2 py-2' : 'w-[260px] px-2 py-2',
       )}
     >
-      <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'justify-start')}>
+      <div className={cn('flex items-center gap-2', sidebarCollapsed ? 'justify-center' : 'justify-between')}>
         <button
           type="button"
           aria-label={tSidebar('toggleSidebar', 'Toggle sidebar')}
@@ -264,6 +264,16 @@ export function Sidebar() {
             <PanelLeftClose className="h-5 w-5" />
           )}
         </button>
+        {!sidebarCollapsed && (
+          <button
+            type="button"
+            aria-label={tSidebar('searchSessions', 'Search sessions')}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-[#e5e5ea]"
+            onClick={() => setSessionSearchOpen(true)}
+          >
+            <Search className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="mt-4 space-y-2">
@@ -320,38 +330,13 @@ export function Sidebar() {
         </div>
 
         <div className="mt-4 space-y-2">
-          {/* Sessions Header with Search Icon */}
-          <div className="flex h-11 w-full items-center gap-3 rounded-xl px-3">
-            <button
-              type="button"
-              aria-label={tSidebar('sessions', 'Sessions')}
-              onClick={() => setSessionsOpen((current) => !current)}
-              className="flex flex-1 items-center gap-3 text-sm font-medium transition-colors hover:bg-[#e5e5ea] rounded-xl px-0"
-            >
-              <MessageSquare className="h-4 w-4 shrink-0" />
-              {!sidebarCollapsed ? (
-                <>
-                  <span className="flex-1 truncate text-left">{tSidebar('sessions', 'Sessions')}</span>
-                  <ChevronRight
-                    className={cn(
-                      'h-4 w-4 shrink-0 text-[#8e8e93] transition-transform',
-                      sessionsOpen && 'rotate-90',
-                    )}
-                  />
-                </>
-              ) : null}
-            </button>
-            {!sidebarCollapsed && (
-              <button
-                type="button"
-                aria-label="Search sessions"
-                onClick={() => setSessionSearchOpen(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#8e8e93] transition-colors hover:bg-[#e5e5ea]"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          <SectionHeader
+            icon={MessageSquare}
+            label={tSidebar('sessions', 'Sessions')}
+            open={sessionsOpen}
+            onToggle={() => setSessionsOpen((current) => !current)}
+            collapsed={sidebarCollapsed}
+          />
           {!sidebarCollapsed && sessionsOpen ? (
             <div className="space-y-2">
               {sortedSessions.length > 0 ? (
