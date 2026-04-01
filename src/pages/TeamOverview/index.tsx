@@ -206,55 +206,6 @@ function EmptyStateDropzone({ activeId }: { activeId: string | null }) {
     </div>
   );
 }
-                    {loading
-                      ? t('status.loading')
-                      : error
-                        ? t('status.loadFailed')
-                        : t('teamOverview.summary', { count: teams.length })}
-                  </p>
-                </div>
-
-                {/* Loading State */}
-                {loading && (
-                  <div className="flex items-center justify-center py-20 text-sm text-slate-400">
-                    {t('status.loading')}
-                  </div>
-                )}
-
-                {/* Error State */}
-                {!loading && error && (
-                  <div className="flex items-center justify-center py-20 text-sm text-rose-500">
-                    {error}
-                  </div>
-                )}
-
-                {/* Team Grid */}
-                {!loading && !error && (
-                  <TeamGrid
-                    teams={teams}
-                    loading={loading}
-                    onDeleteTeam={deleteTeam}
-                  />
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Agent 面板（右侧固定，带清晰边界） */}
-        <AgentPanel />
-
-        {/* 拖拽预览 (per D-13) */}
-        <DragOverlay>
-          {activeId ? (
-            <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-lg opacity-80">
-              <AgentPreview agentId={activeId} agents={agents} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </div>
-    </DndContext>
-  );
 }
 
 function AgentPreview({ agentId, agents }: { agentId: string; agents: any[] }) {
