@@ -316,7 +316,7 @@ export function Channels() {
     ? runtimeCapabilities[selectedChannel.id] ?? runtimeCapabilities[`${selectedChannel.type}-${selectedChannel.accountId || 'default'}`] ?? null
     : null;
 
-  const loadConversation = async (conversationId: string) => {
+  const loadConversation = async (conversationId: string, preserveOptimistic = false) => {
     const response = await hostApiFetch<{
       conversation?: ChannelSyncConversation | null;
       messages?: ChannelSyncMessage[];
@@ -326,7 +326,20 @@ export function Channels() {
     );
     const msgs = (response.messages ?? []).filter(isVisibleConversationMessage);
     setConversation(response.conversation ?? null);
-    setMessages(msgs);
+
+    if (preserveOptimistic) {
+      // Preserve optimistic messages when updating
+      setMessages((prev) => {
+        const optimisticMsgs = prev.filter((m) => m.optimistic);
+        // Remove duplicates based on content and timestamp proximity
+        const serverMsgIds = new Set(msgs.map((m) => m.id));
+        const uniqueOptimistic = optimisticMsgs.filter((opt) => !serverMsgIds.has(opt.id));
+        return [...msgs, ...uniqueOptimistic];
+      });
+    } else {
+      setMessages(msgs);
+    }
+
     setHasMoreMessages(response.hasMore ?? false);
     setOldestMessageTs(msgs[0]?.createdAt ?? null);
   };
@@ -566,9 +579,9 @@ export function Channels() {
         ),
       );
       // Poll for new messages in background to get server-side message
-      window.setTimeout(() => { void loadConversation(convId); }, 1000);
-      window.setTimeout(() => { void loadConversation(convId); }, 2500);
-      window.setTimeout(() => { void loadConversation(convId); }, 5000);
+      window.setTimeout(() => { void loadConversation(convId, true); }, 1000);
+      window.setTimeout(() => { void loadConversation(convId, true); }, 2500);
+      window.setTimeout(() => { void loadConversation(convId, true); }, 5000);
     } catch (error) {
       // Mark optimistic message as failed
       setMessages((prev) =>
