@@ -206,7 +206,6 @@ function EmptyStateDropzone({ activeId }: { activeId: string | null }) {
     </div>
   );
 }
-}
 
 function AgentPreview({ agentId, agents }: { agentId: string; agents: any[] }) {
   const agent = agents.find(a => a.id === agentId);
