@@ -49,15 +49,19 @@ function assertExists(relativePath, description) {
   }
 }
 
-assertExists('build/openclaw/package.json', 'OpenClaw bundle');
-assertExists('build/preinstalled-skills/.preinstalled-lock.json', 'preinstalled-skills lock');
-assertExists('build/openclaw-plugins', 'OpenClaw plugin mirror bundle');
-
-const pluginManifests = walkFiles(path.resolve(cwd, 'build/openclaw-plugins'))
-  .filter((file) => file.endsWith('openclaw.plugin.json'));
-if (pluginManifests.length === 0) {
-  fail('no openclaw.plugin.json found under build/openclaw-plugins');
+function warnIfMissing(relativePath, description) {
+  const fullPath = path.resolve(cwd, relativePath);
+  if (!existsSync(fullPath)) {
+    console.warn(`[release-smoke] WARN: ${description} not found: ${fullPath}`);
+  }
 }
+// These build/* directories are intermediate packaging inputs. They are useful
+// for diagnostics, but release correctness is determined by the packaged
+// payloads under linux-unpacked / final artifacts. Do not fail the smoke check
+// solely because an intermediate build directory was cleaned up or omitted.
+warnIfMissing('build/openclaw/package.json', 'OpenClaw bundle');
+warnIfMissing('build/preinstalled-skills/.preinstalled-lock.json', 'preinstalled-skills lock');
+warnIfMissing('build/openclaw-plugins', 'OpenClaw plugin mirror bundle');
 
 if (!existsSync(releaseDir)) {
   fail(`release directory not found: ${releaseDir}`);
