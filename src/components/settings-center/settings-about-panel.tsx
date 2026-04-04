@@ -102,8 +102,8 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
 
       setDoctorSummary(
         result.success
-          ? `${mode === 'fix' ? 'Doctor fix' : 'Doctor'} completed`
-          : `${mode === 'fix' ? 'Doctor fix' : 'Doctor'} failed${result.stderr ? `: ${result.stderr}` : ''}`,
+          ? `${mode === 'fix' ? '修复' : '诊断'}完成`
+          : `${mode === 'fix' ? '修复' : '诊断'}失败${result.stderr ? `：${result.stderr}` : ''}`,
       );
     } finally {
       setDoctorRunning(null);
@@ -182,14 +182,14 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
                 }
                 className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7]"
               >
-                Report an issue
+                提交 Issue
               </button>
               <button
                 type="button"
                 onClick={() => void handleCopyEnvironment()}
                 className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7]"
               >
-                Copy environment summary
+                复制环境信息
               </button>
             </div>
           </div>
@@ -197,7 +197,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
       </SettingsSectionCard>
 
       <DisclosureCard
-        title="Developer Diagnostics"
+        title="开发者诊断"
         open={diagnosticsOpen}
         onToggle={() => setDiagnosticsOpen((value) => !value)}
       >
@@ -206,8 +206,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-[#111827]">KTClaw Doctor</p>
               <p className="mt-1 text-[12px] text-[#667085]">
-                Run the host-side OpenClaw doctor checks from Settings instead of opening a separate
-                maintenance route.
+                从设置页直接运行 OpenClaw 诊断检查，无需打开独立维护路由。
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -217,7 +216,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
                 disabled={doctorRunning !== null}
                 className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {doctorRunning === 'diagnose' ? 'Running…' : 'Run Doctor'}
+                {doctorRunning === 'diagnose' ? '运行中…' : '运行诊断'}
               </button>
               <button
                 type="button"
@@ -225,7 +224,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
                 disabled={doctorRunning !== null}
                 className="rounded-lg bg-[#0a7aff] px-3 py-2 text-[12px] font-semibold text-white transition hover:bg-[#075ac4] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {doctorRunning === 'fix' ? 'Running…' : 'Run Doctor Fix'}
+                {doctorRunning === 'fix' ? '运行中…' : '运行修复'}
               </button>
             </div>
           </div>
@@ -236,22 +235,22 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <ToggleRow
-            label="Developer Mode"
+            label="开发者模式"
             checked={devModeUnlocked}
             onCheckedChange={setDevModeUnlocked}
           />
           <ToggleRow
-            label="Remote RPC access"
+            label="远程 RPC 访问"
             checked={remoteRpcEnabled}
             onCheckedChange={setRemoteRpcEnabled}
           />
           <ToggleRow
-            label="P2P sync preview"
+            label="P2P 同步预览"
             checked={p2pSyncEnabled}
             onCheckedChange={setP2pSyncEnabled}
           />
           <ToggleRow
-            label="Anonymous telemetry"
+            label="匿名遥测"
             checked={telemetryEnabled}
             onCheckedChange={setTelemetryEnabled}
           />
@@ -259,7 +258,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
       </DisclosureCard>
 
       <DisclosureCard
-        title="Maintenance & Recovery"
+        title="维护与恢复"
         open={maintenanceOpen}
         onToggle={() => setMaintenanceOpen((value) => !value)}
       >
@@ -269,7 +268,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
             onClick={() => onRerunSetup?.()}
             className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7]"
           >
-            Re-run Setup
+            重新运行初始化
           </button>
           <button
             type="button"
@@ -277,7 +276,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
             disabled={resetting || clearing}
             className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {resetting ? 'Resetting…' : 'Reset All Settings'}
+            {resetting ? '重置中…' : '重置所有设置'}
           </button>
           <button
             type="button"
@@ -285,7 +284,7 @@ export function SettingsAboutPanel({ onRerunSetup }: SettingsAboutPanelProps) {
             disabled={resetting || clearing}
             className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#111827] transition hover:bg-[#f2f2f7] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {clearing ? 'Clearing…' : 'Clear Server Data'}
+            {clearing ? '清除中…' : '清除服务器数据'}
           </button>
         </div>
       </DisclosureCard>

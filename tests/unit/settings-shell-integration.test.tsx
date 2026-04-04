@@ -184,12 +184,12 @@ describe('Settings shell integration', () => {
   it.each([
     ['costs-usage', async () => expect(await screen.findByText('planner-agent')).toBeInTheDocument()],
     ['models-providers', async () => expect(await screen.findByText('Providers Settings Mock')).toBeInTheDocument()],
-    ['general', async () => expect(await screen.findByLabelText('Upload brand logo')).toBeInTheDocument()],
+    ['general', async () => expect(await screen.findByLabelText('上传品牌 Logo')).toBeInTheDocument()],
     ['skills-mcp', async () => expect(await screen.findByText('全局 Skills 与 MCP 中心')).toBeInTheDocument()],
     ['tool-permissions', async () => expect(await screen.findByRole('heading', { name: '核心沙箱与内置权限' })).toBeInTheDocument()],
     ['memory-knowledge', async () => expect(await screen.findByRole('tab', { name: 'memoryKnowledge.tabs.strategy' })).toBeInTheDocument()],
     ['migration-backup', async () => expect(await screen.findByRole('button', { name: 'migrationPanel.migrate.cta' })).toBeInTheDocument()],
-    ['app-updates', async () => expect(await screen.findByRole('combobox', { name: 'Update channel' })).toBeInTheDocument()],
+    ['app-updates', async () => expect(await screen.findByRole('combobox', { name: '更新渠道' })).toBeInTheDocument()],
     ['about', async () => expect(await screen.findByText('KTClaw Doctor')).toBeInTheDocument()],
   ] as const)('renders the %s section through a real panel surface', async (_section, assertPanel) => {
     renderSettingsAt(_section);

@@ -464,7 +464,7 @@ function renderActiveSection(args: RenderSectionArgs) {
                 onClick={() => void args.runDoctor('diagnose')}
                 disabled={args.doctorRunning !== null}
               >
-                {args.doctorRunning === 'diagnose' ? args.t('common:status.running') : 'Run checks'}
+                {args.doctorRunning === 'diagnose' ? args.t('common:status.running') : '运行诊断'}
               </Button>
             </div>
 
@@ -504,7 +504,7 @@ function renderActiveSection(args: RenderSectionArgs) {
               </button>
             </div>
             <div className="mt-4 rounded-xl border border-[#c6c6c8] bg-[#f9fafb] p-3">
-              <p className="text-[12px] font-medium text-[#111827]">Maintenance</p>
+              <p className="text-[12px] font-medium text-[#111827]">维护</p>
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 <Button
                   variant="outline"
@@ -512,7 +512,7 @@ function renderActiveSection(args: RenderSectionArgs) {
                   className="rounded-lg text-[12px]"
                   onClick={args.rerunSetup}
                 >
-                  Re-run Setup
+                  重新运行初始化
                 </Button>
                 <Button
                   variant="outline"
@@ -521,7 +521,7 @@ function renderActiveSection(args: RenderSectionArgs) {
                   onClick={() => void args.resetAllSettings()}
                   disabled={args.resettingAllSettings || args.clearingServerData}
                 >
-                  {args.resettingAllSettings ? args.t('common:status.running') : 'Reset All Settings'}
+                  {args.resettingAllSettings ? args.t('common:status.running') : '重置所有设置'}
                 </Button>
                 <Button
                   variant="outline"
@@ -530,7 +530,7 @@ function renderActiveSection(args: RenderSectionArgs) {
                   onClick={() => void args.clearServerData()}
                   disabled={args.clearingServerData || args.resettingAllSettings}
                 >
-                  {args.clearingServerData ? args.t('common:status.running') : 'Clear Server Data'}
+                  {args.clearingServerData ? args.t('common:status.running') : '清除服务器数据'}
                 </Button>
               </div>
             </div>
@@ -670,14 +670,14 @@ function BrandImageUploadField({
           {dataUrl ? (
             <img src={dataUrl} alt={previewAlt} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-[10px] text-[#8e8e93]">None</span>
+            <span className="text-[10px] text-[#8e8e93]">无</span>
           )}
         </div>
         <label
           htmlFor={inputId}
           className="cursor-pointer rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7]"
         >
-          Upload
+          上传
         </label>
         <input
           id={inputId}
@@ -694,7 +694,7 @@ function BrandImageUploadField({
           disabled={!dataUrl}
           className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] text-[#3c3c43] hover:bg-[#f2f2f7] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Clear
+          清除
         </button>
       </div>
     </div>
@@ -919,22 +919,22 @@ function GeneralSection() {
       </SettingsCard>
 
       {/* 退出登录 */}
-      <SettingsCard title="Brand assets">
+      <SettingsCard title="品牌资产">
         <BrandImageUploadField
-          label="Brand logo"
+          label="品牌 Logo"
           dataUrl={brandLogoDataUrl}
-          previewAlt="Brand logo preview"
-          inputLabel="Upload brand logo"
-          clearLabel="Clear brand logo"
+          previewAlt="品牌 Logo 预览"
+          inputLabel="上传品牌 Logo"
+          clearLabel="清除品牌 Logo"
           onUpload={(event) => handleBrandImageUpload(event, setBrandLogoDataUrl, 'logo')}
           onClear={() => setBrandLogoDataUrl(null)}
         />
         <BrandImageUploadField
-          label="Brand icon"
+          label="品牌图标"
           dataUrl={brandIconDataUrl}
-          previewAlt="Brand icon preview"
-          inputLabel="Upload brand icon"
-          clearLabel="Clear brand icon"
+          previewAlt="品牌图标预览"
+          inputLabel="上传品牌图标"
+          clearLabel="清除品牌图标"
           onUpload={(event) => handleBrandImageUpload(event, setBrandIconDataUrl, 'icon')}
           onClear={() => setBrandIconDataUrl(null)}
         />
@@ -2163,38 +2163,38 @@ function AutoUpdateSection({
         />
         <div className="mt-3 rounded-xl bg-[#f2f2f7] px-4 py-3 text-[12px] text-[#3c3c43]">
           <label className="block">
-            <span className="text-[#8e8e93]">Update channel</span>
+            <span className="text-[#8e8e93]">更新渠道</span>
             <select
-              aria-label="Update channel"
+              aria-label="更新渠道"
               value={updatePolicy?.channel ?? 'stable'}
               onChange={(event) => {
                 void updateSetChannel(event.target.value as 'stable' | 'beta' | 'dev');
               }}
               className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#111827] outline-none focus:border-clawx-ac"
             >
-              <option value="stable">Stable</option>
-              <option value="beta">Beta</option>
-              <option value="dev">Dev</option>
+              <option value="stable">稳定版</option>
+              <option value="beta">测试版</option>
+              <option value="dev">开发版</option>
             </select>
           </label>
         </div>
         <div className="mt-3 rounded-xl bg-[#f2f2f7] px-4 py-3 text-[12px] text-[#3c3c43]">
-          <p className="font-medium text-[#111827]">Update policy</p>
+          <p className="font-medium text-[#111827]">更新策略</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <div>
-              <span className="text-[#8e8e93]">Channel</span>
+              <span className="text-[#8e8e93]">渠道</span>
               <p className="mt-0.5">{updatePolicy?.channel ?? 'stable'}</p>
             </div>
             <div>
-              <span className="text-[#8e8e93]">Attempts</span>
+              <span className="text-[#8e8e93]">检查次数</span>
               <p className="mt-0.5">{updatePolicy?.attemptCount ?? 0}</p>
             </div>
             <div>
-              <span className="text-[#8e8e93]">Next eligible check</span>
+              <span className="text-[#8e8e93]">下次可检查</span>
               <p className="mt-0.5">{nextEligibleLabel}</p>
             </div>
             <div>
-              <span className="text-[#8e8e93]">Rollout delay / jitter</span>
+              <span className="text-[#8e8e93]">推送延迟</span>
               <p className="mt-0.5">{Math.round((updatePolicy?.rolloutDelayMs ?? 0) / 60000)} min</p>
             </div>
           </div>

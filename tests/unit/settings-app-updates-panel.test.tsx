@@ -85,9 +85,9 @@ describe('SettingsAppUpdatesPanel', () => {
 
     expect(screen.getByText('KTClaw v1.0.0')).toBeInTheDocument();
     expect(screen.getByText(/Improved settings convergence\./)).toBeInTheDocument();
-    expect(screen.getByText('Attempts')).toBeInTheDocument();
+    expect(screen.getByText('检查次数')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download Update' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy changelog' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '复制更新日志' })).toBeInTheDocument();
   });
 
   it('triggers update actions and policy changes', () => {
@@ -107,7 +107,7 @@ describe('SettingsAppUpdatesPanel', () => {
     expect(settingsState.setAutoDownloadUpdate).toHaveBeenCalledWith(true);
     expect(updateState.setAutoDownload).toHaveBeenCalledWith(true);
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Update channel' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: '更新渠道' }), {
       target: { value: 'beta' },
     });
     expect(updateState.setChannel).toHaveBeenCalledWith('beta');
@@ -116,7 +116,7 @@ describe('SettingsAppUpdatesPanel', () => {
   it('copies the changelog when release notes are available', () => {
     render(<SettingsAppUpdatesPanel />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy changelog' }));
+    fireEvent.click(screen.getByRole('button', { name: '复制更新日志' }));
     expect(clipboardWriteText).toHaveBeenCalledWith('Improved settings convergence.');
   });
 });

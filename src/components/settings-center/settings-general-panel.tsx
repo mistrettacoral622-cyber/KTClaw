@@ -179,20 +179,20 @@ export function SettingsGeneralPanel() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <BrandImageUploadField
-            label="Brand logo"
+            label="品牌 Logo"
             dataUrl={brandLogoDataUrl}
-            previewAlt="Brand logo preview"
-            inputLabel="Upload brand logo"
-            clearLabel="Clear brand logo"
+            previewAlt="品牌 Logo 预览"
+            inputLabel="上传品牌 Logo"
+            clearLabel="清除品牌 Logo"
             onUpload={(event) => handleBrandImageUpload(event, setBrandLogoDataUrl)}
             onClear={() => setBrandLogoDataUrl(null)}
           />
           <BrandImageUploadField
-            label="Brand icon"
+            label="品牌图标"
             dataUrl={brandIconDataUrl}
-            previewAlt="Brand icon preview"
-            inputLabel="Upload brand icon"
-            clearLabel="Clear brand icon"
+            previewAlt="品牌图标预览"
+            inputLabel="上传品牌图标"
+            clearLabel="清除品牌图标"
             onUpload={(event) => handleBrandImageUpload(event, setBrandIconDataUrl)}
             onClear={() => setBrandIconDataUrl(null)}
           />
@@ -300,7 +300,7 @@ function BrandImageUploadField({
           {dataUrl ? (
             <img src={dataUrl} alt={previewAlt} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-[11px] text-[#94a3b8]">None</span>
+            <span className="text-[11px] text-[#94a3b8]">无</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">

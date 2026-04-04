@@ -7,7 +7,7 @@ import { useUpdateStore, type UpdateStatus } from '@/stores/update';
 
 function formatDateTime(value: string | null | undefined): string {
   if (!value) {
-    return 'Never';
+    return '从未';
   }
 
   const parsed = new Date(value);
@@ -224,7 +224,7 @@ export function SettingsAppUpdatesPanel() {
         ) : null}
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Update Policy">
+      <SettingsSectionCard title="更新策略">
         <ToggleRow
           label={t('updates.autoCheck', { defaultValue: 'Auto-check for updates' })}
           description={t('updates.autoCheckDesc', { defaultValue: 'Check for updates on startup' })}
@@ -241,50 +241,50 @@ export function SettingsAppUpdatesPanel() {
         />
 
         <label className="block">
-          <span className="text-[13px] font-medium text-[#000000]">Update channel</span>
+          <span className="text-[13px] font-medium text-[#000000]">更新渠道</span>
           <select
-            aria-label="Update channel"
+            aria-label="更新渠道"
             value={policy?.channel ?? 'stable'}
             onChange={(event) => {
               void setChannel(event.target.value as 'stable' | 'beta' | 'dev');
             }}
             className="mt-2 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#111827] outline-none focus:border-[#0a7aff]"
           >
-            <option value="stable">Stable</option>
-            <option value="beta">Beta</option>
-            <option value="dev">Dev</option>
+            <option value="stable">稳定版</option>
+            <option value="beta">测试版</option>
+            <option value="dev">开发版</option>
           </select>
         </label>
 
         <div className="grid gap-3 rounded-xl bg-[#f9fafb] px-4 py-3 text-[12px] text-[#3c3c43] sm:grid-cols-2">
           <div>
-            <span className="text-[#8e8e93]">Attempts</span>
+            <span className="text-[#8e8e93]">检查次数</span>
             <p className="mt-0.5 font-medium text-[#111827]">{policy?.attemptCount ?? 0}</p>
           </div>
           <div>
-            <span className="text-[#8e8e93]">Last reason</span>
+            <span className="text-[#8e8e93]">上次原因</span>
             <p className="mt-0.5 font-medium text-[#111827]">{policy?.lastCheckReason ?? 'manual'}</p>
           </div>
           <div>
-            <span className="text-[#8e8e93]">Last attempt</span>
+            <span className="text-[#8e8e93]">上次检查</span>
             <p className="mt-0.5 font-medium text-[#111827]">
               {formatDateTime(policy?.lastAttemptAt ?? null)}
             </p>
           </div>
           <div>
-            <span className="text-[#8e8e93]">Next eligible check</span>
+            <span className="text-[#8e8e93]">下次可检查</span>
             <p className="mt-0.5 font-medium text-[#111827]">
               {formatDateTime(policy?.nextEligibleAt ?? null)}
             </p>
           </div>
           <div>
-            <span className="text-[#8e8e93]">Last successful check</span>
+            <span className="text-[#8e8e93]">上次成功</span>
             <p className="mt-0.5 font-medium text-[#111827]">
               {formatDateTime(policy?.lastSuccessAt ?? null)}
             </p>
           </div>
           <div>
-            <span className="text-[#8e8e93]">Rollout delay</span>
+            <span className="text-[#8e8e93]">推送延迟</span>
             <p className="mt-0.5 font-medium text-[#111827]">
               {Math.round((policy?.rolloutDelayMs ?? 0) / 60000)} min
             </p>
@@ -292,7 +292,7 @@ export function SettingsAppUpdatesPanel() {
         </div>
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Changelog">
+      <SettingsSectionCard title="更新日志">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium text-[#000000]">
@@ -303,7 +303,7 @@ export function SettingsAppUpdatesPanel() {
             <p className="mt-0.5 text-[12px] text-[#8e8e93]">
               {updateInfo?.releaseDate
                 ? formatDateTime(updateInfo.releaseDate)
-                : 'Release notes appear here after a successful update check.'}
+                : '成功检查更新后，发布说明将显示在此处。'}
             </p>
           </div>
           {updateInfo?.releaseNotes ? (
@@ -312,12 +312,12 @@ export function SettingsAppUpdatesPanel() {
               onClick={() => void handleCopyChangelog()}
               className="rounded-lg border border-black/10 px-3 py-2 text-[12px] font-medium text-[#000000] transition hover:bg-[#f2f2f7]"
             >
-              Copy changelog
+              复制更新日志
             </button>
           ) : null}
         </div>
         <div className="rounded-xl bg-[#f9fafb] px-4 py-3 text-[12px] leading-6 text-[#3c3c43]">
-          {updateInfo?.releaseNotes || 'No changelog is available until a release is detected.'}
+          {updateInfo?.releaseNotes || '暂无更新日志，检测到新版本后将自动显示。'}
         </div>
       </SettingsSectionCard>
     </div>
