@@ -1,10 +1,67 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpTab } from '@/pages/Skills/McpTab';
+import { SettingsSkillsMcpPanel } from '@/components/settings-center/settings-skills-mcp-panel';
 import { hostApiFetch } from '@/lib/host-api';
+
+const { skillsStoreState, gatewayState } = vi.hoisted(() => ({
+  skillsStoreState: {
+    skills: [] as Array<{
+      id: string;
+      slug: string;
+      name: string;
+      description: string;
+      enabled: boolean;
+      version?: string;
+      isCore?: boolean;
+      isBundled?: boolean;
+      source?: string;
+      baseDir?: string;
+    }>,
+    loading: false,
+    error: null as string | null,
+    searchResults: [],
+    searching: false,
+    searchError: null as string | null,
+    installing: {} as Record<string, boolean>,
+    fetchSkills: vi.fn(async () => {}),
+    enableSkill: vi.fn(async () => {}),
+    disableSkill: vi.fn(async () => {}),
+    searchSkills: vi.fn(async () => {}),
+    installSkill: vi.fn(async () => {}),
+    uninstallSkill: vi.fn(async () => {}),
+  },
+  gatewayState: {
+    status: { state: 'running', port: 18789 },
+  },
+}));
 
 vi.mock('@/lib/host-api', () => ({
   hostApiFetch: vi.fn(),
+}));
+
+vi.mock('@/stores/skills', () => ({
+  useSkillsStore: () => skillsStoreState,
+}));
+
+vi.mock('@/stores/gateway', () => ({
+  useGatewayStore: (selector?: (state: typeof gatewayState) => unknown) =>
+    selector ? selector(gatewayState) : gatewayState,
+}));
+
+vi.mock('@/lib/api-client', () => ({
+  invokeIpc: vi.fn(),
+}));
+
+vi.mock('@/lib/telemetry', () => ({
+  trackUiEvent: vi.fn(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -25,6 +82,20 @@ vi.mock('react-i18next', () => ({
 describe('McpTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    skillsStoreState.skills = [
+      {
+        id: 'skill-a',
+        slug: 'skill-a',
+        name: 'Skill A',
+        description: 'Global skill',
+        enabled: false,
+        version: '1.0.0',
+        isCore: false,
+        isBundled: false,
+        source: 'openclaw-managed',
+        baseDir: 'C:/skills/skill-a',
+      },
+    ];
   });
 
   it('loads runtime-aware server cards and tool visibility from /api/mcp', async () => {
@@ -205,5 +276,30 @@ describe('McpTab', () => {
     await waitFor(() => {
       expect(toggle).toHaveAttribute('aria-checked', 'false');
     });
+  });
+
+  it('renders the reusable global Skills and MCP panel without taking TeamMap member ownership', async () => {
+    vi.mocked(hostApiFetch).mockResolvedValueOnce({ servers: [] });
+
+    render(<SettingsSkillsMcpPanel />);
+
+    await waitFor(() => {
+      expect(skillsStoreState.fetchSkills).toHaveBeenCalled();
+    });
+
+    expect(screen.getByText('全局 Skills 与 MCP 中心')).toBeInTheDocument();
+    expect(screen.getByText('成员技能分配和编辑仍由 TeamMap 负责。')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Skills' })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByText('Skill A')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Skill A' }));
+
+    await waitFor(() => {
+      expect(skillsStoreState.enableSkill).toHaveBeenCalledWith('skill-a');
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'MCP' }));
+
+    expect(await screen.findByText('MCP services')).toBeInTheDocument();
   });
 });

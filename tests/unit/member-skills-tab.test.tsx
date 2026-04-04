@@ -126,7 +126,7 @@ describe('MemberSkillsTab', () => {
     });
   });
 
-  it('routes the user to the global skills page when no installed skills are available', async () => {
+  it('routes the user to the canonical settings Skills and MCP center when no installed skills are available', async () => {
     skillsStoreState.skills = [];
     vi.mocked(hostApiFetch).mockResolvedValue({ success: true, skills: [] });
 
@@ -134,6 +134,6 @@ describe('MemberSkillsTab', () => {
 
     expect(await screen.findByText('No skills assigned')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open Skills Page' }));
-    expect(navigateMock).toHaveBeenCalledWith('/skills');
+    expect(navigateMock).toHaveBeenCalledWith('/settings?section=skills-mcp');
   });
 });

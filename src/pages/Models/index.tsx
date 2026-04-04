@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronLeft,
@@ -6,6 +6,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { hostApiFetch } from '@/lib/host-api';
@@ -23,10 +24,30 @@ const DEFAULT_USAGE_FETCH_MAX_ATTEMPTS = 6;
 const WINDOWS_USAGE_FETCH_MAX_ATTEMPTS = 10;
 const USAGE_FETCH_RETRY_DELAY_MS = 1500;
 
-export function Models() {
+const MODEL_OPTIONS = [
+  { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+  { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+  { value: 'gpt-5.4', label: 'GPT-5.4' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
+  { value: 'deepseek-chat', label: 'DeepSeek Chat' },
+];
+
+type ModelsProps = {
+  embedded?: boolean;
+};
+
+export function Models({ embedded = false }: ModelsProps) {
   const { t } = useTranslation(['dashboard', 'settings']);
   const gatewayStatus = useGatewayStore((state) => state.status);
+  const restartGateway = useGatewayStore((state) => state.restart);
   const devModeUnlocked = useSettingsStore((state) => state.devModeUnlocked);
+  const defaultModel = useSettingsStore((state) => state.defaultModel);
+  const setDefaultModel = useSettingsStore((state) => state.setDefaultModel);
+  const contextLimit = useSettingsStore((state) => state.contextLimit);
+  const setContextLimit = useSettingsStore((state) => state.setContextLimit);
+  const gatewayPort = useSettingsStore((state) => state.gatewayPort);
+  const setGatewayPort = useSettingsStore((state) => state.setGatewayPort);
   const isGatewayRunning = gatewayStatus.state === 'running';
   const usageFetchMaxAttempts = window.electron.platform === 'win32'
     ? WINDOWS_USAGE_FETCH_MAX_ATTEMPTS
@@ -37,12 +58,22 @@ export function Models() {
   const [usageWindow, setUsageWindow] = useState<UsageWindow>('7d');
   const [usagePage, setUsagePage] = useState(1);
   const [selectedUsageEntry, setSelectedUsageEntry] = useState<UsageHistoryEntry | null>(null);
+  const [gatewayPortDraft, setGatewayPortDraft] = useState(() => String(gatewayPort));
+  const [doctorRunning, setDoctorRunning] = useState(false);
+  const [doctorSummary, setDoctorSummary] = useState<string | null>(null);
   const usageFetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usageFetchGenerationRef = useRef(0);
+  const defaultModelSelectId = useId();
+  const contextLimitId = useId();
+  const gatewayPortId = useId();
 
   useEffect(() => {
     trackUiEvent('models.page_viewed');
   }, []);
+
+  useEffect(() => {
+    setGatewayPortDraft(String(gatewayPort));
+  }, [gatewayPort]);
 
   useEffect(() => {
     if (usageFetchTimerRef.current) {
@@ -146,27 +177,200 @@ export function Models() {
   const safeUsagePage = Math.min(usagePage, usageTotalPages);
   const pagedUsageHistory = filteredUsageHistory.slice((safeUsagePage - 1) * usagePageSize, safeUsagePage * usagePageSize);
   const usageLoading = isGatewayRunning && visibleUsageHistory.length === 0;
+  const modelOptions = MODEL_OPTIONS.some((option) => option.value === defaultModel)
+    ? MODEL_OPTIONS
+    : [{ value: defaultModel, label: defaultModel }, ...MODEL_OPTIONS];
+  const gatewayStateLabel = isGatewayRunning
+    ? 'Connected'
+    : gatewayStatus.state === 'starting' || gatewayStatus.state === 'reconnecting'
+      ? 'Connecting'
+      : 'Disconnected';
+
+  const handleGatewayPortSave = () => {
+    const nextPort = Number.parseInt(gatewayPortDraft, 10);
+    if (Number.isNaN(nextPort) || nextPort < 1024 || nextPort > 65535) {
+      setDoctorSummary('Gateway port must be between 1024 and 65535.');
+      return;
+    }
+
+    setGatewayPort(nextPort);
+    setDoctorSummary(`Gateway port updated to ${nextPort}.`);
+  };
+
+  const handleRunDoctor = async () => {
+    setDoctorRunning(true);
+    try {
+      const result = await hostApiFetch<{
+        success: boolean;
+        exitCode?: number;
+        stderr?: string;
+      }>('/api/app/openclaw-doctor', {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'diagnose' }),
+      });
+      setDoctorSummary(
+        result.success
+          ? `Doctor completed successfully (exit=${result.exitCode ?? 0}).`
+          : `Doctor failed (exit=${result.exitCode ?? 'n/a'}) ${result.stderr ?? ''}`.trim(),
+      );
+    } catch (error) {
+      setDoctorSummary(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDoctorRunning(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col h-full dark:bg-background overflow-hidden">
-      <div className="w-full max-w-5xl mx-auto flex flex-col h-full p-10 pt-16">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-start justify-between mb-12 shrink-0 gap-4">
-          <div>
-            <h1 className="text-5xl md:text-6xl font-serif text-foreground mb-3 font-normal tracking-tight" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
-              {t('dashboard:models.title')}
-            </h1>
-            <p className="text-[17px] text-foreground/70 font-medium">
-              {t('dashboard:models.subtitle')}
-            </p>
+    <div className={cn('flex h-full flex-col overflow-hidden', embedded ? 'bg-transparent' : 'dark:bg-background')}>
+      <div className={cn('flex h-full w-full flex-col', embedded ? '' : 'mx-auto max-w-5xl p-10 pt-16')}>
+        {!embedded ? (
+          <div className="mb-12 flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-start">
+            <div>
+              <h1 className="mb-3 text-5xl font-normal tracking-tight text-foreground md:text-6xl" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
+                {t('dashboard:models.title')}
+              </h1>
+              <p className="text-[17px] font-medium text-foreground/70">
+                {t('dashboard:models.subtitle')}
+              </p>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pr-2 pb-10 min-h-0 -mr-2 space-y-12">
-          
-          {/* AI Providers Section */}
+        <div className={cn('flex-1 min-h-0 overflow-y-auto', embedded ? 'space-y-8' : '-mr-2 space-y-12 pr-2 pb-10')}>
+          <section className="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-card/80">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <div className="flex-1">
+                <h2 className="text-2xl font-serif font-normal tracking-tight text-foreground" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
+                  Default model and fallback routing
+                </h2>
+                <p className="mt-2 max-w-2xl text-[14px] leading-6 text-muted-foreground">
+                  Pick the global default model here. Fallback model IDs and fallback provider chains stay on each
+                  provider account below so Settings and runtime behavior share the same provider configuration.
+                </p>
+              </div>
+              <div className="flex-1 space-y-5">
+                <div className="space-y-2">
+                  <label htmlFor={defaultModelSelectId} className="block text-[13px] font-medium text-foreground">
+                    Global default model
+                  </label>
+                  <select
+                    id={defaultModelSelectId}
+                    value={defaultModel}
+                    onChange={(event) => setDefaultModel(event.target.value)}
+                    className="w-full rounded-xl border border-black/10 bg-background px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#0a84ff] dark:border-white/10"
+                  >
+                    {modelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-3 rounded-2xl border border-black/10 bg-black/[0.03] p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                  <div className="flex items-center justify-between gap-3">
+                    <label htmlFor={contextLimitId} className="text-[13px] font-medium text-foreground">
+                      Context window
+                    </label>
+                    <span className="text-[12px] text-muted-foreground">
+                      {contextLimit.toLocaleString()} tokens
+                    </span>
+                  </div>
+                  <input
+                    id={contextLimitId}
+                    type="range"
+                    min={8000}
+                    max={128000}
+                    step={1000}
+                    value={contextLimit}
+                    onChange={(event) => setContextLimit(Number(event.target.value))}
+                    className="w-full"
+                    style={{ accentColor: 'var(--ac)' }}
+                  />
+                  <p className="text-[12px] leading-5 text-muted-foreground">
+                    Provider-specific fallback model IDs and fallback providers are edited directly inside each provider card.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-card/80">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-serif font-normal tracking-tight text-foreground" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
+                    Gateway connection
+                  </h2>
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]',
+                      isGatewayRunning
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+                    )}
+                  >
+                    {gatewayStateLabel}
+                  </span>
+                </div>
+                <p className="mt-2 max-w-2xl text-[14px] leading-6 text-muted-foreground">
+                  Keep the runtime gateway reachable for provider validation and usage history. The reconnect action
+                  uses the shared gateway store, and diagnostics run through the host-api doctor route.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => { void restartGateway(); }}
+                >
+                  Reconnect gateway
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => { void handleRunDoctor(); }}
+                  disabled={doctorRunning}
+                >
+                  {doctorRunning ? 'Running doctor...' : 'Run doctor'}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end">
+              <div className="min-w-0 flex-1 space-y-2">
+                <label htmlFor={gatewayPortId} className="block text-[13px] font-medium text-foreground">
+                  Gateway port
+                </label>
+                <p className="text-[12px] leading-5 text-muted-foreground">
+                  The renderer persists this through the shared settings store so the Settings shell and `/models`
+                  surface stay aligned.
+                </p>
+              </div>
+              <div className="flex w-full gap-3 md:w-auto">
+                <input
+                  id={gatewayPortId}
+                  type="number"
+                  value={gatewayPortDraft}
+                  onChange={(event) => setGatewayPortDraft(event.target.value)}
+                  className="w-full rounded-xl border border-black/10 bg-background px-3 py-2 text-[13px] text-foreground outline-none transition focus:border-[#0a84ff] dark:border-white/10 md:w-[140px]"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={handleGatewayPortSave}
+                  disabled={gatewayPortDraft === String(gatewayPort)}
+                >
+                  Save port
+                </Button>
+              </div>
+            </div>
+            {doctorSummary ? (
+              <p className="mt-4 rounded-2xl border border-black/10 bg-black/[0.03] px-4 py-3 text-[12px] leading-5 text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
+                {doctorSummary}
+              </p>
+            ) : null}
+          </section>
+
           <ProvidersSettings />
 
           {/* Token Usage History Section */}

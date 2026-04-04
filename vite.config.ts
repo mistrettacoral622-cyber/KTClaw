@@ -4,8 +4,21 @@ import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
 import { resolve } from 'path';
 
+function isMainProcessExternal(id: string): boolean {
+  if (!id || id.startsWith('\0')) return false;
+  if (id.startsWith('.') || id.startsWith('/') || /^[A-Za-z]:[\\/]/.test(id)) return false;
+  if (id.startsWith('@/') || id.startsWith('@electron/')) return false;
+  return true;
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => {
+  const mainProcessExternal =
+    command === 'serve'
+      ? isMainProcessExternal
+      : ['electron', 'bufferutil', 'utf-8-validate'];
+
+  return {
   // Required for Electron: all asset URLs must be relative because the renderer
   // loads via file:// in production. vite-plugin-electron-renderer sets this
   // automatically, but we declare it explicitly so the intent is clear and the
@@ -24,12 +37,11 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron/main',
             rollupOptions: {
-              // Keep only Electron itself external. Runtime dependencies used by
-              // the main process are bundled into dist-electron so packaging
-              // does not need to traverse the workspace node_modules tree.
-              // bufferutil and utf-8-validate are optional native addons for ws;
-              // ws falls back to pure-JS implementations when they are absent.
-              external: ['electron', 'bufferutil', 'utf-8-validate'],
+              // Dev mode should externalize almost all non-local modules so Electron
+              // main cold-start does not rebundle the whole runtime dependency graph.
+              // Production builds keep the current bundling strategy so packaged
+              // artifacts remain self-contained.
+              external: mainProcessExternal,
             },
           },
         },
@@ -75,4 +87,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });

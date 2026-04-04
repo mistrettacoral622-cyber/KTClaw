@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Bold, Italic, Link2, List } from 'lucide-react';
-import { hostApiFetch } from '@/lib/host-api';
+import { getMemoryOverview, reindexMemory, saveMemoryFile } from '@/lib/memory-client';
 import type { AgentSummary } from '@/types/agent';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +36,7 @@ export function MemberMemoryTab({ agent }: { agent: AgentSummary }) {
     const loadMemory = async () => {
       setLoading(true);
       try {
-        const response = await hostApiFetch<MemoryApiResponse>(`/api/memory?scope=${encodeURIComponent(agent.id)}`);
+        const response = await getMemoryOverview({ scope: agent.id }) as MemoryApiResponse;
         const memoryFile = response.files.find((file) => file.relativePath === 'MEMORY.md');
         const nextContent = memoryFile?.content ?? '';
         const nextMtime = memoryFile?.lastModified;
@@ -75,19 +75,13 @@ export function MemberMemoryTab({ agent }: { agent: AgentSummary }) {
 
     const timeoutId = window.setTimeout(async () => {
       try {
-        await hostApiFetch('/api/memory/file', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            relativePath: 'MEMORY.md',
-            content: draft,
-            scope: agent.id,
-            expectedMtime,
-          }),
+        await saveMemoryFile({
+          relativePath: 'MEMORY.md',
+          content: draft,
+          scope: agent.id,
+          expectedMtime,
         });
-        await hostApiFetch('/api/memory/reindex', {
-          method: 'POST',
-        });
+        await reindexMemory();
         setSavedContent(draft);
         setStatusText(t('teamMap.memory.synced', { defaultValue: 'Synced' }));
         toast.success(t('teamMap.memory.synced', { defaultValue: 'Synced' }));

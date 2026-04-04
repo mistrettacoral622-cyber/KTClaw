@@ -2,8 +2,8 @@
  * Root Application Component
  * Handles routing and global providers
  */
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { Component, lazy, Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Component, lazy, Suspense, useEffect, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AppToaster } from '@/components/ui/Toast';
 import i18n from './i18n';
@@ -11,25 +11,22 @@ import { MainLayout } from './components/layout/MainLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Route-level lazy imports — each page becomes its own chunk
-const Models = lazy(() => import('./pages/Models').then((m) => ({ default: m.Models })));
 const Chat = lazy(() => import('./pages/Chat').then((m) => ({ default: m.Chat })));
 const Agents = lazy(() => import('./pages/Agents').then((m) => ({ default: m.Agents })));
 const AgentDetail = lazy(() => import('./pages/AgentDetail').then((m) => ({ default: m.AgentDetail })));
 const Channels = lazy(() => import('./pages/Channels').then((m) => ({ default: m.Channels })));
-const Skills = lazy(() => import('./pages/Skills').then((m) => ({ default: m.Skills })));
 const Cron = lazy(() => import('./pages/Cron').then((m) => ({ default: m.Cron })));
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const TeamOverview = lazy(() => import('./pages/TeamOverview').then((m) => ({ default: m.TeamOverview })));
 const TeamMap = lazy(() => import('./pages/TeamMap').then((m) => ({ default: m.TeamMap })));
 const TaskKanban = lazy(() => import('./pages/TaskKanban').then((m) => ({ default: m.TaskKanban })));
 const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
-const Memory = lazy(() => import('./pages/Memory').then((m) => ({ default: m.Memory })));
-const Costs = lazy(() => import('./pages/Costs').then((m) => ({ default: m.Costs })));
 const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })));
 const BroadcastChat = lazy(() => import('./pages/BroadcastChat').then((m) => ({ default: m.BroadcastChat })));
 import { useSettingsStore } from './stores/settings';
 import { useGatewayStore } from './stores/gateway';
 import { wireGatewayNotifications } from './stores/notifications';
+import { isBrowserPreviewMode } from './lib/browser-preview';
 
 
 /**
@@ -98,21 +95,33 @@ class ErrorBoundary extends Component<
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const initSettings = useSettingsStore((state) => state.init);
   const theme = useSettingsStore((state) => state.theme);
   const accentColor = useSettingsStore((state) => state.accentColor);
   const language = useSettingsStore((state) => state.language);
+  const setupComplete = useSettingsStore((state) => state.setupComplete);
   const initGateway = useGatewayStore((state) => state.init);
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
+  const browserPreviewMode = isBrowserPreviewMode();
 
   useEffect(() => {
+    let active = true;
     const initApp = async () => {
       try {
         await initSettings();
       } catch (error) {
         console.error('Failed to initialize settings:', error);
+      } finally {
+        if (active) {
+          setSettingsInitialized(true);
+        }
       }
     };
     initApp();
+    return () => {
+      active = false;
+    };
   }, [initSettings]);
 
   // Sync i18n language with persisted settings on mount
@@ -134,13 +143,14 @@ function App() {
     initGatewayConnection();
   }, [initGateway]);
 
-  // Redirect to setup wizard if not complete
-  // DISABLED: Skip setup wizard to go directly to main app
-  // useEffect(() => {
-  //   if (!browserPreviewMode && !setupComplete && !location.pathname.startsWith('/setup')) {
-  //     navigate('/setup');
-  //   }
-  // }, [browserPreviewMode, setupComplete, location.pathname, navigate]);
+  useEffect(() => {
+    if (!settingsInitialized || browserPreviewMode) {
+      return;
+    }
+    if (!setupComplete && !location.pathname.startsWith('/setup')) {
+      navigate('/setup', { replace: true });
+    }
+  }, [browserPreviewMode, location.pathname, navigate, settingsInitialized, setupComplete]);
 
   // Listen for navigation events from main process
   useEffect(() => {
@@ -204,11 +214,11 @@ function App() {
           {/* Main application routes */}
           <Route element={<MainLayout />}>
             <Route index element={<Chat />} />
-            <Route path="models" element={<Models />} />
+            <Route path="models" element={<Navigate to="/settings?section=models-providers" replace />} />
             <Route path="agents" element={<Agents />} />
             <Route path="agents/:agentId" element={<AgentDetail />} />
             <Route path="channels" element={<Channels />} />
-            <Route path="skills" element={<Skills />} />
+            <Route path="skills" element={<Navigate to="/settings?section=skills-mcp" replace />} />
             <Route path="cron" element={<Cron />} />
             <Route path="team-overview" element={<TeamOverview />} />
             <Route path="team-map/:teamId" element={<TeamMap />} />
@@ -217,8 +227,8 @@ function App() {
             <Route path="kanban" element={<TaskKanban />} />
             <Route path="activity" element={<Activity />} />
             {/* /memory 已迁移至 Settings > 记忆与知识 */}
-            <Route path="memory" element={<Memory />} />
-            <Route path="costs" element={<Costs />} />
+            <Route path="memory" element={<Navigate to="/settings?section=memory-knowledge" replace />} />
+            <Route path="costs" element={<Navigate to="/settings?section=costs-usage" replace />} />
             <Route path="settings/*" element={<Settings />} />
           </Route>
         </Routes>

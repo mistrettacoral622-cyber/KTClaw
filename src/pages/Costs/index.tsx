@@ -231,7 +231,11 @@ function extractRealtimeUsageEntry(payload: unknown): TokenUsageEntry | null {
 
 /* ─── Main component ─── */
 
-export function Costs() {
+type CostsProps = {
+  embedded?: boolean;
+};
+
+export function Costs({ embedded = false }: CostsProps) {
   const { t } = useTranslation('common');
   const [activeTab, setActiveTab] = useState<TabId>('realtime');
   const [entries, setEntries] = useState<TokenUsageEntry[]>([]);
@@ -323,58 +327,59 @@ export function Costs() {
   const modelRows = [...modelMap.entries()].sort((a, b) => b[1].tokens - a[1].tokens);
 
   return (
-    <div className="flex h-full flex-col bg-[#f2f2f7]">
-      {/* Header */}
-      <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-[#c6c6c8] bg-white px-5">
-        <h1 className="text-[15px] font-semibold text-[#000000]">{t('costs.title')}</h1>
-        <div className="flex items-center gap-3">
-          {activeTab === 'realtime' && (
-            <>
-              <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
-                <input
-                  type="checkbox"
-                  aria-label="Auto refresh"
-                  checked={autoRefreshEnabled}
-                  onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-[#c6c6c8]"
-                />
-                Auto refresh
-              </label>
-              <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
-                <span>Interval</span>
+    <div className={cn('flex h-full flex-col', embedded ? 'bg-transparent' : 'bg-[#f2f2f7]')}>
+      {!embedded ? (
+        <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-[#c6c6c8] bg-white px-5">
+          <h1 className="text-[15px] font-semibold text-[#000000]">{t('costs.title')}</h1>
+          <div className="flex items-center gap-3">
+            {activeTab === 'realtime' && (
+              <>
+                <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
+                  <input
+                    type="checkbox"
+                    aria-label="Auto refresh"
+                    checked={autoRefreshEnabled}
+                    onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-[#c6c6c8]"
+                  />
+                  Auto refresh
+                </label>
+                <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
+                  <span>Interval</span>
+                  <select
+                    aria-label="Refresh interval"
+                    value={autoRefreshIntervalSec}
+                    onChange={(event) => setAutoRefreshIntervalSec(Number(event.target.value))}
+                    className="h-8 rounded-lg border border-[#c6c6c8] bg-[#f2f2f7] px-2 text-[12px] text-[#3c3c43] outline-none"
+                  >
+                    <option value={15}>15s</option>
+                    <option value={30}>30s</option>
+                    <option value={60}>60s</option>
+                  </select>
+                </label>
                 <select
-                  aria-label="Refresh interval"
-                  value={autoRefreshIntervalSec}
-                  onChange={(event) => setAutoRefreshIntervalSec(Number(event.target.value))}
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
                   className="h-8 rounded-lg border border-[#c6c6c8] bg-[#f2f2f7] px-2 text-[12px] text-[#3c3c43] outline-none"
                 >
-                  <option value={15}>15s</option>
-                  <option value={30}>30s</option>
-                  <option value={60}>60s</option>
+                  <option value={50}>{t('costs.recent50')}</option>
+                  <option value={200}>{t('costs.recent200')}</option>
+                  <option value={500}>{t('costs.recent500')}</option>
                 </select>
-              </label>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="h-8 rounded-lg border border-[#c6c6c8] bg-[#f2f2f7] px-2 text-[12px] text-[#3c3c43] outline-none"
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => { void fetchData(); void fetchSummary(); }}
+              disabled={loading}
+              className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] text-[#3c3c43] transition-colors hover:bg-[#f2f2f7] disabled:opacity-50"
             >
-              <option value={50}>{t('costs.recent50')}</option>
-              <option value={200}>{t('costs.recent200')}</option>
-              <option value={500}>{t('costs.recent500')}</option>
-            </select>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => { void fetchData(); void fetchSummary(); }}
-            disabled={loading}
-            className="flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] text-[#3c3c43] transition-colors hover:bg-[#f2f2f7] disabled:opacity-50"
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-            {t('actions.refresh')}
-          </button>
+              <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+              {t('actions.refresh')}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Tabs */}
       <div className="flex shrink-0 gap-6 border-b border-[#c6c6c8] bg-white px-5">

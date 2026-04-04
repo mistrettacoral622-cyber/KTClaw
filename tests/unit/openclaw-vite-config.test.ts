@@ -9,4 +9,12 @@ describe('vite packaging config', () => {
     expect(viteConfig).not.toContain("return 'vendor-react'");
     expect(viteConfig).not.toContain("return 'vendor-markdown'");
   });
+
+  it('uses externalized main-process dependencies during dev to avoid rebundling the whole Electron runtime graph', () => {
+    const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8');
+
+    expect(viteConfig).toContain("function isMainProcessExternal");
+    expect(viteConfig).toContain("command === 'serve'");
+    expect(viteConfig).toContain('external: mainProcessExternal');
+  });
 });

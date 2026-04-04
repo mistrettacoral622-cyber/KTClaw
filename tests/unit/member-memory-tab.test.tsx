@@ -1,11 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentSummary } from '@/types/agent';
-import { hostApiFetch } from '@/lib/host-api';
 import { MemberMemoryTab } from '@/components/team-map/MemberMemoryTab';
+import { getMemoryOverview, reindexMemory, saveMemoryFile } from '@/lib/memory-client';
 
 vi.mock('@/lib/host-api', () => ({
-  hostApiFetch: vi.fn(),
+  hostApiFetch: vi.fn(() => {
+    throw new Error('MemberMemoryTab should use the shared memory client instead of hostApiFetch directly');
+  }),
+}));
+
+vi.mock('@/lib/memory-client', () => ({
+  getMemoryOverview: vi.fn(),
+  saveMemoryFile: vi.fn(),
+  reindexMemory: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -48,37 +56,27 @@ describe('MemberMemoryTab', () => {
     vi.clearAllMocks();
     vi.useRealTimers();
 
-    vi.mocked(hostApiFetch).mockImplementation(async (path, init) => {
-      if (path === '/api/memory?scope=researcher') {
-        return {
-          files: [
-            {
-              relativePath: 'MEMORY.md',
-              label: 'MEMORY.md',
-              content: 'Initial memory',
-              lastModified: '2026-04-02T00:00:00.000Z',
-            },
-          ],
-        };
-      }
-
-      if (path === '/api/memory/file' && init?.method === 'PUT') {
-        return { ok: true };
-      }
-
-      if (path === '/api/memory/reindex' && init?.method === 'POST') {
-        return { ok: true };
-      }
-
-      throw new Error(`Unexpected hostApiFetch call: ${String(path)}`);
+    vi.mocked(getMemoryOverview).mockResolvedValue({
+      files: [
+        {
+          relativePath: 'MEMORY.md',
+          label: 'MEMORY.md',
+          content: 'Initial memory',
+          lastModified: '2026-04-02T00:00:00.000Z',
+        },
+      ],
+      activeScope: 'researcher',
+      workspaceDir: '/workspace/researcher',
     });
+    vi.mocked(saveMemoryFile).mockResolvedValue({ ok: true });
+    vi.mocked(reindexMemory).mockResolvedValue({ ok: true });
   });
 
   it('loads the current agent MEMORY.md from the scoped memory API', async () => {
     render(<MemberMemoryTab agent={agent} />);
 
     expect(await screen.findByDisplayValue('Initial memory')).toBeInTheDocument();
-    expect(hostApiFetch).toHaveBeenCalledWith('/api/memory?scope=researcher');
+    expect(getMemoryOverview).toHaveBeenCalledWith({ scope: 'researcher' });
   });
 
   it('autosaves MEMORY.md after 1500ms with the agent scope and save states', async () => {
@@ -91,24 +89,15 @@ describe('MemberMemoryTab', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 1600));
     await waitFor(() => {
-      expect(hostApiFetch).toHaveBeenCalledWith(
-        '/api/memory/file',
-        expect.objectContaining({
-          method: 'PUT',
-        }),
-      );
+      expect(saveMemoryFile).toHaveBeenCalledWith({
+        relativePath: 'MEMORY.md',
+        content: 'Updated memory',
+        scope: 'researcher',
+        expectedMtime: '2026-04-02T00:00:00.000Z',
+      });
     });
 
-    const putCall = vi.mocked(hostApiFetch).mock.calls.find(
-      ([path, init]) => path === '/api/memory/file' && init?.method === 'PUT',
-    );
-    const payload = JSON.parse(String(putCall?.[1]?.body));
-    expect(payload).toEqual({
-      relativePath: 'MEMORY.md',
-      content: 'Updated memory',
-      scope: 'researcher',
-      expectedMtime: '2026-04-02T00:00:00.000Z',
-    });
+    expect(reindexMemory).toHaveBeenCalledTimes(1);
 
     await waitFor(() => {
       expect(screen.getByText('Synced')).toBeInTheDocument();

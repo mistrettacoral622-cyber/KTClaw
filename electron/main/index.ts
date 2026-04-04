@@ -205,19 +205,21 @@ function createWindow(): BrowserWindow {
     logger.error('Failed to load:', errorCode, errorDescription, validatedURL);
   });
 
-  // Load the app
+  return win;
+}
+
+function loadWindowContents(win: BrowserWindow): void {
   if (process.env.VITE_DEV_SERVER_URL) {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL);
+    void win.loadURL(process.env.VITE_DEV_SERVER_URL);
     win.webContents.openDevTools();
-  } else {
-    win.loadFile(join(__dirname, '../../dist/index.html'));
-    // Auto-open DevTools on Linux for debugging white screen issues
-    if (process.platform === 'linux' && process.env.CLAWX_DEBUG !== '0') {
-      win.webContents.openDevTools();
-    }
+    return;
   }
 
-  return win;
+  void win.loadFile(join(__dirname, '../../dist/index.html'));
+  // Auto-open DevTools on Linux for debugging white screen issues
+  if (process.platform === 'linux' && process.env.CLAWX_DEBUG !== '0') {
+    win.webContents.openDevTools();
+  }
 }
 
 function focusWindow(win: BrowserWindow): void {
@@ -341,6 +343,8 @@ async function initialize(): Promise<void> {
     mainWindow: window,
     hostApiSessionToken,
   });
+
+  loadWindowContents(window);
 
   const enabledMcpServers = loadMcpConfig().servers.filter((server) => server.enabled);
   if (enabledMcpServers.length > 0) {
@@ -596,7 +600,7 @@ if (gotTheLock) {
     // "Cannot create BrowserWindow before app is ready" on macOS.
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
-        createMainWindow();
+        loadWindowContents(createMainWindow());
       } else {
         focusMainWindow();
       }

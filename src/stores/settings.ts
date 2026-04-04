@@ -401,7 +401,13 @@ export const useSettingsStore = create<SettingsState>()(
         set({ p2pSyncEnabled });
         void persistSettingValue('p2pSyncEnabled', p2pSyncEnabled).catch(() => { });
       },
-      markSetupComplete: () => set({ setupComplete: true }),
+      markSetupComplete: () => {
+        set({ setupComplete: true });
+        void hostApiFetch('/api/settings/setupComplete', {
+          method: 'PUT',
+          body: JSON.stringify({ value: true }),
+        }).catch(() => { });
+      },
       setBrandName: (brandName) => set({ brandName }),
       setBrandSubtitle: (brandSubtitle) => set({ brandSubtitle }),
       setBrandLogoDataUrl: (brandLogoDataUrl) => set({ brandLogoDataUrl }),

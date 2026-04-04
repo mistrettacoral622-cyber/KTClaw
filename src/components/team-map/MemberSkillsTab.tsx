@@ -131,7 +131,7 @@ export function MemberSkillsTab({ agent }: { agent: AgentSummary }) {
     return (
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
         <p>{t('teamMap.skills.empty', { defaultValue: 'No skills assigned' })}</p>
-        <Button type="button" variant="outline" onClick={() => navigate('/skills')}>
+        <Button type="button" variant="outline" onClick={() => navigate('/settings?section=skills-mcp')}>
           {t('teamMap.skills.openSkillsPage', { defaultValue: 'Open Skills Page' })}
         </Button>
       </div>
@@ -197,7 +197,7 @@ export function MemberSkillsTab({ agent }: { agent: AgentSummary }) {
         ) : (
           <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
             <p>{t('teamMap.skills.empty', { defaultValue: 'No skills assigned' })}</p>
-            <Button type="button" variant="outline" onClick={() => navigate('/skills')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/settings?section=skills-mcp')}>
               {t('teamMap.skills.openSkillsPage', { defaultValue: 'Open Skills Page' })}
             </Button>
           </div>
