@@ -14,10 +14,10 @@
 (function () {
   var _f = globalThis.fetch;
   if (typeof _f !== 'function') return;
-  if (globalThis.__clawxFetchPatched) return;
-  globalThis.__clawxFetchPatched = true;
+  if (globalThis.__ktclawFetchPatched) return;
+  globalThis.__ktclawFetchPatched = true;
 
-  globalThis.fetch = function clawxFetch(input, init) {
+  globalThis.fetch = function ktclawFetch(input, init) {
     var url =
       typeof input === 'string' ? input
         : input && typeof input === 'object' && typeof input.url === 'string'

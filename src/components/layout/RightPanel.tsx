@@ -235,7 +235,7 @@ export function RightPanel() {
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && closePanel()}>
-      <SheetContent side="right" className="w-[400px] sm:max-w-[400px]">
+      <SheetContent side="right" className="flex w-[400px] flex-col sm:max-w-[400px]">
         <SheetHeader>
           <SheetTitle>
             {type === 'file'
@@ -252,7 +252,7 @@ export function RightPanel() {
               : '查看和编辑任务详细信息'}
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6 flex h-[calc(100%-2rem)] flex-col">
+        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
           {type === 'file' ? (
             <FileListPanel />
           ) : type === 'agent' ? (

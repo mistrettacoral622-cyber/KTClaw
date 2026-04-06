@@ -35,28 +35,28 @@
     },
     "square": {
         "title": "员工广场",
-        "subtitle": "在同一个广场里浏览、创建，并进入每个 Agent 的专属入口。",
+        "subtitle": "在同一个广场里浏览、创建，并进入每位员工的专属入口。",
         "stats": {
-            "all": "全部 Agent",
-            "leaders": "Leader",
-            "workers": "Worker"
+            "all": "全部员工",
+            "leaders": "负责人",
+            "workers": "执行成员"
         },
         "filters": {
             "all": "全部",
-            "leader": "Leader",
-            "worker": "Worker",
+            "leader": "负责人",
+            "worker": "执行成员",
             "direct": "可直聊",
-            "leader_only": "仅 Leader 转达",
+            "leader_only": "仅负责人转达",
             "with_team": "已有团队"
         },
         "actions": {
-            "chat": "Chat",
-            "memory": "Memory",
+            "chat": "对话",
+            "memory": "记忆",
             "details": "Details"
         },
         "empty": {
-            "title": "没有匹配的 Agent",
-            "description": "调整当前筛选条件，或创建一个新的 Agent。"
+            "title": "没有匹配的员工",
+            "description": "调整当前筛选条件，或创建一名新员工。"
         }
     },
     "detail": {

@@ -253,7 +253,7 @@ export class McpRuntimeManager {
 
     const transport = this.createTransport(config);
     const client = new Client(
-      { name: 'clawx-mcp-runtime', version: '0.1.0' },
+      { name: 'ktclaw-mcp-runtime', version: '0.1.0' },
       { capabilities: {} },
     );
 

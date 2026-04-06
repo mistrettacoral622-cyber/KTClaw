@@ -306,18 +306,60 @@
   },
   "settingsShell": {
     "groups": {
-      "canonical": "Settings"
+      "basic": "基础",
+      "workflow": "工作流",
+      "capability": "能力",
+      "governance": "治理"
     },
     "items": {
-      "costs-usage": { "label": "Costs & Usage" },
-      "models-providers": { "label": "Models & Providers" },
-      "general": { "label": "General" },
-      "skills-mcp": { "label": "Skills & MCP" },
-      "tool-permissions": { "label": "Tool Permissions" },
-      "memory-knowledge": { "label": "Memory Knowledge Base" },
-      "migration-backup": { "label": "Migration & Backup" },
-      "app-updates": { "label": "App Updates" },
-      "about": { "label": "About" }
+      "costs-usage": {
+        "label": "Costs & Usage"
+      },
+      "models-providers": {
+        "label": "Models & Providers"
+      },
+      "general": {
+        "label": "General"
+      },
+      "skills-mcp": {
+        "label": "Skills & MCP"
+      },
+      "tool-permissions": {
+        "label": "Tool Permissions"
+      },
+      "memory-knowledge": {
+        "label": "Memory Knowledge Base"
+      },
+      "migration-backup": {
+        "label": "Migration & Backup"
+      },
+      "app-updates": {
+        "label": "App Updates"
+      },
+      "about": {
+        "label": "About"
+      },
+      "model-provider": {
+        "label": "模型与 Provider"
+      },
+      "team-role-strategy": {
+        "label": "团队与角色策略"
+      },
+      "channel-advanced": {
+        "label": "通道高级配置"
+      },
+      "automation-defaults": {
+        "label": "自动化默认策略"
+      },
+      "agent-avatars": {
+        "label": "分身头像"
+      },
+      "auto-update": {
+        "label": "应用更新"
+      },
+      "feedback-developer": {
+        "label": "反馈与开发者"
+      }
     },
     "meta": {
       "costs-usage": {
@@ -364,6 +406,41 @@
         "title": "About",
         "subtitle": "Review product information, support links, and developer diagnostics without promoting them to top-level navigation.",
         "kicker": "Product and diagnostics"
+      },
+      "model-provider": {
+        "title": "模型与服务商",
+        "subtitle": "配置核心推理引擎，绑定第三方 API Key，并指定全局兜底模型。",
+        "kicker": "API Key 配置、大语言模型选择"
+      },
+      "team-role-strategy": {
+        "title": "团队架构",
+        "subtitle": "管理如何自动派生系统子 AI，并给不同类任务指定默认角色处理。",
+        "kicker": "角色分配、上下文共享边界"
+      },
+      "channel-advanced": {
+        "title": "通道高级配置",
+        "subtitle": "管理飞书、企业微信、Telegram 等多宿主环境的收发言策略。",
+        "kicker": "IM 集成、静默规则、消息路由"
+      },
+      "automation-defaults": {
+        "title": "自动化默认策略",
+        "subtitle": "定义 Cron 等无人值守工作流的并发资源池和异常熔断逻辑。",
+        "kicker": "定时调度限制、错误重试与告警"
+      },
+      "agent-avatars": {
+        "title": "分身头像",
+        "subtitle": "为每个 Agent 分身上传自定义头像图片。",
+        "kicker": "头像管理"
+      },
+      "auto-update": {
+        "title": "应用更新",
+        "subtitle": "管理自动检查与下载更新策略，查看当前版本与更新进度。",
+        "kicker": "版本管理、自动更新"
+      },
+      "feedback-developer": {
+        "title": "反馈与开发者",
+        "subtitle": "继续承载更新、Doctor 诊断和开发者模式等真实功能。",
+        "kicker": "治理"
       }
     }
   },
@@ -478,20 +555,62 @@
     "compatibility": {
       "title": "Migration Compatibility Report",
       "items": {
-        "channels": { "label": "Channels (IM Config)", "description": "Extract channel config from openclaw.json" },
-        "agentDefaults": { "label": "Agent Default Config", "description": "Migrate agents.defaults settings" },
-        "workspace": { "label": "Workspace Files (workspace/)", "description": "Copy files from workspace/ (39 KB)" },
-        "agents": { "label": "Agent Config (agents/)", "description": "Copy config under agents/ (16 KB)" },
-        "skills": { "label": "Skill Config (skills/)", "description": "Copy the skills/ directory (review custom scripts first)" },
-        "cron": { "label": "Cron Tasks (cron/)", "description": "Copy cron task configuration" },
-        "identity": { "label": "Identity Info (IDENTITY.md)", "description": "Copy the IDENTITY.md file" },
-        "memory": { "label": "Agent Memory Library", "description": "Memory library does not exist" },
-        "history": { "label": "Conversation History (0 sessions)", "description": "No conversation history found" },
-        "providers": { "label": "Model Provider Config", "description": "No custom model providers are available to migrate (zai/zhi…)" },
-        "browser": { "label": "Browser State", "description": "Browser data does not exist" },
-        "media": { "label": "Media Files", "description": "Media files do not exist" },
-        "plugins": { "label": "Plugins (plugins/)", "description": "KTClaw uses a different plugin architecture and cannot migrate them directly" },
-        "gateway": { "label": "Gateway Config", "description": "Gateway architecture differs and cannot be migrated directly" }
+        "channels": {
+          "label": "Channels (IM Config)",
+          "description": "Extract channel config from openclaw.json"
+        },
+        "agentDefaults": {
+          "label": "Agent Default Config",
+          "description": "Migrate agents.defaults settings"
+        },
+        "workspace": {
+          "label": "Workspace Files (workspace/)",
+          "description": "Copy files from workspace/ (39 KB)"
+        },
+        "agents": {
+          "label": "Agent Config (agents/)",
+          "description": "Copy config under agents/ (16 KB)"
+        },
+        "skills": {
+          "label": "Skill Config (skills/)",
+          "description": "Copy the skills/ directory (review custom scripts first)"
+        },
+        "cron": {
+          "label": "Cron Tasks (cron/)",
+          "description": "Copy cron task configuration"
+        },
+        "identity": {
+          "label": "Identity Info (IDENTITY.md)",
+          "description": "Copy the IDENTITY.md file"
+        },
+        "memory": {
+          "label": "Agent Memory Library",
+          "description": "Memory library does not exist"
+        },
+        "history": {
+          "label": "Conversation History (0 sessions)",
+          "description": "No conversation history found"
+        },
+        "providers": {
+          "label": "Model Provider Config",
+          "description": "No custom model providers are available to migrate (zai/zhi…)"
+        },
+        "browser": {
+          "label": "Browser State",
+          "description": "Browser data does not exist"
+        },
+        "media": {
+          "label": "Media Files",
+          "description": "Media files do not exist"
+        },
+        "plugins": {
+          "label": "Plugins (plugins/)",
+          "description": "KTClaw uses a different plugin architecture and cannot migrate them directly"
+        },
+        "gateway": {
+          "label": "Gateway Config",
+          "description": "Gateway architecture differs and cannot be migrated directly"
+        }
       }
     },
     "scope": {

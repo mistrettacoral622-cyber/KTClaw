@@ -14,7 +14,8 @@ interface FeedbackBannerProps {
   dismissLabel?: string;
 }
 
-const STORAGE_PREFIX = 'clawx:feedback-banner:';
+const STORAGE_PREFIX = 'ktclaw:feedback-banner:';
+const LEGACY_STORAGE_PREFIX = 'clawx:feedback-banner:';
 
 const TONE_STYLES: Record<FeedbackBannerTone, string> = {
   info: 'border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-100',
@@ -50,18 +51,36 @@ export function FeedbackBanner({
   dismissLabel = 'Dismiss feedback',
 }: FeedbackBannerProps) {
   const storageKey = useMemo(() => `${STORAGE_PREFIX}${bannerId}`, [bannerId]);
+  const legacyStorageKey = useMemo(() => `${LEGACY_STORAGE_PREFIX}${bannerId}`, [bannerId]);
   const [dismissed, setDismissed] = useState<boolean>(() => getDismissed(storageKey));
   const Icon = TONE_ICONS[tone];
 
   useEffect(() => {
-    setDismissed(getDismissed(storageKey));
-  }, [storageKey]);
+    if (getDismissed(storageKey)) {
+      setDismissed(true);
+      return;
+    }
+
+    if (getDismissed(legacyStorageKey)) {
+      try {
+        window.localStorage.setItem(storageKey, 'dismissed');
+        window.localStorage.removeItem(legacyStorageKey);
+      } catch {
+        // ignore migration issues
+      }
+      setDismissed(true);
+      return;
+    }
+
+    setDismissed(false);
+  }, [legacyStorageKey, storageKey]);
 
   if (dismissed) return null;
 
   const handleDismiss = () => {
     try {
       window.localStorage.setItem(storageKey, 'dismissed');
+      window.localStorage.removeItem(legacyStorageKey);
     } catch {
       // Ignore storage issues and still dismiss for current session.
     }

@@ -93,7 +93,7 @@ export function EmployeeSquareCard({
       </div>
 
       <p className="mt-5 min-h-[44px] text-sm leading-6 text-slate-600">
-        {card.persona || 'No persona configured yet.'}
+        {card.persona || '暂未配置角色设定。'}
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function EmployeeSquareCard({
           ))
         ) : (
           <span className="rounded-full border border-dashed border-slate-200 px-2.5 py-1 text-[12px] text-slate-400">
-            Independent
+            独立成员
           </span>
         )}
       </div>
@@ -116,13 +116,13 @@ export function EmployeeSquareCard({
       <div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-slate-50 px-4 py-3">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Model
+            模型
           </div>
           <div className="mt-1 text-sm font-medium text-slate-800">{card.modelLabel}</div>
         </div>
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            Channels
+            频道
           </div>
           <div className="mt-1 text-sm font-medium text-slate-800">{card.channelCount}</div>
         </div>

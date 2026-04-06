@@ -230,9 +230,9 @@ export function Chat() {
                       agent.id === currentAgentId && 'bg-[#f2f2f7] font-medium',
                     )}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clawx-ac text-[11px] text-white">✦</span>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ktclaw-ac text-[11px] text-white">✦</span>
                     <span className="min-w-0 flex-1 truncate">{agent.name}</span>
-                    {agent.id === currentAgentId && <span className="shrink-0 text-[10px] text-clawx-ac">✓</span>}
+                    {agent.id === currentAgentId && <span className="shrink-0 text-[10px] text-ktclaw-ac">✓</span>}
                   </button>
                 ))}
               </div>

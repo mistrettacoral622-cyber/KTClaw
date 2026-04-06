@@ -32,6 +32,10 @@ import { CHANNEL_ICONS, type Channel } from '@/types/channel';
 
 const CHAT_REQUEST_FILE_UPLOAD_EVENT = 'chat:request-file-upload';
 const CHAT_UPLOAD_PENDING_KEY = 'ktclaw:pending-upload';
+const NICKNAME_STORAGE_KEY = 'ktclaw-user-nickname';
+const LEGACY_NICKNAME_STORAGE_KEY = 'clawx-user-nickname';
+const AVATAR_STORAGE_KEY = 'ktclaw-user-avatar';
+const LEGACY_AVATAR_STORAGE_KEY = 'clawx-user-avatar';
 
 type NavItemConfig = {
   label: string;
@@ -91,6 +95,67 @@ function SectionHeader({
   );
 }
 
+function SessionSectionHeader({
+  label,
+  open,
+  collapsed,
+  newSessionLabel,
+  onToggle,
+  onNewSession,
+}: {
+  label: string;
+  open: boolean;
+  collapsed: boolean;
+  newSessionLabel: string;
+  onToggle: () => void;
+  onNewSession: () => void;
+}) {
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onToggle}
+        className="flex h-11 w-full items-center justify-center rounded-xl px-2 text-sm font-medium transition-colors hover:bg-[#e5e5ea]"
+      >
+        <MessageSquare className="h-4 w-4 shrink-0" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="group/sessions-header flex items-center gap-2">
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onToggle}
+        className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors hover:bg-[#e5e5ea] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a84ff]/40"
+      >
+        <MessageSquare className="h-4 w-4 shrink-0" />
+        <span className="truncate text-left">{label}</span>
+        <ChevronRight
+          data-testid="sessions-section-chevron"
+          aria-hidden="true"
+          className={cn(
+            'h-4 w-4 shrink-0 text-[#8e8e93] transition-all opacity-0 group-hover/sessions-header:opacity-100 group-focus-within/sessions-header:opacity-100',
+            open && 'rotate-90',
+          )}
+        />
+      </button>
+
+      <button
+        type="button"
+        aria-label={newSessionLabel}
+        title={newSessionLabel}
+        onClick={onNewSession}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#3c3c43] transition-colors hover:bg-[#e5e5ea] hover:text-[#000000] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a84ff]/40"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 function NavItem({
   item,
   active,
@@ -110,7 +175,7 @@ function NavItem({
       aria-label={item.label}
       onClick={onClick}
       className={cn(
-        'flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors',
+        'flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors',
         active
           ? 'bg-white text-[#000000] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.04)]'
           : 'text-[#000000] hover:bg-[#e5e5ea]',
@@ -137,6 +202,7 @@ export function Sidebar() {
   const sessionLastActivity = useChatStore((state) => state.sessionLastActivity);
   const messages = useChatStore((state) => state.messages);
   const switchSession = useChatStore((state) => state.switchSession);
+  const newSession = useChatStore((state) => state.newSession);
   const deleteSession = useChatStore((state) => state.deleteSession);
   const loadSessions = useChatStore((state) => state.loadSessions);
   const loadHistory = useChatStore((state) => state.loadHistory);
@@ -155,8 +221,36 @@ export function Sidebar() {
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [avatarPopupOpen, setAvatarPopupOpen] = useState(false);
-  const [nickname, setNickname] = useState(() => localStorage.getItem('clawx-user-nickname') || 'Administrator');
-  const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('clawx-user-avatar') || '👤');
+  const [nickname, setNickname] = useState(() => {
+    try {
+      const current = localStorage.getItem(NICKNAME_STORAGE_KEY);
+      if (current) return current;
+      const legacy = localStorage.getItem(LEGACY_NICKNAME_STORAGE_KEY);
+      if (legacy) {
+        localStorage.setItem(NICKNAME_STORAGE_KEY, legacy);
+        localStorage.removeItem(LEGACY_NICKNAME_STORAGE_KEY);
+        return legacy;
+      }
+    } catch {
+      // ignore storage access issues
+    }
+    return 'Administrator';
+  });
+  const [selectedAvatar, setSelectedAvatar] = useState(() => {
+    try {
+      const current = localStorage.getItem(AVATAR_STORAGE_KEY);
+      if (current) return current;
+      const legacy = localStorage.getItem(LEGACY_AVATAR_STORAGE_KEY);
+      if (legacy) {
+        localStorage.setItem(AVATAR_STORAGE_KEY, legacy);
+        localStorage.removeItem(LEGACY_AVATAR_STORAGE_KEY);
+        return legacy;
+      }
+    } catch {
+      // ignore storage access issues
+    }
+    return '👤';
+  });
 
   const tSidebar = (key: string, defaultValue?: string) =>
     t(`common:sidebar.${key}`, { defaultValue });
@@ -262,6 +356,12 @@ export function Sidebar() {
     }
     navigate('/');
     window.dispatchEvent(new CustomEvent(CHAT_REQUEST_FILE_UPLOAD_EVENT));
+  };
+
+  const handleNewSession = () => {
+    setSessionsOpen(true);
+    newSession();
+    navigate('/');
   };
 
   return (
@@ -417,12 +517,13 @@ export function Sidebar() {
         </div>
 
         <div className="mt-4 space-y-2">
-          <SectionHeader
-            icon={MessageSquare}
+          <SessionSectionHeader
             label={tSidebar('sessions', 'Sessions')}
             open={sessionsOpen}
-            onToggle={() => setSessionsOpen((current) => !current)}
             collapsed={sidebarCollapsed}
+            newSessionLabel={tSidebar('newSession', 'New session')}
+            onToggle={() => setSessionsOpen((current) => !current)}
+            onNewSession={handleNewSession}
           />
           {!sidebarCollapsed && sessionsOpen ? (
             <div className="space-y-2">
@@ -478,7 +579,7 @@ export function Sidebar() {
                 type="button"
                 aria-label={tSidebar('selectAvatar', 'Select avatar')}
                 onClick={() => setAvatarPopupOpen(true)}
-                className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] flex items-center justify-center text-[18px] transition-colors hover:ring-2 hover:ring-clawx-ac/40"
+                className="h-7 w-7 shrink-0 rounded-full bg-[#d9d9d9] flex items-center justify-center text-[18px] transition-colors hover:ring-2 hover:ring-ktclaw-ac/40"
               >
                 {selectedAvatar}
               </button>
@@ -501,8 +602,16 @@ export function Sidebar() {
         <AvatarPopup
           nickname={nickname}
           avatar={selectedAvatar}
-          onNicknameChange={(v) => { setNickname(v); localStorage.setItem('clawx-user-nickname', v); }}
-          onAvatarChange={(v) => { setSelectedAvatar(v); localStorage.setItem('clawx-user-avatar', v); }}
+          onNicknameChange={(v) => {
+            setNickname(v);
+            localStorage.setItem(NICKNAME_STORAGE_KEY, v);
+            localStorage.removeItem(LEGACY_NICKNAME_STORAGE_KEY);
+          }}
+          onAvatarChange={(v) => {
+            setSelectedAvatar(v);
+            localStorage.setItem(AVATAR_STORAGE_KEY, v);
+            localStorage.removeItem(LEGACY_AVATAR_STORAGE_KEY);
+          }}
           onClose={() => setAvatarPopupOpen(false)}
         />
       )}
@@ -591,7 +700,7 @@ function AvatarPopup({
               className={cn(
                 'flex flex-col items-center gap-1 rounded-xl py-2 text-[22px] transition-colors',
                 selectedAvatar === opt.emoji
-                  ? 'bg-clawx-ac/10 ring-1 ring-clawx-ac/40'
+                  ? 'bg-ktclaw-ac/10 ring-1 ring-ktclaw-ac/40'
                   : 'hover:bg-[#f2f2f7]',
               )}
             >
@@ -610,7 +719,7 @@ function AvatarPopup({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder={tSidebar('nicknamePlaceholder')}
-            className="w-full rounded-lg border border-black/10 bg-[#f2f2f7] px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac focus:bg-white"
+            className="w-full rounded-lg border border-black/10 bg-[#f2f2f7] px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-ktclaw-ac focus:bg-white"
           />
         </div>
 
@@ -623,7 +732,7 @@ function AvatarPopup({
               onAvatarChange(selectedAvatar);
               onClose();
             }}
-            className="w-full rounded-full bg-clawx-ac py-2 text-[13px] font-semibold text-white hover:bg-[#0062cc]"
+            className="w-full rounded-full bg-ktclaw-ac py-2 text-[13px] font-semibold text-white hover:bg-[#0062cc]"
           >
             {t('common:actions.save')}
           </button>

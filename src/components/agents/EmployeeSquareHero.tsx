@@ -55,17 +55,17 @@ export function EmployeeSquareHero({
   filterLabels,
 }: EmployeeSquareHeroProps) {
   return (
-    <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_45%,#eef4ff_100%)] p-6 shadow-sm md:p-8">
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+    <section className="rounded-[32px] border border-slate-200/80 bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_45%,#eef4ff_100%)] px-6 py-4 shadow-sm md:px-8 md:py-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             <Users className="h-3.5 w-3.5" />
-            Employee Square
+            员工广场
           </div>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
             {title}
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
             {subtitle}
           </p>
         </div>
@@ -89,7 +89,7 @@ export function EmployeeSquareHero({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-3">
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         {[
           { label: statLabels.all, value: totalCount },
           { label: statLabels.leaders, value: leaderCount },
@@ -97,17 +97,17 @@ export function EmployeeSquareHero({
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-2xl border border-slate-200/70 bg-white/75 px-4 py-4 shadow-sm backdrop-blur"
+            className="rounded-2xl border border-slate-200/70 bg-white/75 px-4 py-2.5 shadow-sm backdrop-blur"
           >
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               {stat.label}
             </div>
-            <div className="mt-2 text-3xl font-semibold text-slate-950">{stat.value}</div>
+            <div className="mt-1 text-2xl font-semibold text-slate-950">{stat.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {FILTER_ORDER.map((filter) => (
           <button
             key={filter}

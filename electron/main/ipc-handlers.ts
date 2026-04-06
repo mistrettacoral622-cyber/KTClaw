@@ -2097,7 +2097,7 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
         const resolvedBaseUrl = options?.baseUrl || provider?.baseUrl || registryBaseUrl;
         const resolvedProtocol = options?.apiProtocol || provider?.apiProtocol;
 
-        logger.info('[clawx-validate] validating provider type', { providerType });
+        logger.info('[ktclaw-validate] validating provider type', { providerType });
         return await validateApiKeyWithProvider(providerType, apiKey, {
           baseUrl: resolvedBaseUrl,
           apiProtocol: resolvedProtocol,

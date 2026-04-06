@@ -197,10 +197,10 @@ describe('Settings center', () => {
     expect(screen.getByRole('tab', { name: 'memoryKnowledge.tabs.browser' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('about') }));
-    expect(screen.getByText('KTClaw Doctor')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Re-run Setup' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reset All Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear Server Data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '运行诊断' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重新运行初始化' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重置所有设置' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '清除服务器数据' })).toBeInTheDocument();
 
     expect(
       await axe(container, {
@@ -270,11 +270,11 @@ describe('Settings center', () => {
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('about') }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Re-run Setup' }));
+    fireEvent.click(screen.getByRole('button', { name: '重新运行初始化' }));
     expect(navigateMock).toHaveBeenCalledWith('/setup');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Reset All Settings' }));
+      fireEvent.click(screen.getByRole('button', { name: '重置所有设置' }));
     });
     expect(hostApiFetchMock).toHaveBeenCalledWith(
       '/api/settings/reset',
@@ -283,7 +283,7 @@ describe('Settings center', () => {
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith('settings:maintenance.resetSuccess');
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Clear Server Data' }));
+      fireEvent.click(screen.getByRole('button', { name: '清除服务器数据' }));
     });
     expect(hostApiFetchMock).toHaveBeenCalledWith(
       '/api/app/clear-server-data',
@@ -300,12 +300,12 @@ describe('Settings center', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('app-updates') }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Update channel' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: '更新渠道' }), {
       target: { value: 'beta' },
     });
 
     expect(updateState.setChannel).toHaveBeenCalledWith('beta');
-    expect(screen.getByText('Update policy')).toBeInTheDocument();
+    expect(screen.getByText('更新策略')).toBeInTheDocument();
   });
 
   it('uploads and clears custom brand logo/icon data urls', async () => {
@@ -317,8 +317,8 @@ describe('Settings center', () => {
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('general') }));
 
-    const logoInput = screen.getByLabelText('Upload brand logo');
-    const iconInput = screen.getByLabelText('Upload brand icon');
+    const logoInput = screen.getByLabelText('上传品牌 Logo');
+    const iconInput = screen.getByLabelText('上传品牌图标');
 
     fireEvent.change(logoInput, {
       target: { files: [new File(['logo'], 'logo.png', { type: 'image/png' })] },
@@ -332,8 +332,8 @@ describe('Settings center', () => {
       expect(useSettingsStore.getState().brandIconDataUrl).toMatch(/^data:image\/png;base64,/);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear brand logo' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Clear brand icon' }));
+    fireEvent.click(screen.getByRole('button', { name: '清除品牌 Logo' }));
+    fireEvent.click(screen.getByRole('button', { name: '清除品牌图标' }));
 
     expect(useSettingsStore.getState().brandLogoDataUrl).toBe(null);
     expect(useSettingsStore.getState().brandIconDataUrl).toBe(null);

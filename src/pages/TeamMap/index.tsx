@@ -430,10 +430,6 @@ export function TeamMap() {
   const loading = agentsLoading || teamsLoading;
   const currentTeam = teams.find((team) => team.id === teamId) ?? null;
 
-  if (loading) {
-    return <TeamMapLoadingState />;
-  }
-
   const { leader, members, scopedAgents } = useMemo(() => {
     if (!currentTeam) {
       return {
@@ -488,6 +484,10 @@ export function TeamMap() {
 
     nodeRefs.current[lastFocusedNodeId]?.focus();
   }, [detailOpen, lastFocusedNodeId]);
+
+  if (loading) {
+    return <TeamMapLoadingState />;
+  }
 
   const registerNode = (agentId: string, node: HTMLDivElement | null) => {
     nodeRefs.current[agentId] = node;

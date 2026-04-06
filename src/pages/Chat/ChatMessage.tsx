@@ -129,7 +129,10 @@ export const ChatMessage = memo(function ChatMessage({
     >
       {/* Avatar */}
       {!isUser && (
-        <div className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-clawx-ac text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]">
+        <div
+          data-testid="chat-avatar-assistant"
+          className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ktclaw-ac text-white shadow-[0_2px_8px_rgba(0,122,255,0.3)]"
+        >
           <Sparkles className="h-3.5 w-3.5" />
         </div>
       )}
@@ -405,7 +408,7 @@ function MessageBubble({
         'relative rounded-2xl px-[14px] py-[10px]',
         !isUser && 'w-full',
         isUser
-          ? 'rounded-tr-[4px] bg-clawx-ac text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]'
+          ? 'rounded-tr-[4px] bg-ktclaw-ac text-white shadow-[0_1px_2px_rgba(0,0,0,0.08)]'
           : 'rounded-tl-[4px] bg-white text-black shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_0.5px_rgba(0,0,0,0.04)] dark:bg-white/[0.04] dark:text-white',
       )}
     >

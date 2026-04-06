@@ -11,9 +11,15 @@ import { WeChatOnboardingWizard } from '@/components/channels/WeChatOnboardingWi
 import { BotBindingModal } from '@/components/channels/BotBindingModal';
 import { ChannelConfigModal } from '@/components/channels/ChannelConfigModal';
 import { DingTalkConfigPage } from '@/components/channels/DingTalkConfigPage';
+import { FeishuWorkbenchPlaceholder } from '@/components/channels/FeishuWorkbenchPlaceholder';
 import { WeComConfigPage } from '@/components/channels/WeComConfigPage';
 import { QQConfigPage } from '@/components/channels/QQConfigPage';
 import MarkdownContent from '@/pages/Chat/MarkdownContent';
+import {
+  buildWorkbenchComposerPlaceholder,
+  getChannelWorkbenchLabel,
+  resolveSelectedChannel,
+} from '@/pages/Channels/channel-selection';
 import {
   CHANNEL_ICONS,
   CHANNEL_NAMES,
@@ -255,17 +261,19 @@ export function Channels() {
     void fetchChannels();
   }, [fetchChannels]);
 
-  const selectedChannel =
-    (activeChannelId ? channels.find((channel) => channel.id === activeChannelId) : undefined)
-    ?? channels.find((channel) => channel.type === requestedChannel)
-    ?? channels[0]
-    ?? null;
+  const selectedChannel = resolveSelectedChannel(channels, activeChannelId, requestedChannel);
   const resolvedActiveChannelId = selectedChannel?.id ?? null;
   const activeChannelType: ChannelType = selectedChannel?.type ?? requestedChannel;
   const activeChannelAccountId = selectedChannel?.accountId ?? undefined;
   const scopedSessionAccountId = activeChannelType === 'wechat' && activeChannelAccountId && activeChannelAccountId !== 'default'
     ? activeChannelAccountId
     : undefined;
+  const showFeishuWorkbenchPlaceholder = activeChannelType === 'feishu';
+  const selectedSessionType = sessions.find((session) => session.id === selectedConversationId)?.sessionType;
+  const composerPlaceholder = buildWorkbenchComposerPlaceholder(activeChannelType, selectedSessionType);
+  const conversationSyncStatusLabel = conversation?.syncState === 'synced'
+    ? `${getChannelWorkbenchLabel(activeChannelType)}同步中`
+    : conversation?.syncState ?? '';
 
   useEffect(() => {
     if (resolvedActiveChannelId !== activeChannelId) {
@@ -603,6 +611,15 @@ export function Channels() {
     openChannelConfig(activeChannelType, selectedChannel?.accountId);
   };
 
+  const feishuPlaceholderActionLabel = selectedChannel ? '打开频道设置' : '新增飞书接入';
+  const handleFeishuPlaceholderAction = () => {
+    if (selectedChannel) {
+      setSettingsOpen(true);
+      return;
+    }
+    handleQuickAddCurrentType();
+  };
+
   const handleSend = async (retryText?: string) => {
     const text = (retryText ?? composerValue).trim();
     if (!text || !selectedChannel || !selectedConversationId) return;
@@ -929,7 +946,13 @@ export function Channels() {
         </div>
       </section>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-white">
+      <main className="relative flex min-w-0 flex-1 flex-col bg-white">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            showFeishuWorkbenchPlaceholder && 'pointer-events-none select-none opacity-25',
+          )}
+        >
         {!conversation || !selectedChannel ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
             <span className="text-[40px]">{CHANNEL_ICONS[activeChannelType]}</span>
@@ -948,7 +971,7 @@ export function Channels() {
                 >←</button>
                 <h2 className="truncate text-[17px] font-semibold text-[#111827]">{conversation.title}</h2>
                 <span className="rounded-full border border-[#dbeafe] bg-[#eff6ff] px-3 py-1 text-[12px] text-[#0284c7]">
-                  {conversation.syncState === 'synced' ? '飞书同步中' : conversation.syncState}
+                  {conversationSyncStatusLabel}
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1222,7 +1245,7 @@ export function Channels() {
                       void handleSend();
                     }
                   }}
-                  placeholder="在群聊发送消息（将同步至飞书）..."
+                  placeholder={composerPlaceholder}
                   rows={1}
                   className="min-h-[24px] max-h-[120px] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent text-[14px] text-[#111827] outline-none placeholder:text-[#8e8e93]"
                 />
@@ -1238,6 +1261,14 @@ export function Channels() {
             </div>
           </>
         )}
+        </div>
+        {showFeishuWorkbenchPlaceholder ? (
+          <FeishuWorkbenchPlaceholder
+            channelName={selectedChannel?.name ?? null}
+            actionLabel={feishuPlaceholderActionLabel}
+            onAction={handleFeishuPlaceholderAction}
+          />
+        ) : null}
       </main>
 
       {lightboxUrl && (

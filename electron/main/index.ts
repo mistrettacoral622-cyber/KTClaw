@@ -12,6 +12,7 @@ import { GatewayManager } from '../gateway/manager';
 import { registerIpcHandlers } from './ipc-handlers';
 import { createTray } from './tray';
 import { createMenu } from './menu';
+import { applyWindowsStartupSwitches, clearDevChromiumCaches } from './startup-hardening';
 
 import { appUpdater, registerUpdateHandlers } from './updater';
 import { logger } from '../utils/logger';
@@ -64,13 +65,19 @@ import { loadMcpConfig } from '../api/routes/mcp';
 // Users who want GPU acceleration can pass `--enable-gpu` on the CLI or
 // set `"disable-hardware-acceleration": false` in the app config (future).
 app.disableHardwareAcceleration();
+applyWindowsStartupSwitches({ ...app, platform: process.platform });
+clearDevChromiumCaches({
+  isPackaged: app.isPackaged,
+  platform: process.platform,
+  userDataDir: app.getPath('userData'),
+});
 
 // On Linux, set CHROME_DESKTOP so Chromium can find the correct .desktop file.
-// On Wayland this maps the running window to clawx.desktop (→ icon + app grouping);
+// On Wayland this maps the running window to ktclaw.desktop (→ icon + app grouping);
 // on X11 it supplements the StartupWMClass matching.
 // Must be called before app.whenReady() / before any window is created.
 if (process.platform === 'linux') {
-  (app as Electron.App & { setDesktopName?: (name: string) => void }).setDesktopName?.('clawx.desktop');
+  (app as Electron.App & { setDesktopName?: (name: string) => void }).setDesktopName?.('ktclaw.desktop');
 }
 
 // Prevent multiple instances of the app from running simultaneously.

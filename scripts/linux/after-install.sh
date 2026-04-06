@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 # Post-installation script for KTClaw on Linux
 
@@ -15,8 +15,8 @@ if command -v gtk-update-icon-cache &> /dev/null; then
 fi
 
 # Create symbolic link for KTClaw app binary
-if [ -x /opt/KTClaw/clawx ]; then
-    ln -sf /opt/KTClaw/clawx /usr/local/bin/clawx 2>/dev/null || true
+if [ -x /opt/KTClaw/ktclaw ]; then
+    ln -sf /opt/KTClaw/ktclaw /usr/local/bin/ktclaw 2>/dev/null || true
 fi
 
 # Create symbolic link for openclaw CLI
@@ -31,7 +31,7 @@ fi
 # On Ubuntu 24.04+, user namespaces are available but blocked by AppArmor;
 # we rely on the AppArmor profile below instead, so 0755 is correct there.
 if ! { [[ -L /proc/self/ns/user ]] && unshare --user true; }; then
-    # No user namespace support — fall back to SUID sandbox
+    # No user namespace support 鈥?fall back to SUID sandbox
     chmod 4755 '/opt/KTClaw/chrome-sandbox' || true
 else
     chmod 0755 '/opt/KTClaw/chrome-sandbox' || true
@@ -46,7 +46,7 @@ fi
 # (Ubuntu 22.04 does not; it runs fine without the profile, so we skip it there).
 if apparmor_status --enabled > /dev/null 2>&1; then
     APPARMOR_PROFILE_SOURCE='/opt/KTClaw/resources/apparmor-profile'
-    APPARMOR_PROFILE_TARGET='/etc/apparmor.d/clawx'
+    APPARMOR_PROFILE_TARGET='/etc/apparmor.d/ktclaw'
     if [ -f "$APPARMOR_PROFILE_SOURCE" ] && \
        apparmor_parser --skip-kernel-load --debug "$APPARMOR_PROFILE_SOURCE" > /dev/null 2>&1; then
         cp -f "$APPARMOR_PROFILE_SOURCE" "$APPARMOR_PROFILE_TARGET"

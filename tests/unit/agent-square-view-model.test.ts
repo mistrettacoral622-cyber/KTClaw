@@ -141,7 +141,7 @@ describe('buildEmployeeSquareCardModels', () => {
     expect(researcher?.isDirectChatBlocked).toBe(true);
     expect(researcher?.detailsHref).toBe('/agents/researcher');
     expect(researcher?.memoryHref).toBe('/agents/researcher?tab=memory');
-    expect(researcher?.lastActiveLabel).toBe('No recent activity');
+    expect(researcher?.lastActiveLabel).toBe('最近暂无活动');
     expect(main?.activityTone).toBe('active');
     expect(researcher?.activityTone).toBe('idle');
   });

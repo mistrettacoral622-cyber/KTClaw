@@ -1006,12 +1006,12 @@ function ModelPickerDropdown({
               type="button"
               className={cn(
                 'flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-[#f2f2f7]',
-                (currentAgent?.inheritedModel || !currentAgent?.model) && 'text-clawx-ac font-medium',
+                (currentAgent?.inheritedModel || !currentAgent?.model) && 'text-ktclaw-ac font-medium',
               )}
               onClick={() => void onSelect('')}
             >
               <span className="truncate">继承默认模型</span>
-              {(currentAgent?.inheritedModel || !currentAgent?.model) && <span className="ml-auto text-clawx-ac">✓</span>}
+              {(currentAgent?.inheritedModel || !currentAgent?.model) && <span className="ml-auto text-ktclaw-ac">✓</span>}
             </button>
             <div className="mx-3 border-t border-black/[0.06]" />
             {modelOptions.map((opt) => {
@@ -1022,12 +1022,12 @@ function ModelPickerDropdown({
                   type="button"
                   className={cn(
                     'flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-[#f2f2f7]',
-                    isActive && 'text-clawx-ac font-medium',
+                    isActive && 'text-ktclaw-ac font-medium',
                   )}
                   onClick={() => void onSelect(opt.value)}
                 >
                   <span className="min-w-0 flex-1 truncate">{opt.label}</span>
-                  {isActive && <span className="shrink-0 text-clawx-ac">✓</span>}
+                  {isActive && <span className="shrink-0 text-ktclaw-ac">✓</span>}
                 </button>
               );
             })}

@@ -718,10 +718,10 @@ function GeneralSettingsSection() {
   return (
     <>
       <GeneralSection />
-      <TeamRoleSection />
-      <ChannelAdvancedSection />
-      <AutomationDefaultsSection />
-      <AgentAvatarsSection />
+      {/* <TeamRoleSection /> */}
+      {/* <ChannelAdvancedSection /> */}
+      {/* <AutomationDefaultsSection /> */}
+      {/* <AgentAvatarsSection /> */}
     </>
   );
 }
@@ -918,7 +918,8 @@ function GeneralSection() {
         <InputField label="我的名字指代" value={myName} onChange={setMyName} />
       </SettingsCard>
 
-      {/* 退出登录 */}
+      {/* 品牌资产 ~ 退出登录：暂时注释 */}
+      {/*
       <SettingsCard title="品牌资产">
         <BrandImageUploadField
           label="品牌 Logo"
@@ -948,6 +949,7 @@ function GeneralSection() {
           退出登录
         </button>
       </div>
+      */}
     </>
   );
 }

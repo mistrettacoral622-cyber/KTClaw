@@ -149,7 +149,7 @@ describe('sidebar session pinning', () => {
 
     expect(pinnedNewButton.compareDocumentPosition(pinnedOldButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(pinnedOldButton.compareDocumentPosition(recentUnpinnedButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByLabelText('Pinned session')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Pinned')).toHaveLength(2);
   });
 
   it('toggles pin state from the session action button and persists the update', () => {

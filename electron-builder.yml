@@ -1,6 +1,6 @@
-appId: app.clawx.desktop
+﻿appId: app.ktclaw.desktop
 productName: KTClaw
-copyright: Copyright © 2026 KTClaw
+copyright: Copyright 漏 2026 KTClaw
 compression: maximum
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
@@ -42,9 +42,9 @@ asarUnpack:
 
 # Disable native module rebuilding.
 # The Electron renderer/main process has no native (.node) dependencies.
-# All native modules (opus, sharp, koffi …) belong to openclaw, which is
-# bundled separately (bundle-openclaw.mjs → extraResources) and runs in its
-# own process — @electron/rebuild must NOT touch them.
+# All native modules (opus, sharp, koffi 鈥? belong to openclaw, which is
+# bundled separately (bundle-openclaw.mjs 鈫?extraResources) and runs in its
+# own process 鈥?@electron/rebuild must NOT touch them.
 npmRebuild: false
 
 # Auto-update configuration
@@ -168,7 +168,7 @@ linux:
       Comment: AI Assistant powered by OpenClaw
       Categories: Utility;Network;
       Keywords: ai;assistant;automation;chat;
-      StartupWMClass: clawx
+      StartupWMClass: ktclaw
       # Note: --no-sandbox for Kylin V11 / UOS compatibility is injected at
       # runtime via app.commandLine.appendSwitch() in electron/main/index.ts.
       # electron-builder forbids setting Exec here (it auto-generates it).

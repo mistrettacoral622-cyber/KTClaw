@@ -319,8 +319,8 @@ type WorkbenchConversationMessage = {
 const FEISHU_PLUGIN_ROOT = join(homedir(), '.openclaw', 'extensions', 'feishu-openclaw-plugin');
 const WECHAT_PLUGIN_ROOT = join(homedir(), '.openclaw', 'extensions', 'openclaw-weixin');
 const channelConversationBindings = createChannelConversationBindingStore();
-const TEST_FEISHU_SNAPSHOT_KEY = '__clawxTestFeishuWorkbenchSnapshot';
-const TEST_DERIVED_WORKBENCH_RECORDS_KEY = '__clawxTestDerivedWorkbenchRecords';
+const TEST_FEISHU_SNAPSHOT_KEY = '__ktclawTestFeishuWorkbenchSnapshot';
+const TEST_DERIVED_WORKBENCH_RECORDS_KEY = '__ktclawTestDerivedWorkbenchRecords';
 
 type FeishuConversationIdParts = {
   accountId: string;
@@ -3124,7 +3124,7 @@ export async function handleChannelRoutes(
       // Attempt to send a test message via the gateway HTTP API
       const port = status.port ?? 3000;
       const http = await import('node:http');
-      const payload = JSON.stringify({ channelId: resolvedChannelId, text: '✅ ClawX 测试消息 — 连接正常' });
+      const payload = JSON.stringify({ channelId: resolvedChannelId, text: '✅ KTClaw 测试消息 — 连接正常' });
       await new Promise<void>((resolve, reject) => {
         const req2 = http.request(
           { hostname: '127.0.0.1', port, path: '/api/channel/test', method: 'POST',

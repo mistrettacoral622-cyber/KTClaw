@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+﻿/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ['class'],
   content: [
@@ -15,7 +15,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        'clawx-ac': 'rgb(var(--ac-rgb) / <alpha-value>)',
+        'ktclaw-ac': 'rgb(var(--ac-rgb) / <alpha-value>)',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',

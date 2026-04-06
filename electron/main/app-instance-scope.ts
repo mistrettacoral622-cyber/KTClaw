@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 
-export const WINDOWS_APP_USER_MODEL_ID = 'app.clawx.desktop';
-export const WINDOWS_DEV_APP_USER_MODEL_ID = 'app.clawx.desktop.dev';
+export const WINDOWS_APP_USER_MODEL_ID = 'app.ktclaw.desktop';
+export const WINDOWS_DEV_APP_USER_MODEL_ID = 'app.ktclaw.desktop.dev';
 export const PACKAGED_LOCK_NAME = 'ktclaw';
 export const DEV_LOCK_NAME = 'ktclaw-dev';
 

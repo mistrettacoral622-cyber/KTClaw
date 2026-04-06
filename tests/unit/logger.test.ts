@@ -11,6 +11,7 @@ vi.mock('electron', () => ({
 
 describe('logger', () => {
   afterEach(() => {
+    delete process.env.KTCLAW_LOG_TO_CONSOLE;
     vi.restoreAllMocks();
     vi.resetModules();
   });
@@ -43,5 +44,13 @@ describe('logger', () => {
     expect(logger.getRecentLogs()).toEqual(
       expect.arrayContaining([expect.stringContaining('gateway state change')]),
     );
+  });
+
+  it('ignores broken-pipe error events from stdout and stderr streams', async () => {
+    await import('@electron/utils/logger');
+    const brokenPipe = Object.assign(new Error('EPIPE: broken pipe, write'), { code: 'EPIPE' });
+
+    expect(() => process.stdout.emit('error', brokenPipe)).not.toThrow();
+    expect(() => process.stderr.emit('error', brokenPipe)).not.toThrow();
   });
 });

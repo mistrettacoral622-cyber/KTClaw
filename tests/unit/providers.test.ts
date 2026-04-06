@@ -162,9 +162,9 @@ describe('provider metadata', () => {
     const { SettingsModelsProvidersPanel } = await import('@/components/settings-center/settings-models-providers-panel');
     render(createElement(SettingsModelsProvidersPanel));
 
-    expect(screen.getByText('Default model and fallback routing')).toBeInTheDocument();
-    expect(screen.getByLabelText('Global default model')).toBeInTheDocument();
-    expect(screen.getByText('Gateway connection')).toBeInTheDocument();
+    expect(screen.getByText('默认模型与回退路由')).toBeInTheDocument();
+    expect(screen.getByLabelText('全局默认模型')).toBeInTheDocument();
+    expect(screen.getByText('网关连接')).toBeInTheDocument();
     expect(screen.getByText('Providers Settings Mock')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
   });

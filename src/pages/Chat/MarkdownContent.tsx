@@ -3,7 +3,7 @@
  * Code highlighting (react-syntax-highlighter + Prism),
  * math formulas (remark-math + rehype-katex),
  * local file link click-to-open, copy button, language tag.
- * Adapted from LobsterAI MarkdownContent for ClawX color system.
+ * Adapted from LobsterAI MarkdownContent for KTClaw color system.
  */
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { JSX } from 'react';
@@ -286,7 +286,7 @@ const createComponents = (resolveLocalFilePath?: (href: string, text: string) =>
     blockquote: ({ children, node, ...props }: MarkdownComponentProps<'blockquote'>) => {
       void node;
       return (
-        <blockquote className="border-l-4 border-clawx-ac pl-4 py-1 my-2 bg-clawx-ac/5 rounded-r-lg" {...props}>
+        <blockquote className="border-l-4 border-ktclaw-ac pl-4 py-1 my-2 bg-ktclaw-ac/5 rounded-r-lg" {...props}>
           {children}
         </blockquote>
       );
@@ -373,7 +373,7 @@ const createComponents = (resolveLocalFilePath?: (href: string, text: string) =>
           <a
             href={toFileHref(filePath)}
             onClick={handleClick}
-            className="text-clawx-ac hover:text-clawx-ac/80 underline decoration-clawx-ac/40 hover:decoration-clawx-ac transition-colors cursor-pointer inline-flex items-center gap-1"
+            className="text-ktclaw-ac hover:text-ktclaw-ac/80 underline decoration-ktclaw-ac/40 hover:decoration-ktclaw-ac transition-colors cursor-pointer inline-flex items-center gap-1"
             title={filePath}
             {...props}
           >
@@ -398,7 +398,7 @@ const createComponents = (resolveLocalFilePath?: (href: string, text: string) =>
             target="_blank"
             rel="noopener noreferrer"
             onClick={handleExternal}
-            className="text-clawx-ac hover:text-clawx-ac/80 underline decoration-clawx-ac/40 hover:decoration-clawx-ac transition-colors"
+            className="text-ktclaw-ac hover:text-ktclaw-ac/80 underline decoration-ktclaw-ac/40 hover:decoration-ktclaw-ac transition-colors"
             {...props}
           >
             {children}
@@ -411,7 +411,7 @@ const createComponents = (resolveLocalFilePath?: (href: string, text: string) =>
           href={hrefValue}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-clawx-ac hover:text-[#0056cc] underline decoration-clawx-ac/40 hover:decoration-clawx-ac transition-colors"
+          className="text-ktclaw-ac hover:text-[#0056cc] underline decoration-ktclaw-ac/40 hover:decoration-ktclaw-ac transition-colors"
           {...props}
         >
           {children}

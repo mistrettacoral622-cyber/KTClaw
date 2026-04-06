@@ -70,25 +70,25 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const copy: Record<string, string> = {
-        title: 'Employee Square',
-        subtitle: 'Browse, create, and route into every agent from one square.',
-        refresh: 'Refresh',
-        addAgent: 'Add Agent',
-        gatewayWarning: 'Gateway warning',
-        'square.stats.all': 'All Agents',
-        'square.stats.leaders': 'Leaders',
-        'square.stats.workers': 'Workers',
-        'square.filters.all': 'All',
-        'square.filters.leader': 'Leaders',
-        'square.filters.worker': 'Workers',
-        'square.filters.direct': 'Direct Chat',
-        'square.filters.leader_only': 'Leader Only',
-        'square.filters.with_team': 'With Team',
-        'square.actions.chat': 'Chat',
-        'square.actions.memory': 'Memory',
-        'square.actions.details': 'Details',
-        'square.empty.title': 'No matching agents',
-        'square.empty.description': 'Adjust the current filters.',
+        title: '员工广场',
+        subtitle: '在同一个广场里浏览、创建，并进入每位员工的专属入口。',
+        refresh: '刷新',
+        addAgent: '添加员工',
+        gatewayWarning: '网关服务未运行。',
+        'square.stats.all': '全部员工',
+        'square.stats.leaders': '负责人',
+        'square.stats.workers': '执行成员',
+        'square.filters.all': '全部',
+        'square.filters.leader': '负责人',
+        'square.filters.worker': '执行成员',
+        'square.filters.direct': '可直聊',
+        'square.filters.leader_only': '仅负责人转达',
+        'square.filters.with_team': '已有团队',
+        'square.actions.chat': '对话',
+        'square.actions.memory': '记忆',
+        'square.actions.details': '详情',
+        'square.empty.title': '没有匹配的员工',
+        'square.empty.description': '调整当前筛选条件。',
       };
 
       if (key in copy) {
@@ -175,7 +175,7 @@ describe('Agents Employee Square page', () => {
     };
   });
 
-  it('renders the Employee Square hero, filter strip, and card action labels', async () => {
+  it('renders the employee square hero, filter strip, and card action labels in Chinese', async () => {
     render(
       <MemoryRouter>
         <Agents />
@@ -188,13 +188,14 @@ describe('Agents Employee Square page', () => {
       expect(mockTeamsStore.fetchTeams).toHaveBeenCalled();
     });
 
-    expect(screen.getByRole('heading', { name: 'Employee Square' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Leaders' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'With Team' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Chat' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: 'Memory' }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: 'Details' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: '员工广场' })).toBeInTheDocument();
+    expect(screen.queryByText('Employee Square')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '负责人' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '已有团队' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '对话' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: '记忆' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: '详情' }).length).toBeGreaterThan(0);
   });
 
   it('switches filters for leaders and agents with team membership', async () => {
@@ -208,12 +209,12 @@ describe('Agents Employee Square page', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bravo')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Leaders' }));
+    fireEvent.click(screen.getByRole('button', { name: '负责人' }));
     expect(screen.getByText('Main')).toBeInTheDocument();
     expect(screen.queryByText('Alice')).not.toBeInTheDocument();
     expect(screen.queryByText('Bravo')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'With Team' }));
+    fireEvent.click(screen.getByRole('button', { name: '已有团队' }));
     expect(screen.getByText('Main')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.queryByText('Bravo')).not.toBeInTheDocument();

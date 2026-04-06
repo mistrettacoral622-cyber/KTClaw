@@ -17,7 +17,7 @@ describe('ChatMessage', () => {
     const bubble = screen.getByTestId('chat-bubble-user');
 
     expect(text).toBeInTheDocument();
-    expect(bubble).toHaveClass('bg-clawx-ac');
+    expect(bubble).toHaveClass('bg-ktclaw-ac');
     expect(bubble).toHaveClass('text-white');
   });
 

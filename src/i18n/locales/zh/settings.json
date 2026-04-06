@@ -13,8 +13,8 @@
     "launchAtStartupDesc": "登录系统后自动启动 KTClaw"
   },
   "aiProviders": {
-    "title": "AI 模型提供商",
-    "description": "配置 AI 模型提供商和 API 密钥",
+    "title": "模型与提供方",
+    "description": "配置模型接入、提供方账户与 API 密钥",
     "overview": {
       "title": "提供商账户",
       "description": "这里汇总当前已配置的 provider 账户与模型信息。",

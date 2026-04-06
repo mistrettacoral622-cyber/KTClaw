@@ -31,8 +31,8 @@ const mocks = vi.hoisted(() => ({
   bindingUpsert: vi.fn(),
 }));
 
-const TEST_FEISHU_SNAPSHOT_KEY = '__clawxTestFeishuWorkbenchSnapshot';
-const TEST_DERIVED_WORKBENCH_RECORDS_KEY = '__clawxTestDerivedWorkbenchRecords';
+const TEST_FEISHU_SNAPSHOT_KEY = '__ktclawTestFeishuWorkbenchSnapshot';
+const TEST_DERIVED_WORKBENCH_RECORDS_KEY = '__ktclawTestDerivedWorkbenchRecords';
 
 vi.mock('@electron/api/route-utils', () => ({
   sendJson: mocks.sendJson,

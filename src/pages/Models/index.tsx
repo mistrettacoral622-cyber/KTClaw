@@ -181,10 +181,10 @@ export function Models({ embedded = false }: ModelsProps) {
     ? MODEL_OPTIONS
     : [{ value: defaultModel, label: defaultModel }, ...MODEL_OPTIONS];
   const gatewayStateLabel = isGatewayRunning
-    ? 'Connected'
+    ? '已连接'
     : gatewayStatus.state === 'starting' || gatewayStatus.state === 'reconnecting'
-      ? 'Connecting'
-      : 'Disconnected';
+      ? '连接中'
+      : '已断开';
 
   const handleGatewayPortSave = () => {
     const nextPort = Number.parseInt(gatewayPortDraft, 10);
@@ -241,17 +241,16 @@ export function Models({ embedded = false }: ModelsProps) {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
               <div className="flex-1">
                 <h2 className="text-2xl font-serif font-normal tracking-tight text-foreground" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
-                  Default model and fallback routing
+                  默认模型与回退路由
                 </h2>
                 <p className="mt-2 max-w-2xl text-[14px] leading-6 text-muted-foreground">
-                  Pick the global default model here. Fallback model IDs and fallback provider chains stay on each
-                  provider account below so Settings and runtime behavior share the same provider configuration.
+                  在这里选择全局默认模型。各个提供方卡片上的回退模型 ID 和回退链会与设置中心和运行时共用同一套配置。
                 </p>
               </div>
               <div className="flex-1 space-y-5">
                 <div className="space-y-2">
                   <label htmlFor={defaultModelSelectId} className="block text-[13px] font-medium text-foreground">
-                    Global default model
+                    全局默认模型
                   </label>
                   <select
                     id={defaultModelSelectId}
@@ -267,10 +266,10 @@ export function Models({ embedded = false }: ModelsProps) {
                 <div className="space-y-3 rounded-2xl border border-black/10 bg-black/[0.03] p-4 dark:border-white/10 dark:bg-white/[0.03]">
                   <div className="flex items-center justify-between gap-3">
                     <label htmlFor={contextLimitId} className="text-[13px] font-medium text-foreground">
-                      Context window
+                      上下文窗口
                     </label>
                     <span className="text-[12px] text-muted-foreground">
-                      {contextLimit.toLocaleString()} tokens
+                      {contextLimit.toLocaleString()} Token
                     </span>
                   </div>
                   <input
@@ -285,7 +284,7 @@ export function Models({ embedded = false }: ModelsProps) {
                     style={{ accentColor: 'var(--ac)' }}
                   />
                   <p className="text-[12px] leading-5 text-muted-foreground">
-                    Provider-specific fallback model IDs and fallback providers are edited directly inside each provider card.
+                    与提供方相关的回退模型 ID 和回退链路，直接在各自的提供方卡片中编辑。
                   </p>
                 </div>
               </div>
@@ -297,7 +296,7 @@ export function Models({ embedded = false }: ModelsProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-2xl font-serif font-normal tracking-tight text-foreground" style={{ fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif' }}>
-                    Gateway connection
+                    网关连接
                   </h2>
                   <span
                     className={cn(
@@ -311,8 +310,7 @@ export function Models({ embedded = false }: ModelsProps) {
                   </span>
                 </div>
                 <p className="mt-2 max-w-2xl text-[14px] leading-6 text-muted-foreground">
-                  Keep the runtime gateway reachable for provider validation and usage history. The reconnect action
-                  uses the shared gateway store, and diagnostics run through the host-api doctor route.
+                  保持运行时网关可用，以支持提供方验证和用量历史读取。重新连接和诊断都复用统一的网关与 host-api 通道。
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -322,7 +320,7 @@ export function Models({ embedded = false }: ModelsProps) {
                   className="rounded-full"
                   onClick={() => { void restartGateway(); }}
                 >
-                  Reconnect gateway
+                  重新连接网关
                 </Button>
                 <Button
                   type="button"
@@ -331,18 +329,17 @@ export function Models({ embedded = false }: ModelsProps) {
                   onClick={() => { void handleRunDoctor(); }}
                   disabled={doctorRunning}
                 >
-                  {doctorRunning ? 'Running doctor...' : 'Run doctor'}
+                  {doctorRunning ? '诊断运行中...' : '运行诊断'}
                 </Button>
               </div>
             </div>
             <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end">
               <div className="min-w-0 flex-1 space-y-2">
                 <label htmlFor={gatewayPortId} className="block text-[13px] font-medium text-foreground">
-                  Gateway port
+                  网关端口
                 </label>
                 <p className="text-[12px] leading-5 text-muted-foreground">
-                  The renderer persists this through the shared settings store so the Settings shell and `/models`
-                  surface stay aligned.
+                  这里的端口配置会通过统一设置仓库持久化，确保设置中心与 `/models` 视图保持一致。
                 </p>
               </div>
               <div className="flex w-full gap-3 md:w-auto">
@@ -360,7 +357,7 @@ export function Models({ embedded = false }: ModelsProps) {
                   onClick={handleGatewayPortSave}
                   disabled={gatewayPortDraft === String(gatewayPort)}
                 >
-                  Save port
+                  保存端口
                 </Button>
               </div>
             </div>

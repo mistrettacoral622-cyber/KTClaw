@@ -20,24 +20,24 @@ export interface EmployeeSquareCardModel {
 
 function formatLastActiveLabel(lastActivityAt: number | undefined, now: number): string {
   if (!lastActivityAt) {
-    return 'No recent activity';
+    return '最近暂无活动';
   }
 
   const elapsedMs = Math.max(0, now - lastActivityAt);
 
   if (elapsedMs < 60_000) {
-    return 'Active just now';
+    return '刚刚活跃';
   }
 
   if (elapsedMs < 3_600_000) {
-    return `Active ${Math.floor(elapsedMs / 60_000)}m ago`;
+    return `${Math.floor(elapsedMs / 60_000)} 分钟前活跃`;
   }
 
   if (elapsedMs < 86_400_000) {
-    return `Active ${Math.floor(elapsedMs / 3_600_000)}h ago`;
+    return `${Math.floor(elapsedMs / 3_600_000)} 小时前活跃`;
   }
 
-  return `Active ${Math.floor(elapsedMs / 86_400_000)}d ago`;
+  return `${Math.floor(elapsedMs / 86_400_000)} 天前活跃`;
 }
 
 function buildTeamLabelMap(teams: TeamSummary[]): Map<string, string[]> {

@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 
 const mockSetSidebarCollapsed = vi.fn();
 const mockSwitchSession = vi.fn();
+const mockNewSession = vi.fn();
 const mockDeleteSession = vi.fn(async () => {});
 const mockLoadSessions = vi.fn(async () => {});
 const mockLoadHistory = vi.fn(async () => {});
@@ -31,6 +32,7 @@ const mockChatState = {
     'session-beta': 100,
   },
   switchSession: mockSwitchSession,
+  newSession: mockNewSession,
   deleteSession: mockDeleteSession,
   loadSessions: mockLoadSessions,
   loadHistory: mockLoadHistory,
@@ -100,6 +102,7 @@ vi.mock('react-i18next', () => ({
         'common:sidebar.uploadFile': 'Upload file',
         'common:sidebar.noChannels': 'No channels configured',
         'common:sidebar.noSessions': 'No sessions',
+        'common:sidebar.newSession': 'New session',
         'common:sidebar.toggleSidebar': 'Toggle sidebar',
         'common:sidebar.pin': 'Pin',
         'common:sidebar.unpin': 'Unpin',
@@ -131,6 +134,7 @@ describe('workbench sidebar', () => {
       { key: 'session-beta', label: 'Beta Session' },
     ];
     mockChatState.currentSessionKey = 'session-alpha';
+    mockChatState.newSession = mockNewSession;
     mockChatState.sessionLabels = {
       'session-alpha': 'Alpha Session',
       'session-beta': 'Beta Session',
@@ -156,6 +160,17 @@ describe('workbench sidebar', () => {
     expect(screen.getByRole('button', { name: 'common:sidebar.selectAvatar' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'common:sidebar.settingsAria' })).toBeInTheDocument();
     expect(screen.queryByText('Add clone')).not.toBeInTheDocument();
+  });
+
+  it('renders a dedicated new-session header action and keeps the chevron hover-revealed', () => {
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: 'New session' })).toBeInTheDocument();
+    expect(screen.getByTestId('sessions-section-chevron')).toHaveClass(
+      'opacity-0',
+      'group-hover/sessions-header:opacity-100',
+      'group-focus-within/sessions-header:opacity-100',
+    );
   });
 
   it('toggles channels independently and keeps session content visible', () => {
@@ -221,6 +236,24 @@ describe('workbench sidebar', () => {
     fireEvent.click(screen.getByText('Beta Session'));
     expect(mockSwitchSession).toHaveBeenCalledWith('session-beta');
     expect(screen.getByTestId('pathname')).toHaveTextContent('/');
+  });
+
+  it('creates a new session from the header plus without toggling collapse, and reopens sessions when needed', () => {
+    renderSidebar('/settings');
+
+    expect(screen.getByText('Alpha Session')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New session' }));
+    expect(mockNewSession).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Alpha Session')).toBeInTheDocument();
+    expect(screen.getByTestId('pathname')).toHaveTextContent('/');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sessions' }));
+    expect(screen.queryByText('Alpha Session')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New session' }));
+    expect(mockNewSession).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Alpha Session')).toBeInTheDocument();
   });
 
   it('keeps a collapsed icon rail and a scrollable content region', () => {

@@ -55,6 +55,17 @@ let flushing = false;
 const FLUSH_INTERVAL_MS = 500;
 const FLUSH_SIZE_THRESHOLD = 20;
 const CONSOLE_MIRROR_ENABLED = process.env.KTCLAW_LOG_TO_CONSOLE === '1';
+const guardedStreams = new WeakSet<NodeJS.WritableStream>();
+
+function isStreamUsable(stream: NodeJS.WritableStream | undefined): boolean {
+  if (!stream) return false;
+  const state = stream as NodeJS.WritableStream & {
+    destroyed?: boolean;
+    closed?: boolean;
+    writableEnded?: boolean;
+  };
+  return !state.destroyed && !state.closed && !state.writableEnded;
+}
 
 async function flushBuffer(): Promise<void> {
   if (flushing || writeBuffer.length === 0 || !logFilePath) return;
@@ -164,11 +175,31 @@ function isBrokenPipeError(error: unknown): boolean {
   return message.includes('broken pipe') || message.includes('epipe');
 }
 
+function installBrokenPipeGuard(stream: NodeJS.WritableStream | undefined): void {
+  if (!stream || guardedStreams.has(stream)) {
+    return;
+  }
+
+  stream.on('error', (error) => {
+    if (isBrokenPipeError(error)) {
+      return;
+    }
+  });
+  guardedStreams.add(stream);
+}
+
+installBrokenPipeGuard(process.stdout);
+installBrokenPipeGuard(process.stderr);
+
 function writeToConsole(
   method: (message?: unknown, ...optionalParams: unknown[]) => void,
   formatted: string,
+  stream?: NodeJS.WritableStream,
 ): void {
   if (!CONSOLE_MIRROR_ENABLED) {
+    return;
+  }
+  if (!isStreamUsable(stream)) {
     return;
   }
   try {
@@ -215,7 +246,7 @@ export function debug(message: string, ...args: unknown[]): void {
   if (currentLevel <= LogLevel.DEBUG) {
     const formatted = formatMessage('DEBUG', message, ...args);
     writeLog(formatted);
-    writeToConsole(console.debug, formatted);
+    writeToConsole(console.debug, formatted, process.stdout);
   }
 }
 
@@ -223,7 +254,7 @@ export function info(message: string, ...args: unknown[]): void {
   if (currentLevel <= LogLevel.INFO) {
     const formatted = formatMessage('INFO', message, ...args);
     writeLog(formatted);
-    writeToConsole(console.info, formatted);
+    writeToConsole(console.info, formatted, process.stdout);
   }
 }
 
@@ -231,7 +262,7 @@ export function warn(message: string, ...args: unknown[]): void {
   if (currentLevel <= LogLevel.WARN) {
     const formatted = formatMessage('WARN', message, ...args);
     writeLog(formatted);
-    writeToConsole(console.warn, formatted);
+    writeToConsole(console.warn, formatted, process.stderr);
   }
 }
 
@@ -239,7 +270,7 @@ export function error(message: string, ...args: unknown[]): void {
   if (currentLevel <= LogLevel.ERROR) {
     const formatted = formatMessage('ERROR', message, ...args);
     writeLog(formatted);
-    writeToConsole(console.error, formatted);
+    writeToConsole(console.error, formatted, process.stderr);
   }
 }
 

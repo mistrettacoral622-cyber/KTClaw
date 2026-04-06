@@ -75,23 +75,23 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const copy: Record<string, string> = {
-        title: 'Employee Square',
-        subtitle: 'Browse, create, and route into every agent from one square.',
-        refresh: 'Refresh',
-        addAgent: 'Add Agent',
-        gatewayWarning: 'Gateway warning',
-        'square.stats.all': 'All Agents',
-        'square.stats.leaders': 'Leaders',
-        'square.stats.workers': 'Workers',
-        'square.filters.all': 'All',
-        'square.filters.leader': 'Leaders',
-        'square.filters.worker': 'Workers',
-        'square.filters.direct': 'Direct Chat',
-        'square.filters.leader_only': 'Leader Only',
-        'square.filters.with_team': 'With Team',
-        'square.actions.chat': 'Chat',
-        'square.actions.memory': 'Memory',
-        'square.actions.details': 'Details',
+        title: '员工广场',
+        subtitle: '在同一个广场里浏览、创建，并进入每位员工的专属入口。',
+        refresh: '刷新',
+        addAgent: '添加员工',
+        gatewayWarning: '网关服务未运行。',
+        'square.stats.all': '全部员工',
+        'square.stats.leaders': '负责人',
+        'square.stats.workers': '执行成员',
+        'square.filters.all': '全部',
+        'square.filters.leader': '负责人',
+        'square.filters.worker': '执行成员',
+        'square.filters.direct': '可直聊',
+        'square.filters.leader_only': '仅负责人转达',
+        'square.filters.with_team': '已有团队',
+        'square.actions.chat': '对话',
+        'square.actions.memory': '记忆',
+        'square.actions.details': '详情',
       };
 
       if (key in copy) {
@@ -193,7 +193,7 @@ describe('Employee Square card actions', () => {
       expect(agentsStoreState.fetchAgents).toHaveBeenCalled();
     });
 
-    fireEvent.click(within(getCard('Main')).getByRole('button', { name: 'Chat' }));
+    fireEvent.click(within(getCard('Main')).getByRole('button', { name: '对话' }));
 
     expect(chatStoreState.openDirectAgentSession).toHaveBeenCalledWith('main');
     expect(navigateMock).toHaveBeenCalledWith('/');
@@ -208,8 +208,8 @@ describe('Employee Square card actions', () => {
 
     await screen.findByText('Main');
 
-    fireEvent.click(within(getCard('Main')).getByRole('button', { name: 'Memory' }));
-    fireEvent.click(within(getCard('Main')).getByRole('button', { name: 'Details' }));
+    fireEvent.click(within(getCard('Main')).getByRole('button', { name: '记忆' }));
+    fireEvent.click(within(getCard('Main')).getByRole('button', { name: '详情' }));
 
     expect(navigateMock).toHaveBeenNthCalledWith(1, '/agents/main?tab=memory');
     expect(navigateMock).toHaveBeenNthCalledWith(2, '/agents/main');
@@ -228,7 +228,7 @@ describe('Employee Square card actions', () => {
 
     await screen.findByText('Researcher');
 
-    fireEvent.click(within(getCard('Researcher')).getByRole('button', { name: 'Chat' }));
+    fireEvent.click(within(getCard('Researcher')).getByRole('button', { name: '对话' }));
 
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Leader route required'));
     expect(navigateMock).not.toHaveBeenCalledWith('/');
