@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2 } from 'lucide-react';
-import type { KanbanTask, WorkState } from '@/types/task';
+import type { WorkState } from '@/types/task';
 
 interface TaskDetailPanelProps {
   taskId: string;

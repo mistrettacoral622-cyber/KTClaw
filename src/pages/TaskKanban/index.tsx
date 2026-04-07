@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Calendar, AlertCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { ManualTaskForm } from './ManualTaskForm';
 import { CalendarView } from './CalendarView';
 
@@ -206,7 +205,6 @@ function AgentRow({ agent, tasks, onTaskClick }: AgentRowProps) {
 }
 
 export function TaskKanban() {
-  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const agents = useAgentsStore((s) => s.agents) || [];
   const fetchAgents = useAgentsStore((s) => s.fetchAgents);
@@ -319,3 +317,5 @@ export function TaskKanban() {
     </div>
   );
 }
+
+export default TaskKanban;

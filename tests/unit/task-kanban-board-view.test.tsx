@@ -83,12 +83,12 @@ describe('TaskKanban Board View', () => {
     const mockFetchAgents = vi.fn();
     const mockFetchTasks = vi.fn();
 
-    vi.mocked(useAgentsStore).mockReturnValue({
+    vi.mocked(useAgentsStore).mockImplementation((selector: any) => selector({
       agents: mockAgents,
       fetchAgents: mockFetchAgents,
-    } as any);
+    }));
 
-    vi.mocked(useApprovalsStore).mockReturnValue({
+    vi.mocked(useApprovalsStore).mockImplementation((selector: any) => selector({
       tasks: mockTasks,
       tasksLoading: false,
       tasksError: null,
@@ -97,7 +97,9 @@ describe('TaskKanban Board View', () => {
       updateTaskStatus: vi.fn(),
       updateTask: vi.fn(),
       deleteTask: vi.fn(),
-    } as any);
+      startTaskExecution: vi.fn(),
+      appendTaskExecutionEvent: vi.fn(),
+    }));
   });
 
   it('renders 4 columns with correct labels', () => {
@@ -141,7 +143,7 @@ describe('TaskKanban Board View', () => {
   });
 
   it('empty agents show placeholder', () => {
-    vi.mocked(useAgentsStore).mockReturnValue({
+    vi.mocked(useAgentsStore).mockImplementation((selector: any) => selector({
       agents: [
         ...mockAgents,
         {
@@ -162,10 +164,10 @@ describe('TaskKanban Board View', () => {
         },
       ],
       fetchAgents: vi.fn(),
-    } as any);
+    }));
 
-    vi.mocked(useApprovalsStore).mockReturnValue({
-      tasks: mockTasks, // No tasks for agent-3
+    vi.mocked(useApprovalsStore).mockImplementation((selector: any) => selector({
+      tasks: mockTasks,
       tasksLoading: false,
       tasksError: null,
       fetchTasks: vi.fn(),
@@ -173,7 +175,9 @@ describe('TaskKanban Board View', () => {
       updateTaskStatus: vi.fn(),
       updateTask: vi.fn(),
       deleteTask: vi.fn(),
-    } as any);
+      startTaskExecution: vi.fn(),
+      appendTaskExecutionEvent: vi.fn(),
+    }));
 
     render(
       <BrowserRouter>

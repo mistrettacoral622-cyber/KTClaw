@@ -1,8 +1,13 @@
 import { create } from 'zustand';
 import { hostApiFetch } from '@/lib/host-api';
-import type { KanbanTask, TaskStatus, TaskPriority } from '@/types/task';
-
-const TASK_STORAGE_KEY = 'ktclaw-kanban-tasks';
+import type {
+  CreateTaskRequest,
+  KanbanTask,
+  StartTaskExecutionRequest,
+  TaskExecutionEventInput,
+  TaskStatus,
+  TasksSnapshot,
+} from '@/types/task';
 
 export interface ApprovalItem {
   id: string;
@@ -36,19 +41,34 @@ interface ApprovalsState {
   tasksLoading: boolean;
   tasksError: string | null;
   fetchTasks: () => Promise<void>;
-  createTask: (input: {
-    title: string;
-    description: string;
-    priority: TaskPriority;
-    assigneeId?: string;
-    assigneeRole?: string;
-    teamId?: string;
-    teamName?: string;
-    deadline?: string;
-  }) => Promise<void>;
-  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
-  updateTask: (taskId: string, updates: Partial<KanbanTask>) => Promise<void>;
+  createTask: (input: CreateTaskRequest) => Promise<KanbanTask>;
+  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<KanbanTask>;
+  updateTask: (taskId: string, updates: Partial<KanbanTask>) => Promise<KanbanTask>;
   deleteTask: (taskId: string) => Promise<void>;
+  startTaskExecution: (taskId: string, input: StartTaskExecutionRequest) => Promise<KanbanTask>;
+  appendTaskExecutionEvent: (taskId: string, input: TaskExecutionEventInput) => Promise<KanbanTask>;
+}
+
+function applyTaskSnapshotResponse(
+  response: TasksSnapshot | undefined,
+  currentTasks: KanbanTask[],
+): KanbanTask[] {
+  if (Array.isArray(response?.tasks)) {
+    return response.tasks;
+  }
+
+  if (response?.task) {
+    const nextTasks = [...currentTasks];
+    const index = nextTasks.findIndex((task) => task.id === response.task?.id);
+    if (index === -1) {
+      nextTasks.push(response.task);
+    } else {
+      nextTasks[index] = response.task;
+    }
+    return nextTasks;
+  }
+
+  return currentTasks;
 }
 
 export const useApprovalsStore = create<ApprovalsState>((set, get) => ({
@@ -81,8 +101,8 @@ export const useApprovalsStore = create<ApprovalsState>((set, get) => ({
   fetchTasks: async () => {
     set({ tasksLoading: true, tasksError: null });
     try {
-      const stored = localStorage.getItem(TASK_STORAGE_KEY);
-      const tasks: KanbanTask[] = stored ? JSON.parse(stored) : [];
+      const snapshot = await hostApiFetch<TasksSnapshot>('/api/tasks');
+      const tasks = Array.isArray(snapshot?.tasks) ? snapshot.tasks : [];
       set({ tasks, tasksLoading: false });
     } catch (err) {
       set({ tasksLoading: false, tasksError: String(err) });
@@ -90,55 +110,78 @@ export const useApprovalsStore = create<ApprovalsState>((set, get) => ({
   },
 
   createTask: async (input) => {
-    const now = new Date().toISOString();
-    const id = `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-    const newTask: KanbanTask = {
-      id,
-      title: input.title,
-      description: input.description,
-      status: 'todo',
-      priority: input.priority,
-      assigneeId: input.assigneeId,
-      assigneeRole: input.assigneeRole,
-      workState: 'idle',
-      teamId: input.teamId,
-      teamName: input.teamName,
-      isTeamTask: !!input.teamId,
-      deadline: input.deadline,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const tasks = [...get().tasks, newTask];
-    localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
-    set({ tasks });
+    const snapshot = await hostApiFetch<TasksSnapshot>('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!snapshot?.task) {
+      throw new Error('Missing task from createTask response');
+    }
+    set((state) => ({
+      tasks: applyTaskSnapshotResponse(snapshot, state.tasks),
+    }));
+    return snapshot.task;
   },
 
   updateTaskStatus: async (taskId, status) => {
-    const tasks = get().tasks.map((task) =>
-      task.id === taskId
-        ? { ...task, status, updatedAt: new Date().toISOString() }
-        : task
-    );
-    localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
-    set({ tasks });
+    return get().updateTask(taskId, { status });
   },
 
   updateTask: async (taskId, updates) => {
-    const tasks = get().tasks.map((task) =>
-      task.id === taskId
-        ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-        : task
-    );
-    localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
-    set({ tasks });
+    const snapshot = await hostApiFetch<TasksSnapshot>(`/api/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!snapshot?.task) {
+      throw new Error('Missing task from updateTask response');
+    }
+    set((state) => ({
+      tasks: applyTaskSnapshotResponse(snapshot, state.tasks),
+    }));
+    return snapshot.task;
   },
 
   deleteTask: async (taskId) => {
-    const tasks = get().tasks.filter((task) => task.id !== taskId);
-    localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
-    set({ tasks });
+    const snapshot = await hostApiFetch<TasksSnapshot>(`/api/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'DELETE',
+    });
+    set((state) => ({
+      tasks: Array.isArray(snapshot?.tasks)
+        ? snapshot.tasks
+        : state.tasks.filter((task) => task.id !== taskId),
+    }));
+  },
+
+  startTaskExecution: async (taskId, input) => {
+    const snapshot = await hostApiFetch<TasksSnapshot>(`/api/tasks/${encodeURIComponent(taskId)}/execution/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!snapshot?.task) {
+      throw new Error('Missing task from startTaskExecution response');
+    }
+    set((state) => ({
+      tasks: applyTaskSnapshotResponse(snapshot, state.tasks),
+    }));
+    return snapshot.task;
+  },
+
+  appendTaskExecutionEvent: async (taskId, input) => {
+    const snapshot = await hostApiFetch<TasksSnapshot>(`/api/tasks/${encodeURIComponent(taskId)}/execution/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!snapshot?.task) {
+      throw new Error('Missing task from appendTaskExecutionEvent response');
+    }
+    set((state) => ({
+      tasks: applyTaskSnapshotResponse(snapshot, state.tasks),
+    }));
+    return snapshot.task;
   },
 
   approveItem: async (id: string, reason?: string) => {
