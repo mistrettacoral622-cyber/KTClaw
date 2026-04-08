@@ -39,6 +39,7 @@ import {
 import { createSignalQuitHandler } from './signal-quit';
 import { acquireProcessInstanceFileLock } from './process-instance-lock';
 import { getSetting } from '../utils/store';
+import { syncWatchedDirs, clearAllWatchers } from '../api/routes/memory-watcher';
 import { ensureBuiltinSkillsInstalled, ensurePreinstalledSkillsInstalled } from '../utils/skill-config';
 import { startHostApiServer } from '../api/server';
 import { HostEventBus } from '../api/event-bus';
@@ -322,6 +323,12 @@ async function initialize(): Promise<void> {
   const isAutostart = process.argv.includes('--autostart');
   _minimizeToTray = minimizeToTray;
   _suppressInitialShow = isAutostart && startMinimized;
+
+  // Start watched-directory memory watchers
+  const watchedDirs = await getSetting('watchedMemoryDirs');
+  if (Array.isArray(watchedDirs) && watchedDirs.length > 0) {
+    syncWatchedDirs(watchedDirs);
+  }
 
   const configuredGatewayPort = await getSetting('gatewayPort');
   if (typeof configuredGatewayPort === 'number') {
@@ -657,6 +664,7 @@ if (gotTheLock) {
 
   app.on('before-quit', (event) => {
     setQuitting();
+    clearAllWatchers();
     const action = requestQuitLifecycleAction(quitLifecycleState);
 
     if (action === 'allow-quit') {

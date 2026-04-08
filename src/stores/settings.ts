@@ -344,7 +344,10 @@ export const useSettingsStore = create<SettingsState>()(
           body: JSON.stringify({ value: resolvedLanguage }),
         }).catch(() => { });
       },
-      setStartMinimized: (startMinimized) => set({ startMinimized }),
+      setStartMinimized: (startMinimized) => {
+        set({ startMinimized });
+        void persistSettingsPatch({ startMinimized }).catch(() => { });
+      },
       setLaunchAtStartup: (launchAtStartup) => {
         set({ launchAtStartup });
         void hostApiFetch('/api/settings/launchAtStartup', {
