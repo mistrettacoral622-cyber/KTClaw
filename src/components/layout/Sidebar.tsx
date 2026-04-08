@@ -191,6 +191,7 @@ function NavItem({
 export function Sidebar() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useSettingsStore((state) => state.setSidebarCollapsed);
+  const brandSubtitle = useSettingsStore((state) => state.brandSubtitle);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -395,6 +396,15 @@ export function Sidebar() {
           </button>
         )}
       </div>
+
+      {!sidebarCollapsed && brandSubtitle ? (
+        <p
+          data-testid="sidebar-brand-subtitle"
+          className="mt-1 truncate px-1 text-[11px] text-[#8e8e93]"
+        >
+          {brandSubtitle}
+        </p>
+      ) : null}
 
       <div className="mt-4 space-y-2">
         {navItems.map((item) => (

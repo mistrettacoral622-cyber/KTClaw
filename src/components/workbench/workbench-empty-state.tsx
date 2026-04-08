@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useChatStore } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
+import { useSettingsStore } from '@/stores/settings';
 
 type WorkbenchEmptyStateProps = Record<string, never>;
 
@@ -39,6 +40,7 @@ const suggestions = [
 export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
   const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const isGatewayRunning = useGatewayStore((s) => s.status.state === 'running');
+  const myName = useSettingsStore((s) => s.myName);
   const [selectedQuickActionIndex, setSelectedQuickActionIndex] = useState(0);
   const [promptPanelOpen, setPromptPanelOpen] = useState(false);
   const [promptDraft, setPromptDraft] = useState('');
@@ -73,7 +75,9 @@ export function WorkbenchEmptyState(_props: WorkbenchEmptyStateProps) {
         </div>
       </div>
 
-      <h2 className="mb-4 text-[26px] font-medium text-foreground">有什么我可以帮你的？</h2>
+      <h2 className="mb-4 text-[26px] font-medium text-foreground">
+        {myName ? `你好，${myName}！有什么我可以帮你的？` : '有什么我可以帮你的？'}
+      </h2>
 
       {!isGatewayRunning && (
         <div className="mb-5 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
