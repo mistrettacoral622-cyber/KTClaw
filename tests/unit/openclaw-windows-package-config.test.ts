@@ -9,4 +9,12 @@ describe('windows packaging config', () => {
     expect(builderConfig).toContain('verifyUpdateCodeSignature: false');
     expect(builderConfig).toContain('signAndEditExecutable: false');
   });
+
+  it('keeps desktop and start-menu shortcuts enabled for the NSIS installer', () => {
+    const builderConfig = readFileSync(resolve(process.cwd(), 'electron-builder.yml'), 'utf8');
+
+    expect(builderConfig).toContain('createDesktopShortcut: true');
+    expect(builderConfig).toContain('createStartMenuShortcut: true');
+    expect(builderConfig).toContain('shortcutName: KTClaw');
+  });
 });

@@ -214,7 +214,7 @@ describe('Channels sync workbench', () => {
       type: null,
       agentId: null,
       taskId: null,
-      activeChannelId: null,
+      activeChannelId: 'feishu-default',
       pendingBotSettings: null,
       pendingAddChannel: false,
     });
@@ -1424,6 +1424,95 @@ describe('WeChat workbench', () => {
     expect(hostApiFetchMock).not.toHaveBeenCalledWith('/api/channels/workbench/sessions?channelType=feishu');
   });
 
+  it('renders a neutral placeholder instead of defaulting to feishu when nothing selected yet', async () => {
+    locationState.search = '';
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, search: '' },
+    });
+    useRightPanelStore.setState({ activeChannelId: null });
+    channelsStoreState.channels = [
+      {
+        id: 'feishu-default',
+        type: 'feishu',
+        name: 'feishu',
+        status: 'connected',
+        accountId: 'default',
+      },
+      {
+        id: 'wechat-default',
+        type: 'wechat',
+        name: 'wechat',
+        status: 'connected',
+        accountId: 'default',
+      },
+    ] as typeof channelsStoreState.channels;
+
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/channels/capabilities') {
+        return {
+          success: true,
+          capabilities: [
+            {
+              channelId: 'feishu-default',
+              channelType: 'feishu',
+              accountId: 'default',
+              status: 'connected',
+              availableActions: ['send'],
+              capabilityFlags: {
+                supportsConnect: true,
+                supportsDisconnect: true,
+                supportsTest: true,
+                supportsSend: true,
+                supportsSchemaSummary: false,
+                supportsCredentialValidation: false,
+              },
+              configSchemaSummary: {
+                totalFieldCount: 0,
+                requiredFieldCount: 0,
+                optionalFieldCount: 0,
+                sensitiveFieldCount: 0,
+                fieldKeys: [],
+              },
+            },
+            {
+              channelId: 'wechat-default',
+              channelType: 'wechat',
+              accountId: 'default',
+              status: 'connected',
+              availableActions: ['send'],
+              capabilityFlags: {
+                supportsConnect: true,
+                supportsDisconnect: true,
+                supportsTest: true,
+                supportsSend: true,
+                supportsSchemaSummary: false,
+                supportsCredentialValidation: false,
+              },
+              configSchemaSummary: {
+                totalFieldCount: 0,
+                requiredFieldCount: 0,
+                optionalFieldCount: 0,
+                sensitiveFieldCount: 0,
+                fieldKeys: [],
+              },
+            },
+          ],
+        };
+      }
+      if (path.includes('/api/channels/workbench/sessions?channelType=feishu')) {
+        throw new Error('unexpected feishu session request');
+      }
+      return { success: true };
+    });
+
+    render(<Channels />);
+
+    expect(await screen.findByTestId('channels-neutral-placeholder')).toBeInTheDocument();
+    expect(hostApiFetchMock).not.toHaveBeenCalledWith('/api/channels/workbench/sessions?channelType=feishu');
+    expect(screen.queryByText('椋炰功鍚屾宸ヤ綔鍙板紑鍙戜腑')).not.toBeInTheDocument();
+  });
+
   it('uses router search as the single source of truth for the active channel', async () => {
     locationState.search = '?channel=wechat';
     Object.defineProperty(window, 'location', {
@@ -1500,7 +1589,7 @@ describe('WeChat workbench', () => {
 
   it('rerenders cleanly when switching from feishu placeholder to wechat workbench', async () => {
     locationState.search = '';
-    useRightPanelStore.setState({ activeChannelId: null });
+    useRightPanelStore.setState({ activeChannelId: 'feishu-default' });
     channelsStoreState.channels = [
       {
         id: 'feishu-default',

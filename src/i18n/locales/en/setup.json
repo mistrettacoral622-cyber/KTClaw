@@ -78,6 +78,7 @@
         "validateSave": "Validate & Save",
         "valid": "Provider configured successfully",
         "invalid": "Invalid API key",
+        "persistVerifyFailed": "Provider save did not persist as the active default provider.",
         "storedLocally": "Your API key is stored locally on your machine."
     },
     "channel": {

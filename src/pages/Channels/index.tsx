@@ -31,12 +31,12 @@ import type { ChannelSyncConversation, ChannelSyncFileInfo, ChannelSyncMessage, 
 
 const DOMESTIC_CHANNEL_TYPES: ChannelType[] = getPrimaryChannels();
 
-function resolveRequestedChannel(search: string): ChannelType {
+function resolveRequestedChannel(search: string): ChannelType | null {
   const params = new URLSearchParams(search);
   const requested = params.get('channel');
   return requested && DOMESTIC_CHANNEL_TYPES.includes(requested as ChannelType)
     ? requested as ChannelType
-    : 'feishu';
+    : null;
 }
 
 const CHANNEL_FAMILY_UI: Record<ChannelType, { railLabel: string; panelTitle: string; icon: string }> = {
@@ -290,14 +290,16 @@ export function Channels() {
 
   const selectedChannel = resolveSelectedChannel(channels, activeChannelId, requestedChannel);
   const resolvedActiveChannelId = selectedChannel?.id ?? null;
-  const activeChannelType: ChannelType = selectedChannel?.type ?? requestedChannel;
+  const activeChannelType: ChannelType = selectedChannel?.type ?? requestedChannel ?? 'feishu';
   const activeChannelAccountId = selectedChannel?.accountId ?? undefined;
   const scopedSessionAccountId = activeChannelType === 'wechat' && activeChannelAccountId && activeChannelAccountId !== 'default'
     ? activeChannelAccountId
     : undefined;
-  const showFeishuWorkbenchPlaceholder = activeChannelType === 'feishu';
+  const showFeishuWorkbenchPlaceholder = selectedChannel?.type === 'feishu';
   const selectedSessionType = sessions.find((session) => session.id === selectedConversationId)?.sessionType;
-  const composerPlaceholder = buildWorkbenchComposerPlaceholder(activeChannelType, selectedSessionType);
+  const composerPlaceholder = selectedChannel
+    ? buildWorkbenchComposerPlaceholder(selectedChannel.type, selectedSessionType)
+    : '';
   const conversationSyncStatusLabel = conversation?.syncState === 'synced'
     ? `${getChannelWorkbenchLabel(activeChannelType)}同步中`
     : conversation?.syncState ?? '';
@@ -607,6 +609,10 @@ export function Channels() {
 
   const handleQuickAddCurrentType = () => {
     // Quick add for current channel type - skip type selection modal
+    if (!selectedChannel && !requestedChannel) {
+      setAddOpen(true);
+      return;
+    }
     if (activeChannelType === 'feishu') {
       openFeishuWizard({
         accountId: selectedChannel?.accountId,
@@ -829,7 +835,10 @@ export function Channels() {
         <div className="flex h-[56px] items-center justify-between px-5">
           <div>
             <h1 className="text-[15px] font-semibold text-[#111827]">
-              {selectedChannel?.name || activeChannelType.charAt(0).toUpperCase() + activeChannelType.slice(1)}
+              {selectedChannel?.name
+                || (requestedChannel
+                  ? activeChannelType.charAt(0).toUpperCase() + activeChannelType.slice(1)
+                  : t('common:channels.title', { defaultValue: 'Channels' }))}
             </h1>
             <p className="text-[12px] text-[#8e8e93]">{t('syncWorkbench.sessionsTitle', { defaultValue: '同步会话' })}</p>
           </div>
@@ -981,8 +990,13 @@ export function Channels() {
           )}
         >
         {!conversation || !selectedChannel ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-            <span className="text-[40px]">{CHANNEL_ICONS[activeChannelType]}</span>
+          <div
+            data-testid={!selectedChannel ? 'channels-neutral-placeholder' : undefined}
+            className="flex flex-1 flex-col items-center justify-center gap-3 text-center"
+          >
+            <span className={selectedChannel ? 'text-[40px]' : 'text-[36px] text-[#94a3b8]'}>
+              {selectedChannel ? CHANNEL_ICONS[activeChannelType] : '◎'}
+            </span>
             <p className="text-[14px] text-[#8e8e93]">{t('syncWorkbench.emptyConversation', { defaultValue: '选择一个同步会话开始查看' })}</p>
           </div>
         ) : (
@@ -1557,7 +1571,7 @@ export function Channels() {
                   type="button"
                   onClick={() => void handleAdd()}
                   disabled={!addName.trim()}
-                  className="flex-1 rounded-xl bg-clawx-ac py-2 text-[13px] font-medium text-white disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-[#0a84ff] py-2 text-[13px] font-medium text-white hover:bg-[#0062cc] disabled:bg-[#0a84ff] disabled:opacity-50"
                 >
                   {t('common:channels.confirmAdd')}
                 </button>

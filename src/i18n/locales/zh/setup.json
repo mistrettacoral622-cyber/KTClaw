@@ -78,6 +78,7 @@
         "validateSave": "验证并保存",
         "valid": "提供商配置成功",
         "invalid": "无效的 API 密钥",
+        "persistVerifyFailed": "提供商配置未成功保存为当前默认提供商。",
         "storedLocally": "您的 API 密钥存储在本地机器上。"
     },
     "channel": {

@@ -19,16 +19,18 @@
 - Decimal phases (11.1, 11.2): 后续插入项
 
 - [x] **Phase 1: Sidebar Restructure** - ChatGPT 网页版侧边栏布局，3 固定 + 2 折叠，ChatGPT 风格
-- [ ] **Phase 2: Task Board Redesign** - 看板 4 列 + 日程视图双切换，Agent 分组，团队前缀，对话创建
+- [x] **Phase 2: Task Board Redesign** - 看板 4 列 + 日程视图双切换，Agent 分组，团队前缀，对话创建
 - [x] **Phase 3: Team Overview Rebuild** - 团队卡片列表，拖拽创建团队，多团队支持
-- [ ] **Phase 4: Team Map Evolution** - 动态路由，Memory/Skills 管理与同步，成员管理，私聊
-- [ ] **Phase 5: Employee Square** - Agent 卡片展示，创建，私聊，Memory 管理，会话管理
-- [ ] **Phase 6: Channel Redesign** - 频道同步工作台，机器人一对一绑定，显式指定负责人
-- [ ] **Phase 7: Session Redesign** - 会话列表重构，搜索/置顶/分组/导出，团队/个人身份区分
-- [ ] **Phase 8: Settings Convergence** - 设置中心 9 项，移入移出，记忆知识库，迁移备份
-- [ ] **Phase 9: Deletions & Global Cleanup** - /activity 删除，ClawX→KTClaw 替换，冗余项清理
-- [ ] **Phase 10: Channel Feishu Sync Workbench** - 飞书双向同步工作台（已实现，保留）
-- [ ] **Phase 11: Channel WeChat Sync Workbench** - 微信双向同步工作台（已部分实现，保留）
+- [x] **Phase 4: Team Map Evolution** - 动态路由，Memory/Skills 管理与同步，成员管理，私聊
+- [x] **Phase 5: Employee Square** - Agent 卡片展示，创建，私聊，Memory 管理，会话管理
+- [x] **Phase 6: Channel Redesign** - 频道同步工作台，机器人一对一绑定，显式指定负责人
+- [x] **Phase 7: Session Redesign** - 会话列表重构，搜索/置顶/分组/导出，团队/个人身份区分
+- [x] **Phase 8: Settings Convergence** - 设置中心 9 项，移入移出，记忆知识库，迁移备份
+- [x] **Phase 9: Deletions & Global Cleanup** - /activity 删除，ClawX→KTClaw 替换，冗余项清理
+- [x] **Phase 10: Channel Feishu Sync Workbench** - 飞书双向同步工作台（已实现，保留）
+- [x] **Phase 11: Channel WeChat Sync Workbench** - 微信双向同步工作台（已部分实现，保留）
+- [x] **Phase 12: Team Task Execution Integration** - canonical task / session / runtime / team / agent 联动模型
+- [x] **Phase 13: Settings Functional Restoration** - restore real Settings behavior for tool permissions, backup, memory strategy, and desktop identity
 
 ---
 
@@ -317,7 +319,7 @@ Plans:
 - `.planning/phases/08-settings-convergence/08-CONTEXT.md`
 - `src/pages/Settings/index.tsx`
 - `src/stores/settings.ts`
-**Plans:** 4 plans
+**Plans:** 4/4 plans executed
 
 **Success Criteria (what must be TRUE):**
   1. Tool Permissions become real runtime controls for KTClaw-initiated execution entrypoints instead of decorative settings
@@ -329,10 +331,10 @@ Plans:
   7. Existing single-instance desktop behavior must not regress
 
 Plans:
-- [ ] 13-01-PLAN.md — Settings persistence spine (AppSettings schema + renderer store wiring)
-- [ ] 13-02-PLAN.md — Desktop behavior + identity (startMinimized, close-to-tray, notifications, brandSubtitle, myName)
-- [ ] 13-03-PLAN.md — Tool permissions enforcement (runtime enforcement layer + audit log)
-- [ ] 13-04-PLAN.md — Migration & backup + memory strategy (.ktclaw archive, preview restore, watched-dir reindex)
+- [x] 13-01-PLAN.md — Settings persistence spine (AppSettings schema + renderer store wiring)
+- [x] 13-02-PLAN.md — Desktop behavior + identity (startMinimized, close-to-tray, notifications, brandSubtitle, myName)
+- [x] 13-03-PLAN.md — Tool permissions enforcement (runtime enforcement layer + audit log)
+- [x] 13-04-PLAN.md — Migration & backup + memory strategy (.ktclaw archive, preview restore, watched-dir reindex)
 
 ---
 
@@ -353,13 +355,15 @@ Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 1. Sidebar Restructure | 3/3 | Complete |
-| 2. Task Board Redesign | TBD | Not started |
+| 2. Task Board Redesign | 4/4 | Complete |
 | 3. Team Overview Rebuild | 4/4 | Complete |
-| 4. Team Map Evolution | 3/4 | In progress |
-| 5. Employee Square | TBD | Not started |
-| 6. Channel Redesign | TBD | Not started |
-| 7. Session Redesign | 3 plans | Not started |
-| 8. Settings Convergence | TBD | Not started |
-| 9. Deletions & Global Cleanup | TBD | Not started |
-| 10. Channel Feishu Sync Workbench | 2/4 | In progress |
-| 11. Channel WeChat Sync Workbench | 1/3 | In progress |
+| 4. Team Map Evolution | 4/4 | Complete |
+| 5. Employee Square | 3/3 | Complete |
+| 6. Channel Redesign | 5/5 | Complete |
+| 7. Session Redesign | 4/4 | Complete |
+| 8. Settings Convergence | 6/6 | Complete |
+| 9. Deletions & Global Cleanup | 3/3 | Complete |
+| 10. Channel Feishu Sync Workbench | 4/4 | Complete |
+| 11. Channel WeChat Sync Workbench | 3/3 | Complete |
+| 12. Team Task Execution Integration | 4/4 | Complete |
+| 13. Settings Functional Restoration | 4/4 | Complete |

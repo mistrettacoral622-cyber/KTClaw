@@ -20,12 +20,12 @@ import {
   ExternalLink,
   Copy,
 } from 'lucide-react';
-import { TitleBar } from '@/components/layout/TitleBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { WizardShell } from '@/components/wizard/wizard-shell';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { useTranslation } from 'react-i18next';
@@ -200,122 +200,84 @@ export function Setup() {
     }, 1000);
   }, []);
 
-
-  return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-      <TitleBar />
-      <div className="flex-1 overflow-auto">
-        {/* Progress Indicator */}
-        <div className="flex justify-center pt-8">
-          <div className="flex items-center gap-2">
-            {steps.map((s, i) => (
-              <div key={s.id} className="flex items-center">
-                <div
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
-                    i < safeStepIndex
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : i === safeStepIndex
-                        ? 'border-primary text-primary'
-                        : 'border-slate-600 text-slate-600'
-                  )}
-                >
-                  {i < safeStepIndex ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <span className="text-sm">{i + 1}</span>
-                  )}
-                </div>
-                {i < steps.length - 1 && (
-                  <div
-                    className={cn(
-                      'h-0.5 w-8 transition-colors',
-                      i < safeStepIndex ? 'bg-primary' : 'bg-slate-600'
-                    )}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="mx-auto max-w-2xl p-8"
-          >
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">{t(`steps.${step.id}.title`)}</h1>
-              <p className="text-slate-400">{t(`steps.${step.id}.description`)}</p>
-            </div>
-
-            {/* Step-specific content */}
-            <div className="rounded-xl bg-card text-card-foreground border shadow-sm p-8 mb-8">
-              {safeStepIndex === STEP.WELCOME && <WelcomeContent />}
-              {safeStepIndex === STEP.RUNTIME && <RuntimeContent onStatusChange={setRuntimeChecksPassed} />}
-              {safeStepIndex === STEP.PROVIDER && (
-                <ProviderContent
-                  providers={providers}
-                  selectedProvider={selectedProvider}
-                  onSelectProvider={setSelectedProvider}
-                  apiKey={apiKey}
-                  onApiKeyChange={setApiKey}
-                  onConfiguredChange={setProviderConfigured}
-                />
-              )}
-              {safeStepIndex === STEP.INSTALLING && (
-                <InstallingContent
-                  skills={getDefaultSkills(t)}
-                  onComplete={handleInstallationComplete}
-                  onSkip={() => setCurrentStep((i) => i + 1)}
-                />
-              )}
-              {safeStepIndex === STEP.COMPLETE && (
-                <CompleteContent
-                  selectedProvider={selectedProvider}
-                  installedSkills={installedSkills}
-                />
-              )}
-            </div>
-
-            {/* Navigation - hidden during installation step */}
-            {safeStepIndex !== STEP.INSTALLING && (
-              <div className="flex justify-between">
-                <div>
-                  {!isFirstStep && (
-                    <Button variant="ghost" onClick={handleBack}>
-                      <ChevronLeft className="h-4 w-4 mr-2" />
-                      {t('nav.back')}
-                    </Button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  {!isLastStep && safeStepIndex !== STEP.RUNTIME && (
-                    <Button variant="ghost" onClick={handleSkip}>
-                      {t('nav.skipSetup')}
-                    </Button>
-                  )}
-                  <Button onClick={handleNext} disabled={!canProceed}>
-                    {isLastStep ? (
-                      t('nav.getStarted')
-                    ) : (
-                      <>
-                        {t('nav.next')}
-                        <ChevronRight className="h-4 w-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+  const footer = safeStepIndex !== STEP.INSTALLING ? (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex justify-start">
+        {!isFirstStep ? (
+          <Button variant="ghost" onClick={handleBack}>
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            {t('nav.back')}
+          </Button>
+        ) : (
+          <span />
+        )}
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+        {!isLastStep && safeStepIndex !== STEP.RUNTIME ? (
+          <Button variant="ghost" onClick={handleSkip}>
+            {t('nav.skipSetup')}
+          </Button>
+        ) : null}
+        <Button onClick={handleNext} disabled={!canProceed}>
+          {isLastStep ? (
+            t('nav.getStarted')
+          ) : (
+            <>
+              {t('nav.next')}
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </>
+          )}
+        </Button>
       </div>
     </div>
+  ) : null;
+
+  return (
+    <WizardShell
+      steps={steps}
+      activeStep={safeStepIndex}
+      title={t(`steps.${step.id}.title`)}
+      description={t(`steps.${step.id}.description`)}
+      footer={footer}
+      contentClassName="max-w-2xl"
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step.id}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+        >
+          <div className="rounded-xl border bg-card p-8 text-card-foreground shadow-sm">
+            {safeStepIndex === STEP.WELCOME && <WelcomeContent />}
+            {safeStepIndex === STEP.RUNTIME && <RuntimeContent onStatusChange={setRuntimeChecksPassed} />}
+            {safeStepIndex === STEP.PROVIDER && (
+              <ProviderContent
+                providers={providers}
+                selectedProvider={selectedProvider}
+                onSelectProvider={setSelectedProvider}
+                apiKey={apiKey}
+                onApiKeyChange={setApiKey}
+                onConfiguredChange={setProviderConfigured}
+              />
+            )}
+            {safeStepIndex === STEP.INSTALLING && (
+              <InstallingContent
+                skills={getDefaultSkills(t)}
+                onComplete={handleInstallationComplete}
+                onSkip={() => setCurrentStep((i) => i + 1)}
+              />
+            )}
+            {safeStepIndex === STEP.COMPLETE && (
+              <CompleteContent
+                selectedProvider={selectedProvider}
+                installedSkills={installedSkills}
+              />
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </WizardShell>
   );
 }
 
@@ -750,6 +712,12 @@ function ProviderContent({
   const [oauthError, setOauthError] = useState<string | null>(null);
   const pendingOAuthRef = useRef<{ accountId: string; label: string } | null>(null);
 
+  const verifyPersistedProviderSelection = useCallback(async (expectedAccountId: string) => {
+    const snapshot = await fetchProviderSnapshot();
+    const accountExists = snapshot.accounts.some((account) => account.id === expectedAccountId);
+    return accountExists && snapshot.defaultAccountId === expectedAccountId;
+  }, []);
+
   // Manage OAuth events
   useEffect(() => {
     const handleCode = (data: unknown) => {
@@ -786,13 +754,25 @@ function ProviderContent({
             method: 'PUT',
             body: JSON.stringify({ accountId }),
           });
-          setSelectedAccountId(accountId);
         } catch (error) {
           console.error('Failed to set default provider account:', error);
+          setKeyValid(false);
+          onConfiguredChange(false);
+          toast.error(t('provider.persistVerifyFailed'));
+          pendingOAuthRef.current = null;
+          return;
         }
       }
 
       pendingOAuthRef.current = null;
+      if (!accountId || !(await verifyPersistedProviderSelection(accountId))) {
+        setKeyValid(false);
+        onConfiguredChange(false);
+        toast.error(t('provider.persistVerifyFailed'));
+        return;
+      }
+
+      setSelectedAccountId(accountId);
       onConfiguredChange(true);
       toast.success(t('provider.valid'));
     };
@@ -1111,6 +1091,13 @@ function ProviderContent({
 
       if (!defaultResult.success) {
         throw new Error(defaultResult.error || 'Failed to set default provider');
+      }
+
+      if (!(await verifyPersistedProviderSelection(accountIdForSave))) {
+        setKeyValid(false);
+        onConfiguredChange(false);
+        toast.error(t('provider.persistVerifyFailed'));
+        return;
       }
 
       setSelectedAccountId(accountIdForSave);

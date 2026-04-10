@@ -33,7 +33,7 @@
 
 - [ ] **AGENT-01**: Agents 页面升级为员工广场，承担展示、创建、培养、管理入口
 - [ ] **AGENT-02**: 用户可以在员工广场中直接发起私聊，并将记录沉淀回统一会话体系
-- [ ] **AGENT-03**: Agent 的 Memory 管理与设置中心中的记忆知识库保持同步
+- [x] **AGENT-03**: Agent 的 Memory 管理与设置中心中的记忆知识库保持同步
 
 ### Channel & Session
 
@@ -43,9 +43,9 @@
 
 ### Settings & Cleanup
 
-- [ ] **SETTINGS-01**: 设置中心收敛为 9 项高价值设置，费用用量优先展示
-- [ ] **SETTINGS-02**: 记忆知识库、迁移与备份能力纳入统一设置体系
-- [ ] **CLEANUP-01**: 删除 `/activity` 和其他废弃入口，并完成 ClawX → KTClaw 的全局替换
+- [x] **SETTINGS-01**: 设置中心收敛为 9 项高价值设置，费用用量优先展示
+- [x] **SETTINGS-02**: 记忆知识库、迁移与备份能力纳入统一设置体系
+- [x] **CLEANUP-01**: 删除 `/activity` 和其他废弃入口，并完成 ClawX → KTClaw 的全局替换
 
 ### Retained Sync Workbenches
 
@@ -75,13 +75,13 @@
 | TEAM-03 | Phase 3 | Pending |
 | AGENT-01 | Phase 5 | Pending |
 | AGENT-02 | Phase 5 | Pending |
-| AGENT-03 | Phase 5 / Phase 8 | Pending |
+| AGENT-03 | Phase 5 / Phase 13 | Complete |
 | CHANNEL-01 | Phase 6 | Complete |
 | CHANNEL-02 | Phase 6 | Complete |
 | SESSION-01 | Phase 7 | Complete |
-| SETTINGS-01 | Phase 8 | Pending |
-| SETTINGS-02 | Phase 8 | Pending |
-| CLEANUP-01 | Phase 9 | Pending |
+| SETTINGS-01 | Phase 8 | Complete |
+| SETTINGS-02 | Phase 13 | Complete |
+| CLEANUP-01 | Phase 9 | Complete |
 | SYNC-FEISHU-01 | Phase 10 | In progress |
 | SYNC-WECHAT-01 | Phase 11 | In progress |
 

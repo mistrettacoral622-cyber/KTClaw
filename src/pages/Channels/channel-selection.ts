@@ -22,7 +22,7 @@ function parseChannelTypeFromId(channelId: string | null): string | null {
 export function resolveSelectedChannel(
   channels: Channel[],
   activeChannelId: string | null,
-  requestedChannel: ChannelType,
+  requestedChannel: ChannelType | null,
 ): Channel | null {
   if (activeChannelId) {
     const exactMatch = channels.find((channel) => channel.id === activeChannelId);
@@ -39,7 +39,11 @@ export function resolveSelectedChannel(
     }
   }
 
-  return channels.find((channel) => channel.type === requestedChannel) ?? channels[0] ?? null;
+  if (requestedChannel) {
+    return channels.find((channel) => channel.type === requestedChannel) ?? null;
+  }
+
+  return null;
 }
 
 export function buildWorkbenchComposerPlaceholder(
