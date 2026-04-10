@@ -1,5 +1,6 @@
 import { invokeIpc } from '@/lib/api-client';
 import { useAgentsStore } from '@/stores/agents';
+import { appendDispatchHints } from '../../../shared/chat-dispatch-hints';
 import {
   clearErrorRecoveryTimer,
   clearHistoryPoll,
@@ -190,12 +191,15 @@ export function createRuntimeSendActions(set: ChatSet, get: ChatGet): Pick<Runti
         // Longer timeout for chat sends to tolerate high-latency networks (avoids connect error)
         const CHAT_SEND_TIMEOUT_MS = 120_000;
 
+        const baseMessage = trimmed || (hasMedia ? 'Process the attached file(s).' : '');
+        const dispatchAwareMessage = appendDispatchHints(baseMessage, attachments);
+
         if (hasMedia) {
           result = await invokeIpc(
             'chat:sendWithMedia',
             {
               sessionKey: currentSessionKey,
-              message: trimmed || 'Process the attached file(s).',
+              message: dispatchAwareMessage,
               deliver: false,
               idempotencyKey,
               ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
@@ -212,7 +216,7 @@ export function createRuntimeSendActions(set: ChatSet, get: ChatGet): Pick<Runti
             'chat.send',
             {
               sessionKey: currentSessionKey,
-              message: trimmed,
+              message: dispatchAwareMessage,
               deliver: false,
               idempotencyKey,
               ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),

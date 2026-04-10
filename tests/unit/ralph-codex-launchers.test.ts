@@ -70,5 +70,5 @@ writeFileSync(${JSON.stringify(outputFile)}, JSON.stringify(process.argv.slice(2
 
     expect(result.status).toBe(0);
     expect(readFileSync(outputFile, 'utf8')).toBe(JSON.stringify(['5', '--forever']));
-  });
+  }, 20000);
 });

@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { hostApiFetch } from '@/lib/host-api';
 import type { TaskLatestInternalExcerpt } from '@/types/task';
+import { appendDispatchHints } from '../../shared/chat-dispatch-hints';
 import {
   buildLeaderOnlyBlockedMessage,
   findAgentBySessionKey,
@@ -20,7 +21,6 @@ import {
   getUnreadCounts,
   saveUnreadCounts,
   markAsRead as markAsReadInStorage,
-  incrementUnreadCount as incrementUnreadInStorage,
 } from '@/lib/session-unread';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -1837,6 +1837,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Longer timeout for chat sends to tolerate high-latency networks (avoids connect error)
       const CHAT_SEND_TIMEOUT_MS = 120_000;
 
+      const baseMessage = trimmed || (hasMedia ? 'Process the attached file(s).' : '');
+      const dispatchAwareMessage = appendDispatchHints(baseMessage, attachments);
+
       if (hasMedia) {
         result = await hostApiFetch<{ success: boolean; result?: { runId?: string }; error?: string }>(
           '/api/chat/send-with-media',
@@ -1844,7 +1847,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             method: 'POST',
             body: JSON.stringify({
               sessionKey: rpcSessionKey,
-              message: trimmed || 'Process the attached file(s).',
+              message: dispatchAwareMessage,
               deliver: false,
               idempotencyKey,
               ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),
@@ -1861,7 +1864,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           'chat.send',
           {
               sessionKey: rpcSessionKey,
-              message: trimmed,
+              message: dispatchAwareMessage,
             deliver: false,
             idempotencyKey,
             ...(normalizedWorkingDir ? { cwd: normalizedWorkingDir } : {}),

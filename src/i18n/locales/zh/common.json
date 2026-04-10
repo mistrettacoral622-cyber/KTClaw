@@ -189,7 +189,6 @@
         "vectorSearch": "向量搜索",
         "tabOverview": "概览",
         "tabBrowser": "文件浏览",
-        "tabExtras": "额外来源",
         "tabGuide": "使用指南"
     },
     "costs": {
@@ -572,6 +571,14 @@
             "blockingReason": "阻塞原因",
             "nextStep": "建议下一步"
         },
+        "activity": {
+            "status": "状态",
+            "currentWork": "当前工作",
+            "blockingReason": "阻塞原因",
+            "recommendedNextStep": "建议下一步",
+            "agentLabel": "成员",
+            "noActiveWork": "暂无活跃工作"
+        },
         "zoom": {
             "in": "放大",
             "out": "缩小",
@@ -582,12 +589,34 @@
             "hierarchy": "层级图"
         },
         "role": {
-            "leader": "leader",
-            "worker": "worker"
+            "leader": "Leader",
+            "worker": "成员"
         },
         "access": {
-            "direct": "direct",
-            "leader_only": "leader_only"
+            "direct": "直接对话",
+            "leader_only": "仅可经由 Leader"
+        },
+        "memberDetail": {
+            "tabs": {
+                "overview": "概览",
+                "memory": "记忆",
+                "skills": "技能",
+                "activity": "动态"
+            },
+            "openChat": "打开聊天",
+            "removeFromTeam": "移出团队",
+            "removeConfirm": "确定要将 {{agentName}} 从这个团队中移除吗？这不会删除该 Agent。",
+            "notSet": "未设置",
+            "fields": {
+                "role": "角色",
+                "chatAccess": "聊天权限",
+                "responsibility": "职责",
+                "team": "团队",
+                "ownedEntryPoints": "归属入口"
+            }
+        },
+        "session": {
+            "leaderChatBadge": "Leader 聊天"
         },
         "allGroup": "全部",
         "rail": {

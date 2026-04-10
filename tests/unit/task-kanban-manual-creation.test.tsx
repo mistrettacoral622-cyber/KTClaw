@@ -9,10 +9,19 @@ import { useApprovalsStore } from '@/stores/approvals';
 import { useAgentsStore } from '@/stores/agents';
 import { useRightPanelStore } from '@/stores/rightPanelStore';
 
+const setSearchParamsMock = vi.fn();
+
 // Mock stores
 vi.mock('@/stores/approvals');
 vi.mock('@/stores/agents');
 vi.mock('@/stores/rightPanelStore');
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useSearchParams: () => [new URLSearchParams('view=board'), setSearchParamsMock],
+  };
+});
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -54,6 +63,7 @@ describe('TaskKanban - Manual Creation', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    setSearchParamsMock.mockReset();
 
     // Mock approvals store
     vi.mocked(useApprovalsStore).mockImplementation((selector: any) => {

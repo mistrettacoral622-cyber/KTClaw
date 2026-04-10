@@ -20,7 +20,6 @@ const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m
 const TeamOverview = lazy(() => import('./pages/TeamOverview').then((m) => ({ default: m.TeamOverview })));
 const TeamMap = lazy(() => import('./pages/TeamMap').then((m) => ({ default: m.TeamMap })));
 const TaskKanban = lazy(() => import('./pages/TaskKanban').then((m) => ({ default: m.TaskKanban })));
-const Activity = lazy(() => import('./pages/Activity').then((m) => ({ default: m.Activity })));
 const Setup = lazy(() => import('./pages/Setup').then((m) => ({ default: m.Setup })));
 const BroadcastChat = lazy(() => import('./pages/BroadcastChat').then((m) => ({ default: m.BroadcastChat })));
 import { useSettingsStore } from './stores/settings';
@@ -225,7 +224,6 @@ function App() {
             <Route path="team-map" element={<Navigate to="/team-overview" replace />} />
             <Route path="broadcast" element={<BroadcastChat />} />
             <Route path="kanban" element={<TaskKanban />} />
-            <Route path="activity" element={<Activity />} />
             {/* /memory 已迁移至 Settings > 记忆与知识 */}
             <Route path="memory" element={<Navigate to="/settings?section=memory-knowledge" replace />} />
             <Route path="costs" element={<Navigate to="/settings?section=costs-usage" replace />} />

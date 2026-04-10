@@ -58,6 +58,10 @@ export interface ChannelSyncMessage {
   isSelf?: boolean;
   /** Proxied image URL for inline display */
   imageUrl?: string;
+  /** Proxied voice/audio URL for inline playback */
+  voiceUrl?: string;
+  /** Voice duration in seconds */
+  voiceDuration?: number;
   /** Metadata for file-type messages */
   fileInfo?: ChannelSyncFileInfo;
   /** Feishu message type; defaults to 'text' when absent */

@@ -29,7 +29,7 @@ describe('FeedbackBanner', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss feedback' }));
     expect(screen.queryByText('Could not refresh activity log')).not.toBeInTheDocument();
-    expect(window.localStorage.getItem('clawx:feedback-banner:activity-error')).toBe('dismissed');
+    expect(window.localStorage.getItem('ktclaw:feedback-banner:activity-error')).toBe('dismissed');
 
     rerender(<FeedbackBanner bannerId="activity-error" title="Could not refresh activity log" />);
     expect(screen.queryByText('Could not refresh activity log')).not.toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentSummary } from '@/types/agent';
 import { MemberMemoryTab } from '@/components/team-map/MemberMemoryTab';
@@ -83,24 +83,31 @@ describe('MemberMemoryTab', () => {
     render(<MemberMemoryTab agent={agent} />);
 
     const textarea = await screen.findByRole('textbox');
-    fireEvent.change(textarea, { target: { value: 'Updated memory' } });
+    vi.useFakeTimers();
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: 'Updated memory' } });
+    });
 
     expect(screen.getByText('Saving...')).toBeInTheDocument();
 
-    await new Promise((resolve) => setTimeout(resolve, 1600));
-    await waitFor(() => {
-      expect(saveMemoryFile).toHaveBeenCalledWith({
-        relativePath: 'MEMORY.md',
-        content: 'Updated memory',
-        scope: 'researcher',
-        expectedMtime: '2026-04-02T00:00:00.000Z',
-      });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(saveMemoryFile).toHaveBeenCalledWith({
+      relativePath: 'MEMORY.md',
+      content: 'Updated memory',
+      scope: 'researcher',
+      expectedMtime: '2026-04-02T00:00:00.000Z',
+    });
+
+    await act(async () => {
+      await Promise.resolve();
     });
 
     expect(reindexMemory).toHaveBeenCalledTimes(1);
-
-    await waitFor(() => {
-      expect(screen.getByText('Synced')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Synced')).toBeInTheDocument();
   });
 });

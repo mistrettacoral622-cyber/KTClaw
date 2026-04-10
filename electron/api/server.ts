@@ -3,28 +3,6 @@ import { randomBytes } from 'node:crypto';
 import { PORTS } from '../utils/config';
 import { logger } from '../utils/logger';
 import type { HostApiContext } from './context';
-import { handleAppRoutes } from './routes/app';
-import { handleGatewayRoutes } from './routes/gateway';
-import { handleSettingsRoutes } from './routes/settings';
-import { handleProviderRoutes } from './routes/providers';
-import { handleAgentRoutes } from './routes/agents';
-import { handleChannelRoutes } from './routes/channels';
-import { handleLogRoutes } from './routes/logs';
-import { handleUsageRoutes } from './routes/usage';
-import { handleSkillRoutes } from './routes/skills';
-import { handleFileRoutes } from './routes/files';
-import { handleSessionRoutes } from './routes/sessions';
-import { handleCronRoutes } from './routes/cron';
-import { handleApprovalRoutes } from './routes/approvals';
-import { handleHealthRoutes } from './routes/health';
-import { handleMemoryRoutes } from './routes/memory';
-import { handleMcpRoutes } from './routes/mcp';
-import { handleCostsRoutes } from './routes/costs';
-import { handleAlertsRoutes } from './routes/alerts';
-import { handleFeishuRoutes } from './routes/feishu';
-import { handleTeamRoutes } from './routes/teams';
-import { handleTaskRoutes } from './routes/tasks';
-import { handleBackupRoutes } from './routes/backup';
 import { isAuthorizedHostApiRequest, applyCorsOrigin, sendJson, sendNoContent, sendUnauthorized } from './route-utils';
 
 type RouteHandler = (
@@ -34,30 +12,55 @@ type RouteHandler = (
   ctx: HostApiContext,
 ) => Promise<boolean>;
 
-const routeHandlers: RouteHandler[] = [
-  handleAppRoutes,
-  handleGatewayRoutes,
-  handleSettingsRoutes,
-  handleProviderRoutes,
-  handleAgentRoutes,
-  handleTeamRoutes,
-  handleTaskRoutes,
-  handleChannelRoutes,
-  handleSkillRoutes,
-  handleFileRoutes,
-  handleSessionRoutes,
-  handleCronRoutes,
-  handleApprovalRoutes,
-  handleHealthRoutes,
-  handleMemoryRoutes,
-  handleMcpRoutes,
-  handleCostsRoutes,
-  handleAlertsRoutes,
-  handleFeishuRoutes,
-  handleLogRoutes,
-  handleUsageRoutes,
-  handleBackupRoutes,
+type LazyRouteDefinition = {
+  prefixes: string[];
+  loader: () => Promise<RouteHandler>;
+};
+
+const routeHandlerCache = new Map<string, Promise<RouteHandler>>();
+
+function memoizeRouteLoader(cacheKey: string, loader: () => Promise<RouteHandler>): () => Promise<RouteHandler> {
+  return async () => {
+    const cached = routeHandlerCache.get(cacheKey);
+    if (cached) {
+      return await cached;
+    }
+
+    const loadPromise = loader();
+    routeHandlerCache.set(cacheKey, loadPromise);
+    return await loadPromise;
+  };
+}
+
+const routeDefinitions: LazyRouteDefinition[] = [
+  { prefixes: ['/api/app'], loader: memoizeRouteLoader('app', () => import('./routes/app').then((mod) => mod.handleAppRoutes)) },
+  { prefixes: ['/api/gateway', '/api/chat'], loader: memoizeRouteLoader('gateway', () => import('./routes/gateway').then((mod) => mod.handleGatewayRoutes)) },
+  { prefixes: ['/api/settings'], loader: memoizeRouteLoader('settings', () => import('./routes/settings').then((mod) => mod.handleSettingsRoutes)) },
+  { prefixes: ['/api/provider-accounts', '/api/providers', '/api/provider-vendors'], loader: memoizeRouteLoader('providers', () => import('./routes/providers').then((mod) => mod.handleProviderRoutes)) },
+  { prefixes: ['/api/agents'], loader: memoizeRouteLoader('agents', () => import('./routes/agents').then((mod) => mod.handleAgentRoutes)) },
+  { prefixes: ['/api/teams'], loader: memoizeRouteLoader('teams', () => import('./routes/teams').then((mod) => mod.handleTeamRoutes)) },
+  { prefixes: ['/api/tasks'], loader: memoizeRouteLoader('tasks', () => import('./routes/tasks').then((mod) => mod.handleTaskRoutes)) },
+  { prefixes: ['/api/channels'], loader: memoizeRouteLoader('channels', () => import('./routes/channels').then((mod) => mod.handleChannelRoutes)) },
+  { prefixes: ['/api/skills'], loader: memoizeRouteLoader('skills', () => import('./routes/skills').then((mod) => mod.handleSkillRoutes)) },
+  { prefixes: ['/api/files'], loader: memoizeRouteLoader('files', () => import('./routes/files').then((mod) => mod.handleFileRoutes)) },
+  { prefixes: ['/api/sessions'], loader: memoizeRouteLoader('sessions', () => import('./routes/sessions').then((mod) => mod.handleSessionRoutes)) },
+  { prefixes: ['/api/cron'], loader: memoizeRouteLoader('cron', () => import('./routes/cron').then((mod) => mod.handleCronRoutes)) },
+  { prefixes: ['/api/approvals'], loader: memoizeRouteLoader('approvals', () => import('./routes/approvals').then((mod) => mod.handleApprovalRoutes)) },
+  { prefixes: ['/api/health'], loader: memoizeRouteLoader('health', () => import('./routes/health').then((mod) => mod.handleHealthRoutes)) },
+  { prefixes: ['/api/memory'], loader: memoizeRouteLoader('memory', () => import('./routes/memory').then((mod) => mod.handleMemoryRoutes)) },
+  { prefixes: ['/api/mcp'], loader: memoizeRouteLoader('mcp', () => import('./routes/mcp').then((mod) => mod.handleMcpRoutes)) },
+  { prefixes: ['/api/costs'], loader: memoizeRouteLoader('costs', () => import('./routes/costs').then((mod) => mod.handleCostsRoutes)) },
+  { prefixes: ['/api/alerts'], loader: memoizeRouteLoader('alerts', () => import('./routes/alerts').then((mod) => mod.handleAlertsRoutes)) },
+  { prefixes: ['/api/feishu'], loader: memoizeRouteLoader('feishu', () => import('./routes/feishu').then((mod) => mod.handleFeishuRoutes)) },
+  { prefixes: ['/api/logs'], loader: memoizeRouteLoader('logs', () => import('./routes/logs').then((mod) => mod.handleLogRoutes)) },
+  { prefixes: ['/api/usage'], loader: memoizeRouteLoader('usage', () => import('./routes/usage').then((mod) => mod.handleUsageRoutes)) },
+  { prefixes: ['/api/backup'], loader: memoizeRouteLoader('backup', () => import('./routes/backup').then((mod) => mod.handleBackupRoutes)) },
 ];
+
+function getMatchingRouteDefinitions(pathname: string): LazyRouteDefinition[] {
+  return routeDefinitions.filter((definition) =>
+    definition.prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)));
+}
 
 /**
  * Per-session secret token used to authenticate Host API requests.
@@ -90,7 +93,9 @@ export function startHostApiServer(ctx: HostApiContext, port = PORTS.CLAWX_HOST_
         sendUnauthorized(res);
         return;
       }
-      for (const handler of routeHandlers) {
+      const matchingDefinitions = getMatchingRouteDefinitions(requestUrl.pathname);
+      for (const definition of matchingDefinitions) {
+        const handler = await definition.loader();
         if (await handler(req, res, requestUrl, ctx)) {
           return;
         }

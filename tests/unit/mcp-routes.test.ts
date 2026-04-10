@@ -23,6 +23,10 @@ vi.mock('@electron/api/route-utils', () => ({
   sendJson: mocks.sendJson,
 }));
 
+vi.mock('@electron/utils/permissions-enforcer', () => ({
+  checkPermission: vi.fn(async () => 'allow'),
+}));
+
 interface FakeManager {
   listServers: ReturnType<typeof vi.fn>;
   startServer: ReturnType<typeof vi.fn>;

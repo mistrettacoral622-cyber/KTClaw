@@ -9,7 +9,7 @@ for (const route of smokeRoutes) {
       pageErrors.push(error.message);
     });
 
-    await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await page.goto(route, { waitUntil: 'commit' });
     await expect(page.locator('#root')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0);
 

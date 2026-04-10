@@ -10,7 +10,7 @@ import type { Server } from 'node:http';
 import { dirname, join } from 'path';
 import { GatewayManager } from '../gateway/manager';
 import { registerIpcHandlers } from './ipc-handlers';
-import { createTray } from './tray';
+import { createTray, sendDesktopNotification } from './tray';
 import { createMenu } from './menu';
 import { applyWindowsStartupSwitches, clearDevChromiumCaches } from './startup-hardening';
 
@@ -135,6 +135,7 @@ const quitLifecycleState = createQuitLifecycleState();
 // Runtime-mutable desktop behavior settings (read at startup, updated via IPC events)
 let _minimizeToTray = true;
 let _suppressInitialShow = false;
+let _notificationsEnabled = true;
 
 /**
  * Resolve the icons directory path (works in both dev and packaged mode)
@@ -320,8 +321,10 @@ async function initialize(): Promise<void> {
   const startMinimized = await getSetting('startMinimized');
   const minimizeToTray = await getSetting('minimizeToTray');
   const brandSubtitle = await getSetting('brandSubtitle');
+  const notificationsEnabled = await getSetting('notificationsEnabled');
   const isAutostart = process.argv.includes('--autostart');
   _minimizeToTray = minimizeToTray;
+  _notificationsEnabled = notificationsEnabled;
   _suppressInitialShow = isAutostart && startMinimized;
 
   // Start watched-directory memory watchers
@@ -397,6 +400,24 @@ async function initialize(): Promise<void> {
   hostEventBus.on('settings:minimizeToTray-changed', ({ minimizeToTray }: { minimizeToTray: boolean }) => {
     _minimizeToTray = minimizeToTray;
   });
+  hostEventBus.on('settings:notifications-changed', ({ notificationsEnabled }: { notificationsEnabled: boolean }) => {
+    _notificationsEnabled = notificationsEnabled;
+  });
+  hostEventBus.on('task:completed', (payload: { taskId?: string; content?: string }) => {
+    if (!_notificationsEnabled) return;
+    sendDesktopNotification('Task completed', payload.content || payload.taskId || 'A task finished.');
+  });
+  hostEventBus.on('human-intervention-required', (payload: { taskId?: string; status?: string; content?: string }) => {
+    if (!_notificationsEnabled) return;
+    sendDesktopNotification(
+      'Human intervention required',
+      payload.content || `${payload.taskId ?? 'Task'} is ${payload.status ?? 'waiting for input'}.`,
+    );
+  });
+  hostEventBus.on('sync:failed', (payload: { message?: string }) => {
+    if (!_notificationsEnabled) return;
+    sendDesktopNotification('Sync failed', payload.message || 'A sync operation failed.');
+  });
 
   loadWindowContents(window);
 
@@ -463,6 +484,7 @@ async function initialize(): Promise<void> {
 
   gatewayManager.on('error', (error) => {
     hostEventBus.emit('gateway:error', { message: error.message });
+    hostEventBus.emit('sync:failed', { message: error.message });
   });
 
   gatewayManager.on('notification', (notification) => {

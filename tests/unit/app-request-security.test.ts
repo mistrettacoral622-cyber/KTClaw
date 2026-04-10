@@ -47,7 +47,7 @@ vi.mock('electron', () => ({
   },
   app: {
     getVersion: vi.fn(() => '1.0.0'),
-    getName: vi.fn(() => 'ClawX'),
+    getName: vi.fn(() => 'KTClaw'),
     getPath: vi.fn(() => '/tmp'),
     quit: vi.fn(),
     relaunch: vi.fn(),

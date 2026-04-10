@@ -4,6 +4,7 @@
  * message content formats returned by the Gateway.
  */
 import type { RawMessage, ContentBlock } from '@/stores/chat';
+import { stripDispatchHints } from '../../../shared/chat-dispatch-hints';
 
 /**
  * Clean Gateway metadata from user message text for display.
@@ -12,6 +13,8 @@ import type { RawMessage, ContentBlock } from '@/stores/chat';
  */
 function cleanUserText(text: string): string {
   return text
+    // Remove KTClaw-injected hidden dispatch hints
+    .replace(/\s*\[KTCLAW_DISPATCH_HINTS\][\s\S]*?\[\/KTCLAW_DISPATCH_HINTS\]\s*/g, '\n')
     // Remove [media attached: path (mime) | path] references
     .replace(/\s*\[media attached:[^\]]*\]/g, '')
     // Remove [message_id: uuid]
@@ -58,7 +61,7 @@ export function extractText(message: RawMessage | unknown): string {
 
   // Strip Gateway metadata from user messages for clean display
   if (isUser && result) {
-    result = cleanUserText(result);
+    result = stripDispatchHints(cleanUserText(result));
   }
 
   return result;

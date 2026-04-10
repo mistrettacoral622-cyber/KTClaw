@@ -42,7 +42,6 @@ vi.mock('@/pages/Settings', () => ({ Settings: () => <div>Settings</div> }));
 vi.mock('@/pages/TeamOverview', () => ({ TeamOverview: () => <div>Team Overview</div> }));
 vi.mock('@/pages/TeamMap', () => ({ TeamMap: () => <div>Team Map</div> }));
 vi.mock('@/pages/TaskKanban', () => ({ TaskKanban: () => <div>Kanban</div> }));
-vi.mock('@/pages/Activity', () => ({ Activity: () => <div>Activity</div> }));
 vi.mock('@/pages/Memory', () => ({ Memory: () => <div>Memory</div> }));
 vi.mock('@/pages/Costs', () => ({ Costs: () => <div>Costs</div> }));
 vi.mock('@/pages/BroadcastChat', () => ({ BroadcastChat: () => <div>Broadcast</div> }));

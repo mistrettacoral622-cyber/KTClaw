@@ -66,11 +66,10 @@ const STATIC_PAGE_ITEMS: StaticPageItem[] = [
   { id: 'channels', label: 'Channels', path: '/channels', icon: '📗' },
   { id: 'skills', label: 'Skills', path: '/skills', icon: '🧠' },
   { id: 'cron', label: 'Cron', path: '/cron', icon: '⏰' },
-  { id: 'activity', label: 'Activity', path: '/activity', icon: '📋' },
   { id: 'memory', label: 'Memory', path: '/memory', icon: '🗂' },
   { id: 'costs', label: 'Costs', path: '/costs', icon: '💰' },
   { id: 'team-overview', label: 'Team Overview', path: '/team-overview', icon: '👥' },
-  { id: 'team-map', label: 'Team Map', path: '/team-map', icon: '🗺' },
+  { id: 'team-map', label: 'Team Map', path: '/team-overview', icon: '🗺' },
   { id: 'kanban', label: 'Task Kanban', path: '/kanban', icon: '📝' },
   { id: 'settings', label: 'Settings', path: '/settings', icon: '⚙️' },
 ];

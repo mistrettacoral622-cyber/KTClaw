@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { invokeIpc } from '@/lib/api-client';
 import type { RawMessage, AttachedFileMeta } from '@/stores/chat';
+import { useSettingsStore } from '@/stores/settings';
 import { extractText, extractThinking, extractImages, extractToolGroups, formatTimestamp, isSystemInjectedUserMessage } from './message-utils';
 import { TaskCreationBubble } from './TaskCreationBubble';
 
@@ -49,13 +50,14 @@ export const ChatMessage = memo(function ChatMessage({
   const isUser = message.role === 'user';
   const role = typeof message.role === 'string' ? message.role.toLowerCase() : '';
   const isToolResult = role === 'toolresult' || role === 'tool_result';
+  const showToolCalls = useSettingsStore((state) => state.showToolCalls);
   const text = extractText(message);
   const hasText = text.trim().length > 0;
   const thinking = extractThinking(message);
   const images = extractImages(message);
   const tools = extractToolGroups(message);
   const visibleThinking = showThinking ? thinking : null;
-  const visibleTools = tools;
+  const visibleTools = showToolCalls ? tools : [];
   const hasOnlyCronToolActivity = visibleTools.length > 0
     && visibleTools.every((tool) => tool.name.trim().toLowerCase() === 'cron');
 
@@ -137,7 +139,7 @@ export const ChatMessage = memo(function ChatMessage({
     );
   }
 
-  const hasStreamingToolStatus = isStreaming && streamingTools.length > 0;
+  const hasStreamingToolStatus = showToolCalls && isStreaming && streamingTools.length > 0;
   if (!hasText && !visibleThinking && images.length === 0 && visibleTools.length === 0 && attachedFiles.length === 0 && !hasStreamingToolStatus) return null;
 
   return (

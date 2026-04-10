@@ -111,11 +111,11 @@ export interface AppSettings {
  * Default settings
  */
 function getSystemLocale(): string {
-  const preferredLanguages = typeof app.getPreferredSystemLanguages === 'function'
+  const preferredLanguages = app && typeof app.getPreferredSystemLanguages === 'function'
     ? app.getPreferredSystemLanguages()
     : [];
   return preferredLanguages[0]
-    || (typeof app.getLocale === 'function' ? app.getLocale() : '')
+    || (app && typeof app.getLocale === 'function' ? app.getLocale() : '')
     || Intl.DateTimeFormat().resolvedOptions().locale
     || 'en';
 }

@@ -4,7 +4,7 @@
  */
 import { mkdir, readdir, stat, readFile, writeFile, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { app } from 'electron';
 import { getAllSettings, type AppSettings } from './store';
 
@@ -58,6 +58,19 @@ async function readMemorySnapshot(): Promise<Record<string, unknown>> {
   }
 }
 
+async function restoreMemorySnapshot(memory: Record<string, unknown>): Promise<void> {
+  const { homedir } = await import('os');
+  const workspaceDir = join(homedir(), '.openclaw', 'agents', 'main', 'workspace');
+  await mkdir(workspaceDir, { recursive: true });
+
+  for (const [relativePath, content] of Object.entries(memory)) {
+    if (typeof content !== 'string') continue;
+    const targetPath = join(workspaceDir, relativePath);
+    await mkdir(dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, content, 'utf8');
+  }
+}
+
 async function readChannelMetadata(): Promise<Record<string, unknown>> {
   // Read channel/provider metadata (no API keys) from openclaw config
   try {
@@ -76,6 +89,29 @@ async function readChannelMetadata(): Promise<Record<string, unknown>> {
   } catch {
     return {};
   }
+}
+
+async function restoreChannelMetadata(channelMetadata: Record<string, unknown>): Promise<void> {
+  const { homedir } = await import('os');
+  const configPath = join(homedir(), '.openclaw', 'openclaw.json');
+  let currentConfig: Record<string, unknown> = {};
+
+  if (existsSync(configPath)) {
+    try {
+      currentConfig = JSON.parse(await readFile(configPath, 'utf8')) as Record<string, unknown>;
+    } catch {
+      currentConfig = {};
+    }
+  }
+
+  const nextConfig = {
+    ...currentConfig,
+    ...(Array.isArray(channelMetadata.channels) ? { channels: channelMetadata.channels } : {}),
+    ...(Array.isArray(channelMetadata.providers) ? { providers: channelMetadata.providers } : {}),
+  };
+
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, JSON.stringify(nextConfig, null, 2), 'utf8');
 }
 
 async function ensureBackupDir(): Promise<void> {
@@ -203,8 +239,14 @@ export async function importArchive(
     }
   }
 
-  // memory and channelMetadata restoration would require additional services;
-  // for now we record the intent and return success
+  if (modules.includes('memory') && preview.memory) {
+    await restoreMemorySnapshot(preview.memory);
+  }
+
+  if (modules.includes('channelMetadata') && preview.channelMetadata) {
+    await restoreChannelMetadata(preview.channelMetadata);
+  }
+
   return { success: true, backedUpAs };
 }
 

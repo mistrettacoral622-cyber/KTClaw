@@ -53,11 +53,15 @@ describe('E2E / release smoke guardrails', () => {
     const packageWinManualWorkflow = readFileSync(resolve(process.cwd(), '.github/workflows/package-win-manual.yml'), 'utf8');
 
     expect(releaseWorkflow).toContain('pnpm run package:mac:ci');
-    expect(releaseWorkflow).toContain('pnpm run package:win:ci');
+    expect(releaseWorkflow).toContain('pnpm run package:prepare');
+    expect(releaseWorkflow).toContain('pnpm exec electron-builder --win --x64 --publish never');
+    expect(releaseWorkflow).toContain('pnpm exec electron-builder --win --arm64 --publish never');
     expect(releaseWorkflow).toContain('pnpm run package:linux:ci');
     expect(releaseWorkflow).toContain('pnpm run smoke:release:linux');
     expect(releaseWorkflow).toContain('pnpm run smoke:install:linux');
 
-    expect(packageWinManualWorkflow).toContain('pnpm run package:win:ci');
+    expect(packageWinManualWorkflow).toContain('pnpm run package:prepare');
+    expect(packageWinManualWorkflow).toContain('npx electron-builder --win --x64 --publish never');
+    expect(packageWinManualWorkflow).toContain('npx electron-builder --win --arm64 --publish never');
   });
 });

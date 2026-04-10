@@ -26,6 +26,10 @@ vi.mock('@electron/utils/task-config', () => ({
   appendTaskExecutionEvent: mocks.appendTaskExecutionEvent,
 }));
 
+vi.mock('@electron/utils/permissions-enforcer', () => ({
+  checkPermission: vi.fn(async () => 'allow'),
+}));
+
 function createRequest(
   method: string,
   body?: unknown,

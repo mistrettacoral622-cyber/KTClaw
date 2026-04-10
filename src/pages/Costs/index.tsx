@@ -1,6 +1,6 @@
-/**
- * Costs Page — 费用 / Token 用量统计 + 监控大盘
- * 合并原 SettingsMonitoringPanel 的全部功能
+﻿/**
+ * Costs Page 鈥?璐圭敤 / Token 鐢ㄩ噺缁熻 + 鐩戞帶澶х洏
+ * 鍚堝苟鍘?SettingsMonitoringPanel 鐨勫叏閮ㄥ姛鑳?
  */
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { RefreshCw, TrendingUp, Zap, DollarSign, BarChart3, Plus, Trash2 } from 
 import { Switch } from '@/components/ui/switch';
 import { SkeletonText } from '@/components/ui/Skeleton';
 
-/* ─── Types ─── */
+/* 鈹€鈹€鈹€ Types 鈹€鈹€鈹€ */
 
 interface TokenUsageEntry {
   timestamp: string;
@@ -114,7 +114,7 @@ const TAB_LABEL_KEYS: Record<TabId, string> = {
   alerts: 'costs.tabAlerts',
 };
 
-/* ─── Helpers ─── */
+/* 鈹€鈹€鈹€ Helpers 鈹€鈹€鈹€ */
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
@@ -229,7 +229,7 @@ function extractRealtimeUsageEntry(payload: unknown): TokenUsageEntry | null {
   };
 }
 
-/* ─── Main component ─── */
+/* 鈹€鈹€鈹€ Main component 鈹€鈹€鈹€ */
 
 type CostsProps = {
   embedded?: boolean;
@@ -337,17 +337,17 @@ export function Costs({ embedded = false }: CostsProps) {
                 <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
                   <input
                     type="checkbox"
-                    aria-label="Auto refresh"
+                    aria-label="自动刷新"
                     checked={autoRefreshEnabled}
                     onChange={(event) => setAutoRefreshEnabled(event.target.checked)}
                     className="h-3.5 w-3.5 rounded border-[#c6c6c8]"
                   />
-                  Auto refresh
+                  自动刷新
                 </label>
                 <label className="flex items-center gap-1.5 text-[12px] text-[#3c3c43]">
-                  <span>Interval</span>
+                  <span>刷新间隔</span>
                   <select
-                    aria-label="Refresh interval"
+                    aria-label="刷新间隔"
                     value={autoRefreshIntervalSec}
                     onChange={(event) => setAutoRefreshIntervalSec(Number(event.target.value))}
                     className="h-8 rounded-lg border border-[#c6c6c8] bg-[#f2f2f7] px-2 text-[12px] text-[#3c3c43] outline-none"
@@ -433,7 +433,7 @@ export function Costs({ embedded = false }: CostsProps) {
   );
 }
 
-/* ─── Realtime Tab ─── */
+/* 鈹€鈹€鈹€ Realtime Tab 鈹€鈹€鈹€ */
 
 function RealtimeTab({
   entries, loading, totalInput, totalOutput, totalCache, totalCost, modelRows,
@@ -500,7 +500,7 @@ function RealtimeTab({
         </div>
         {entries.length === 0 && !loading ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <span className="text-[28px] opacity-30">💸</span>
+            <span className="text-[28px] opacity-30">馃捀</span>
             <span className="text-[13px] text-[#8e8e93]">{t('costs.noUsageData')}</span>
           </div>
         ) : (
@@ -538,7 +538,7 @@ function RealtimeTab({
   );
 }
 
-/* ─── Dashboard Tab ─── */
+/* 鈹€鈹€鈹€ Dashboard Tab 鈹€鈹€鈹€ */
 
 function DashboardTab({
   summary,
@@ -604,24 +604,24 @@ function DashboardTab({
       {analysis && (
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
-            <p className="text-[13px] text-[#8e8e93]">Optimization Score</p>
+            <p className="text-[13px] text-[#8e8e93]">优化评分</p>
             <p className="mt-2 text-[30px] font-semibold text-[#111827]">{analysis.optimizationScore}</p>
           </div>
           <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
-            <p className="text-[13px] text-[#8e8e93]">Cache Savings</p>
+            <p className="text-[13px] text-[#8e8e93]">缓存节省</p>
             <p className="mt-2 text-[24px] font-semibold text-[#111827]">{formatCost(analysis.cacheSavings.estimatedCostUsd)}</p>
             <p className="mt-1 text-[12px] text-[#667085]">
-              {formatTokens(analysis.cacheSavings.cacheTokens)} tokens ({analysis.cacheSavings.savingsRatePct}%)
+              {formatTokens(analysis.cacheSavings.cacheTokens)} Tokens ({analysis.cacheSavings.savingsRatePct}%)
             </p>
           </div>
           <div className="rounded-xl border border-[#c6c6c8] bg-white p-4">
-            <p className="text-[13px] text-[#8e8e93]">Week-over-week</p>
+            <p className="text-[13px] text-[#8e8e93]">周环比</p>
             <p className="mt-2 text-[24px] font-semibold text-[#111827]">
               {analysis.weekOverWeek.deltas.totalTokensPct > 0 ? '+' : ''}
               {analysis.weekOverWeek.deltas.totalTokensPct}%
             </p>
             <p className="mt-1 text-[12px] text-[#667085]">
-              Cost {analysis.weekOverWeek.deltas.costUsdPct > 0 ? '+' : ''}
+              费用 {analysis.weekOverWeek.deltas.costUsdPct > 0 ? '+' : ''}
               {analysis.weekOverWeek.deltas.costUsdPct}%
             </p>
           </div>
@@ -702,9 +702,9 @@ function DashboardTab({
               </div>
               <div className="w-full space-y-3">
                 {[
-                  { label: 'Input', value: `${Math.round(totals.inputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.inputTokens)})`, color: '#0a7aff' },
-                  { label: 'Output', value: `${Math.round(totals.outputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.outputTokens)})`, color: '#10b981' },
-                  { label: 'Cache', value: `${Math.round(totals.cacheTokens / totals.totalTokens * 100)}% (${formatTokens(totals.cacheTokens)})`, color: '#dbe2ea' },
+                  { label: '杈撳叆', value: `${Math.round(totals.inputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.inputTokens)})`, color: '#0a7aff' },
+                  { label: '杈撳嚭', value: `${Math.round(totals.outputTokens / totals.totalTokens * 100)}% (${formatTokens(totals.outputTokens)})`, color: '#10b981' },
+                  { label: '缂撳瓨', value: `${Math.round(totals.cacheTokens / totals.totalTokens * 100)}% (${formatTokens(totals.cacheTokens)})`, color: '#dbe2ea' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between gap-4 text-[12px]">
                     <span className="flex items-center gap-2 text-[#667085]">
@@ -718,7 +718,7 @@ function DashboardTab({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <span className="text-[28px] opacity-30">📊</span>
+              <span className="text-[28px] opacity-30">馃搳</span>
               <span className="text-[13px] text-[#8e8e93]">{t('costs.noUsageData')}</span>
             </div>
           )}
@@ -729,7 +729,7 @@ function DashboardTab({
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
           <p className="mb-4 text-[14px] font-semibold text-[#334155]">{t('costs.agentUsageRanking')}</p>
           <div className="overflow-x-auto">
-            <table aria-label="Agent usage ranking table" className="min-w-full border-collapse text-left text-[13px]">
+            <table aria-label="Agent 用量排行表" className="min-w-full border-collapse text-left text-[13px]">
               <thead>
                 <tr className="border-b border-[#eef2f6] text-[#8e8e93]">
                   <th className="py-3 font-medium">Agent</th>
@@ -769,16 +769,16 @@ function DashboardTab({
 
       {modelRows.length > 0 && (
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Model Costs</p>
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">模型费用</p>
           <div className="overflow-x-auto">
-            <table aria-label="Model cost table" className="min-w-full border-collapse text-left text-[13px]">
+            <table aria-label="模型费用表" className="min-w-full border-collapse text-left text-[13px]">
               <thead>
                 <tr className="border-b border-[#eef2f6] text-[#8e8e93]">
-                  <th className="py-3 font-medium">Model</th>
-                  <th className="py-3 font-medium">Calls</th>
+                  <th className="py-3 font-medium">模型</th>
+                  <th className="py-3 font-medium">调用次数</th>
                   <th className="py-3 font-medium">{t('costs.input')}</th>
                   <th className="py-3 font-medium">{t('costs.output')}</th>
-                  <th className="py-3 font-medium">Total Tokens</th>
+                  <th className="py-3 font-medium">总 Tokens</th>
                   <th className="py-3 text-right font-medium">{t('costs.costUsd')}</th>
                 </tr>
               </thead>
@@ -801,7 +801,7 @@ function DashboardTab({
 
       {topCrons.length > 0 && (
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Top Crons</p>
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">高消耗 Cron</p>
           <div className="space-y-3">
             {topCrons.map((row) => (
               <div
@@ -811,7 +811,7 @@ function DashboardTab({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium text-[#111827]">{row.cronName}</p>
                   <p className="mt-1 text-[11px] text-[#8e8e93]">
-                    {row.sessions} runs · {formatTokens(row.inputTokens)} in · {formatTokens(row.outputTokens)} out
+                    {row.sessions} 次 · 输入 {formatTokens(row.inputTokens)} · 输出 {formatTokens(row.outputTokens)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -826,18 +826,18 @@ function DashboardTab({
 
       {cronRows.length > 0 && (
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
-          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Cron Job Costs</p>
+          <p className="mb-4 text-[14px] font-semibold text-[#334155]">Cron 任务费用</p>
           <div className="overflow-x-auto">
-            <table aria-label="Cron job costs table" className="min-w-full border-collapse text-left text-[13px]">
+            <table aria-label="Cron 任务费用表" className="min-w-full border-collapse text-left text-[13px]">
               <thead>
                 <tr className="border-b border-[#eef2f6] text-[#8e8e93]">
-                  <th className="py-3 font-medium">Job</th>
-                  <th className="py-3 font-medium">Runs</th>
-                  <th className="py-3 font-medium">Input</th>
-                  <th className="py-3 font-medium">Output</th>
-                  <th className="py-3 font-medium">Total Tokens</th>
-                  <th className="py-3 text-right font-medium">Cost ($)</th>
-                  <th className="py-3 text-right font-medium">Details</th>
+                  <th className="py-3 font-medium">任务</th>
+                  <th className="py-3 font-medium">运行次数</th>
+                  <th className="py-3 font-medium">输入</th>
+                  <th className="py-3 font-medium">输出</th>
+                  <th className="py-3 font-medium">总 Tokens</th>
+                  <th className="py-3 text-right font-medium">费用（$）</th>
+                  <th className="py-3 text-right font-medium">详情</th>
                 </tr>
               </thead>
               <tbody>
@@ -857,11 +857,11 @@ function DashboardTab({
                         <td className="py-3 text-right">
                           <button
                             type="button"
-                            aria-label={`Show details for ${row.cronName}`}
+                            aria-label={`查看 ${row.cronName}`}
                             onClick={() => setExpandedCronId(expanded ? null : row.cronJobId)}
                             className="text-[12px] font-medium text-clawx-ac hover:underline"
                           >
-                            {expanded ? 'Hide' : 'Show'}
+                            {expanded ? '收起' : '展开'}
                           </button>
                         </td>
                       </tr>
@@ -869,9 +869,9 @@ function DashboardTab({
                         <tr className="border-b border-[#f7f8fa] bg-[#f8fafc]">
                           <td className="py-2 text-[12px] text-[#667085]" colSpan={7}>
                             <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
-                              <span>Job ID: {row.cronJobId}</span>
-                              <span>Last run: {row.lastRunAt ? formatDate(row.lastRunAt) : 'N/A'}</span>
-                              <span>Avg/run: {avgTokensPerRun} tokens 路 {formatCost(avgCostUsdPerRun)}</span>
+                              <span>任务 ID： {row.cronJobId}</span>
+                              <span>最近运行： {row.lastRunAt ? formatDate(row.lastRunAt) : '暂无'}</span>
+                              <span>单次均值： {avgTokensPerRun} Tokens · {formatCost(avgCostUsdPerRun)}</span>
                             </div>
                           </td>
                         </tr>
@@ -889,7 +889,7 @@ function DashboardTab({
         <div className="rounded-xl border border-[#c6c6c8] bg-white p-5">
           <p className="mb-4 text-[14px] font-semibold text-[#334155]">{t('costs.agentUsageRanking')}</p>
           <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <span className="text-[28px] opacity-30">🤖</span>
+            <span className="text-[28px] opacity-30">馃</span>
             <span className="text-[13px] text-[#8e8e93]">{t('costs.noAgentData')}</span>
             <span className="text-[12px] text-[#c6c6c8]">{t('costs.noAgentDataDesc')}</span>
           </div>
@@ -899,7 +899,7 @@ function DashboardTab({
   );
 }
 
-/* ─── Usage Tab ─── */
+/* 鈹€鈹€鈹€ Usage Tab 鈹€鈹€鈹€ */
 
 function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
   const { t } = useTranslation('common');
@@ -909,7 +909,7 @@ function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
     return (
       <div className="rounded-xl border border-[#c6c6c8] bg-white p-6">
         <div className="flex flex-col items-center gap-2 py-12 text-center">
-          <span className="text-[40px] opacity-30">📊</span>
+          <span className="text-[40px] opacity-30">馃搳</span>
           <p className="text-[14px] text-[#8e8e93]">{t('costs.noUsageAnalysis')}</p>
           <p className="text-[12px] text-[#c6c6c8]">{t('costs.noUsageAnalysisDesc')}</p>
         </div>
@@ -933,14 +933,14 @@ function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
   return (
     <div className="rounded-xl border border-[#c6c6c8] bg-white p-6">
       <p className="text-[12px] text-[#8e8e93]">{t('costs.statsScope')}</p>
-      <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">{formatTokens(totalTokens)} Total Tokens</div>
+      <div className="mt-1 text-[28px] font-bold tracking-[-0.04em] text-[#111827]">{formatTokens(totalTokens)} 总 Tokens</div>
       <div className="mt-6 grid gap-8 xl:grid-cols-[280px_minmax(0,1fr)]">
         <div
           className="relative mx-auto h-[280px] w-[280px] rounded-full"
           style={{ background: `conic-gradient(${gradientStops.join(', ')})` }}
         >
           <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
-            <span className="text-[14px] font-semibold text-[#667085]">Agent</span>
+            <span className="text-[14px] font-semibold text-[#667085]">Agent 数量</span>
             <span className="mt-1 text-[20px] font-bold text-[#111827]">{agentRows.length}</span>
           </div>
         </div>
@@ -961,7 +961,7 @@ function UsageTab({ agentRows }: { agentRows: AgentSummary[] }) {
   );
 }
 
-/* ─── Alerts Tab ─── */
+/* 鈹€鈹€鈹€ Alerts Tab 鈹€鈹€鈹€ */
 
 function AlertsTab() {
   const { t } = useTranslation('common');
@@ -1031,12 +1031,12 @@ function AlertsTab() {
             <input
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
-              placeholder="如：日均 Token 超限"
+              placeholder="濡傦細鏃ュ潎 Token 瓒呴檺"
               className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
             />
           </div>
           <div className="w-[140px]">
-            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">类型</p>
+            <p className="mb-1 text-[12px] font-medium text-[#3c3c43]">绫诲瀷</p>
             <select
               value={addType}
               onChange={(e) => setAddType(e.target.value as AlertRule['type'])}
@@ -1070,15 +1070,15 @@ function AlertsTab() {
       </section>
 
       <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
-        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">告警规则列表</h3>
+        <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">鍛婅瑙勫垯鍒楄〃</h3>
         {loading ? (
           <div className="space-y-2 py-2">
             <SkeletonText lines={3} />
           </div>
         ) : rules.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <span className="text-[28px] opacity-30">🔔</span>
-            <p className="text-[13px] text-[#8e8e93]">暂无告警规则</p>
+            <span className="text-[28px] opacity-30">馃敂</span>
+            <p className="text-[13px] text-[#8e8e93]">鏆傛棤鍛婅瑙勫垯</p>
           </div>
         ) : (
           <div className="divide-y divide-[#f2f2f7]">
@@ -1106,3 +1106,4 @@ function AlertsTab() {
     </div>
   );
 }
+

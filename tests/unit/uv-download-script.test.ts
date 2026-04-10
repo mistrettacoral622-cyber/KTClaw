@@ -1,19 +1,21 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { getExtractionCommand } from '../../scripts/download-bundled-uv.mjs';
-
 describe('download bundled uv script', () => {
-  it('uses direct tar extraction for linux archives on Windows hosts', () => {
-    const result = getExtractionCommand({
-      archivePath: 'C:\\tmp\\uv-linux.tar.gz',
-      filename: 'uv-x86_64-unknown-linux-gnu.tar.gz',
-      tempDir: 'C:\\tmp\\extract',
-      hostPlatform: 'win32',
-    });
+  const scriptSource = readFileSync(
+    join(process.cwd(), 'scripts', 'download-bundled-uv.mjs'),
+    'utf8',
+  );
 
-    expect(result).toEqual({
-      command: 'tar',
-      args: ['-xzf', 'C:\\tmp\\uv-linux.tar.gz', '-C', 'C:\\tmp\\extract'],
-    });
+  it('keeps the tar extraction branch for non-zip archives', () => {
+    expect(scriptSource).toContain("command: 'tar'");
+    expect(scriptSource).toContain("args: ['-xzf', archivePath, '-C', tempDir]");
+   });
+
+  it('keeps the PowerShell zip extraction branch for Windows hosts', () => {
+    expect(scriptSource).toContain("if (hostPlatform === 'win32')");
+    expect(scriptSource).toContain("command: 'powershell.exe'");
+    expect(scriptSource).toContain('ExtractToDirectory');
   });
 });

@@ -152,7 +152,7 @@ describe('Chat page team access', () => {
     expect(toastErrorMock).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a team brief entry point for leader chats and opens the panel', () => {
+  it('does not render a team brief entry point in the current header shell', () => {
     window.localStorage.setItem('clawport-kanban', JSON.stringify([
       {
         id: 'ticket-brief',
@@ -173,14 +173,7 @@ describe('Chat page team access', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /team brief|common:teamBrief\.open/i }));
-
-    expect(screen.getByText('common:teamBrief.title')).toBeInTheDocument();
-    expect(screen.getByText('common:teamBrief.activeWork')).toBeInTheDocument();
-    expect(screen.getByText('common:teamBrief.blockers')).toBeInTheDocument();
-    expect(screen.getByText('common:teamBrief.nextSteps')).toBeInTheDocument();
-    expect(screen.getAllByText('common:teamBrief.openMember').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('common:teamBrief.openKanban').length).toBeGreaterThan(0);
-    expect(screen.getByText('Review launch checklist')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /team brief|common:teamBrief\.open/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('common:teamBrief.title')).not.toBeInTheDocument();
   });
 });

@@ -25,6 +25,14 @@ vi.mock('electron', () => ({
   },
 }));
 
+vi.mock('os', async () => {
+  const actual = await vi.importActual<typeof import('os')>('os');
+  return {
+    ...actual,
+    homedir: () => testUserData,
+  };
+});
+
 // Mock electron-store
 vi.mock('electron-store', () => {
   const store: Record<string, unknown> = {
@@ -52,6 +60,13 @@ describe('backup-manager', () => {
   beforeEach(async () => {
     await mkdir(testUserData, { recursive: true });
     await mkdir(join(testUserData, 'backups'), { recursive: true });
+    await mkdir(join(testUserData, '.openclaw', 'agents', 'main', 'workspace'), { recursive: true });
+    await writeFile(join(testUserData, '.openclaw', 'agents', 'main', 'workspace', 'notes.md'), '# original', 'utf8');
+    await writeFile(
+      join(testUserData, '.openclaw', 'openclaw.json'),
+      JSON.stringify({ channels: [{ id: 'c1', name: 'Original Channel', type: 'feishu' }], providers: [] }, null, 2),
+      'utf8',
+    );
   });
 
   afterEach(async () => {
@@ -105,6 +120,38 @@ describe('backup-manager', () => {
       const backupsAfter = await listBackups();
       // At least one more backup should exist after import
       expect(backupsAfter.length).toBeGreaterThan(backupsBefore.length);
+    });
+
+    it('restores memory files and channel metadata when requested', async () => {
+      const archivePath = join(testUserData, 'incoming.ktclaw');
+      await writeFile(
+        archivePath,
+        JSON.stringify({
+          version: '1',
+          createdAt: '2026-04-08T00:00:00.000Z',
+          settings: { theme: 'dark' },
+          memory: { 'notes.md': '# restored', 'agent.json': '{"ok":true}' },
+          channelMetadata: {
+            channels: [{ id: 'c2', name: 'Restored Channel', type: 'wechat' }],
+            providers: [{ id: 'p1', name: 'Restored Provider', type: 'openai' }],
+          },
+        }, null, 2),
+        'utf8',
+      );
+
+      const { importArchive } = await import('@electron/utils/backup-manager');
+      await importArchive(archivePath, ['memory', 'channelMetadata']);
+
+      expect(
+        await readFile(join(testUserData, '.openclaw', 'agents', 'main', 'workspace', 'notes.md'), 'utf8'),
+      ).toBe('# restored');
+
+      expect(
+        JSON.parse(await readFile(join(testUserData, '.openclaw', 'openclaw.json'), 'utf8')),
+      ).toMatchObject({
+        channels: [{ id: 'c2', name: 'Restored Channel', type: 'wechat' }],
+        providers: [{ id: 'p1', name: 'Restored Provider', type: 'openai' }],
+      });
     });
   });
 

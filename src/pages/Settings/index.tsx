@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+﻿import { useEffect, useId, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -12,6 +12,8 @@ import { SettingsCostsUsagePanel } from '@/components/settings-center/settings-c
 import { SettingsModelsProvidersPanel } from '@/components/settings-center/settings-models-providers-panel';
 import { SettingsAppUpdatesPanel } from '@/components/settings-center/settings-app-updates-panel';
 import { SettingsAboutPanel } from '@/components/settings-center/settings-about-panel';
+import { SettingsGeneralPanel } from '@/components/settings-center/settings-general-panel';
+import { SettingsToolPermissionsPanel as CanonicalSettingsToolPermissionsPanel } from '@/components/settings-center/settings-tool-permissions-panel';
 import { ProvidersSettings } from '@/components/settings/ProvidersSettings';
 import { McpTab } from '@/pages/Skills/McpTab';
 import {
@@ -225,15 +227,15 @@ export function Settings() {
   };
 
   return (
-    <div className="h-full bg-[linear-gradient(180deg,#f3f4f6_0%,#eceff3_100%)] p-6 dark:bg-background">
-      <div className="mx-auto flex h-full max-w-[1360px] overflow-hidden rounded-[32px] border border-black/[0.05] bg-white shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-background">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,#f3f4f6_0%,#eceff3_100%)] p-6 dark:bg-background">
+      <div className="mx-auto flex min-h-full min-h-0 flex-1 w-full max-w-[1360px] overflow-hidden rounded-[32px] border border-black/[0.05] bg-white shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-background">
         <SettingsNav
           groups={SETTINGS_NAV_GROUPS}
           activeItemId={activeSection}
           onChange={handleSectionChange}
         />
 
-        <main className="min-w-0 flex-1 overflow-y-auto bg-white px-[60px] py-8 dark:bg-background">
+        <main className="min-w-0 min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-[60px] py-8 dark:bg-background">
           <div className="mx-auto max-w-[780px]">
             <header className="mb-8">
               <button
@@ -383,10 +385,10 @@ function renderActiveSection(args: Omit<RenderSectionArgs, 'activeSection'> & { 
       return <SettingsModelsProvidersPanel />;
 
     case 'general':
-      return <HonestGeneralSettingsSection />;
+      return <SettingsGeneralPanel />;
 
     case 'tool-permissions':
-      return <ToolPermissionsPlaceholder />;
+      return <CanonicalSettingsToolPermissionsPanel />;
 
     case 'app-updates':
       return <SettingsAppUpdatesPanel />;
@@ -530,8 +532,7 @@ function renderActiveSection(args: Omit<RenderSectionArgs, 'activeSection'> & { 
   }
 }
 
-function HonestGeneralSettingsSection() {
-  const { t } = useTranslation(['settings']);
+export function HonestGeneralSettingsSection() {
   const {
     theme,
     setTheme,
@@ -545,42 +546,9 @@ function HonestGeneralSettingsSection() {
     setShowToolCalls,
     brandName,
     setBrandName,
-    brandLogoDataUrl,
-    setBrandLogoDataUrl,
-    brandIconDataUrl,
-    setBrandIconDataUrl,
   } = useSettingsStore();
   const languageSelectId = useId();
   const accentCustomColorId = useId();
-
-  const handleBrandImageUpload = (
-    event: ChangeEvent<HTMLInputElement>,
-    setDataUrl: (value: string | null) => void,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('settings:brandImageRequired'));
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setDataUrl(reader.result);
-      } else {
-        toast.error(t('settings:brandReadFailed'));
-      }
-    };
-    reader.onerror = () => {
-      toast.error(t('settings:brandReadFailed'));
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-  };
 
   return (
     <>
@@ -712,7 +680,7 @@ function HonestGeneralSettingsSection() {
   );
 }
 
-function ToolPermissionsPlaceholder() {
+export function ToolPermissionsPlaceholder() {
   return (
     <SettingsCard title="Tool Permissions">
       <div
@@ -831,7 +799,7 @@ function InputField({
   );
 }
 
-function BrandImageUploadField({
+export function BrandImageUploadField({
   label,
   dataUrl,
   previewAlt,
@@ -891,7 +859,7 @@ function BrandImageUploadField({
 
 /* ─── Section: General (07.1) ─── */
 
-function CostsUsageSection() {
+export function CostsUsageSection() {
   return (
     <SettingsCard title="Costs & Usage">
       <div className="rounded-lg border border-dashed border-[#c6c6c8] bg-[#f9fafb] px-4 py-3 text-[13px] text-[#3c3c43]">
@@ -902,7 +870,7 @@ function CostsUsageSection() {
   );
 }
 
-function GeneralSettingsSection() {
+export function GeneralSettingsSection() {
   return (
     <>
       <GeneralSection />
@@ -915,46 +883,14 @@ function GeneralSettingsSection() {
 }
 
 function GeneralSection() {
-  const { t } = useTranslation(['settings']);
   const {
     theme, setTheme, accentColor, setAccentColor, language, setLanguage, launchAtStartup, setLaunchAtStartup,
-    brandName, setBrandName, brandSubtitle, setBrandSubtitle, brandLogoDataUrl, setBrandLogoDataUrl,
-    brandIconDataUrl, setBrandIconDataUrl, myName, setMyName,
+    brandName, setBrandName, brandSubtitle, setBrandSubtitle, myName, setMyName,
     showToolCalls, setShowToolCalls, emojiAvatar, setEmojiAvatar,
     hideAvatarBg, setHideAvatarBg, minimizeToTray, setMinimizeToTray,
   } = useSettingsStore();
   const languageSelectId = useId();
   const accentCustomColorId = useId();
-
-  const handleBrandImageUpload = (
-    event: ChangeEvent<HTMLInputElement>,
-    setDataUrl: (value: string | null) => void,
-    _kind: 'logo' | 'icon',
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      toast.error(t('settings:brandImageRequired'));
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setDataUrl(reader.result);
-      } else {
-        toast.error(t('settings:brandReadFailed'));
-      }
-    };
-    reader.onerror = () => {
-      toast.error(t('settings:brandReadFailed'));
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
-  };
 
   return (
     <>
@@ -1153,7 +1089,7 @@ const MODEL_OPTIONS = [
   { value: 'deepseek-chat', label: 'deepseek-chat (DeepSeek)' },
 ];
 
-function ModelProviderSection({
+export function ModelProviderSection({
   gatewayStatus,
   restartGateway,
 }: {
@@ -1327,7 +1263,7 @@ function ModelProviderSection({
 
 /* ─── Section: Team & Role Strategy (08.1) ─── */
 
-function TeamRoleSection() {
+export function TeamRoleSection() {
   const { autoSpawn, setAutoSpawn, modelInherit, setModelInherit, strictIsolation, setStrictIsolation, orgTemplate, setOrgTemplate } = useSettingsStore();
 
   return (
@@ -1383,7 +1319,7 @@ function TeamRoleSection() {
 
 /* ─── Section: Channel Advanced Config (08.2) ─── */
 
-function ChannelAdvancedSection() {
+export function ChannelAdvancedSection() {
   const {
     groupRate,
     setGroupRate,
@@ -1488,7 +1424,7 @@ function ChannelAdvancedSection() {
 
 /* ─── Section: Automation Defaults (08.3) ─── */
 
-function AutomationDefaultsSection() {
+export function AutomationDefaultsSection() {
   const {
     workerSlots, setWorkerSlots, maxDailyRuns, setMaxDailyRuns,
     exponentialBackoff, setExponentialBackoff, agentSelfHeal, setAgentSelfHeal,

@@ -311,12 +311,12 @@ export async function handleCostsRoutes(
         if (zScore < 1.5) return null;
 
         const cronTokens = dayCronTokenMap.get(day.date);
-        let reason = 'Token usage significantly above baseline.';
+        let reason = 'Token 用量显著高于基线。';
         if (cronTokens && cronTokens.size > 0) {
           const topCron = [...cronTokens.entries()].sort((a, b) => b[1] - a[1])[0];
           if (topCron) {
             const cronName = cronNameById.get(topCron[0]) ?? topCron[0];
-            reason = `Usage spike linked to ${cronName}.`;
+            reason = `用量激增与 ${cronName} 有关。`;
           }
         }
 
@@ -344,12 +344,12 @@ export async function handleCostsRoutes(
     );
 
     const insights = [
-      `Token usage is ${deltas.totalTokensPct >= 0 ? 'up' : 'down'} ${Math.abs(deltas.totalTokensPct)}% week over week.`,
-      `Cache activity avoided about $${estimatedCostUsd.toFixed(4)} in spend.`,
+      `本周 Token 用量较上周${deltas.totalTokensPct >= 0 ? '上升' : '下降'} ${Math.abs(deltas.totalTokensPct)}%。`,
+      `缓存命中约节省 $${estimatedCostUsd.toFixed(4)} 的支出。`,
     ];
     if (anomalies.length > 0) {
       const topAnomaly = anomalies[0];
-      insights.push(`${topAnomaly.date} is an outlier: ${topAnomaly.reason}`);
+      insights.push(`${topAnomaly.date} 出现异常波动：${topAnomaly.reason}`);
     }
 
     const response: CostsAnalysisResponse = {

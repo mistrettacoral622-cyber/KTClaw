@@ -38,12 +38,11 @@ import { getProviderConfig } from '../utils/provider-registry';
 import { deviceOAuthManager, OAuthProviderType } from '../utils/device-oauth';
 import { browserOAuthManager, type BrowserOAuthProviderType } from '../utils/browser-oauth';
 import { getOutboundMediaDir, isOutboundMediaPath } from '../utils/outbound-media';
+import { appendDispatchHints } from '../../shared/chat-dispatch-hints';
 import { applyProxySettings } from './proxy';
 import { syncLaunchAtStartupSettingFromStore } from './launch-at-startup';
 import { proxyAwareFetch } from '../utils/proxy-fetch';
 import { getRecentTokenUsageHistory } from '../utils/token-usage';
-import { registerHostApiProxyHandlers } from './ipc/host-api-proxy';
-import type { AppRequest, AppErrorCode } from './ipc/request-helpers';
 import { getProviderService } from '../services/providers/provider-service';
 import {
   getOpenClawProviderKey,
@@ -1243,7 +1242,7 @@ function registerGatewayHandlers(
     media?: Array<{ filePath: string; mimeType: string; fileName: string }>;
   }) => {
     try {
-      let message = params.message;
+      let message = appendDispatchHints(params.message, params.media);
       // The Gateway processes image attachments through TWO parallel paths:
       // Path A: `attachments` param → parsed via `parseMessageWithAttachments` →
       //   injected as inline vision content when the model supports images.

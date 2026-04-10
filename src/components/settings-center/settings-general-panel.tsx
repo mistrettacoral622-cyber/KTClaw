@@ -1,4 +1,6 @@
 import { type ChangeEvent, useId } from 'react';
+import { SettingsAgentAvatarsPanel } from '@/components/settings-center/settings-agent-avatars-panel';
+import { DesktopBehaviorPanel } from '@/components/settings-center/desktop-behavior-panel';
 import { SettingsSectionCard } from '@/components/settings-center/settings-section-card';
 import { Switch } from '@/components/ui/switch';
 import { SUPPORTED_LANGUAGES } from '@/i18n';
@@ -37,12 +39,8 @@ export function SettingsGeneralPanel() {
     setLanguage,
     launchAtStartup,
     setLaunchAtStartup,
-    startMinimized,
-    setStartMinimized,
-    minimizeToTray,
-    setMinimizeToTray,
-    mobileAlert,
-    setMobileAlert,
+    showToolCalls,
+    setShowToolCalls,
     brandName,
     setBrandName,
     brandSubtitle,
@@ -81,9 +79,9 @@ export function SettingsGeneralPanel() {
 
   return (
     <>
-      <SettingsSectionCard title="账号与安全">
+      <SettingsSectionCard title="账户与安全">
         <div className="rounded-xl border border-dashed border-black/10 bg-[#f8fafc] px-4 py-3 text-[13px] text-[#475569]">
-          桌面端暂不提供账号管理或注销入口，请在其他官方入口完成账户相关操作。
+          当前桌面端暂不提供账户管理入口，请前往其他官方入口处理账户相关操作。
         </div>
       </SettingsSectionCard>
 
@@ -105,12 +103,12 @@ export function SettingsGeneralPanel() {
               </option>
             ))}
           </select>
-          <p className="text-[12px] text-[#64748b]">切换语言后，新的界面文案会按当前设置加载。</p>
+          <p className="text-[12px] text-[#64748b]">切换后立即生效。</p>
         </div>
 
         <SettingsRow
           label="主题模式"
-          description="选择当前工作台默认外观。"
+          description="设置 KTClaw 工作台的整体外观。"
           right={
             <div className="flex items-center gap-2">
               {THEME_OPTIONS.map((option) => (
@@ -138,44 +136,17 @@ export function SettingsGeneralPanel() {
           onCheckedChange={setLaunchAtStartup}
         />
         <ToggleRow
-          label="启动后最小化"
-          description="应用启动后直接停留在后台，减少桌面干扰。"
-          checked={startMinimized}
-          onCheckedChange={setStartMinimized}
-        />
-        <ToggleRow
-          label="关闭时隐藏到托盘"
-          description="点击关闭时保留后台进程，维持通道与定时任务在线。"
-          checked={minimizeToTray}
-          onCheckedChange={setMinimizeToTray}
-        />
-        <ToggleRow
-          label="通知提醒"
-          description="启用任务、同步和运行状态提醒。"
-          checked={mobileAlert}
-          onCheckedChange={setMobileAlert}
+          label="显示 Tool Calls"
+          description="在聊天中展示工具调用卡片和实时状态。"
+          checked={showToolCalls}
+          onCheckedChange={setShowToolCalls}
         />
       </SettingsSectionCard>
 
       <SettingsSectionCard title="品牌与身份">
-        <TextField
-          id={brandNameId}
-          label="工作台名称"
-          value={brandName}
-          onChange={setBrandName}
-        />
-        <TextField
-          id={brandSubtitleId}
-          label="副标题"
-          value={brandSubtitle}
-          onChange={setBrandSubtitle}
-        />
-        <TextField
-          id={myNameId}
-          label="我的名字指代"
-          value={myName}
-          onChange={setMyName}
-        />
+        <TextField id={brandNameId} label="工作台名称" value={brandName} onChange={setBrandName} />
+        <TextField id={brandSubtitleId} label="品牌副标题" value={brandSubtitle} onChange={setBrandSubtitle} />
+        <TextField id={myNameId} label="我的称呼" value={myName} onChange={setMyName} />
 
         <div className="grid gap-4 md:grid-cols-2">
           <BrandImageUploadField
@@ -198,6 +169,12 @@ export function SettingsGeneralPanel() {
           />
         </div>
       </SettingsSectionCard>
+
+      <SettingsSectionCard title="桌面行为">
+        <DesktopBehaviorPanel />
+      </SettingsSectionCard>
+
+      <SettingsAgentAvatarsPanel />
     </>
   );
 }
@@ -239,11 +216,7 @@ function ToggleRow({
         <p className="text-[13px] font-medium text-[#0f172a]">{label}</p>
         <p className="mt-1 text-[12px] text-[#64748b]">{description}</p>
       </div>
-      <Switch
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        aria-label={label}
-      />
+      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
     </div>
   );
 }
@@ -300,7 +273,7 @@ function BrandImageUploadField({
           {dataUrl ? (
             <img src={dataUrl} alt={previewAlt} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-[11px] text-[#94a3b8]">无</span>
+            <span className="text-[11px] text-[#94a3b8]">未设置</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">

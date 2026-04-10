@@ -17,6 +17,12 @@ export default [
       'openclaw/**',
       'release/**',
       'build/**',
+      '_backup/**',
+      '.claude/**',
+      '.worktrees/**',
+      'release-win-ci-test-*/**',
+      'output/**',
+      'tmp-bench/**',
       '.superpowers/**',
       'continue/auto-coding-agent-demo-main/**',
       'reference/**',
@@ -45,6 +51,8 @@ export default [
       ...reactHooks.configs.recommended.rules,
       // TypeScript handles these checks natively, disable ESLint duplicates
       'no-undef': 'off',
+      'no-redeclare': 'off',
+      'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
@@ -87,6 +95,15 @@ export default [
     files: ['src/lib/api-client.ts'],
     rules: {
       'no-restricted-syntax': 'off',
+    },
+  },
+  {
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-useless-escape': 'off',
+      'no-useless-assignment': 'off',
     },
   },
 ];

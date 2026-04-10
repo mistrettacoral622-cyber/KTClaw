@@ -6,6 +6,17 @@ vi.mock('@/lib/session-search', () => ({
   formatRelativeTime: () => 'just now',
 }));
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const translations: Record<string, string> = {
+        'teamMap.session.leaderChatBadge': 'LEADER_BADGE',
+      };
+      return translations[key] ?? (typeof options?.defaultValue === 'string' ? options.defaultValue : key);
+    },
+  }),
+}));
+
 describe('SessionItem', () => {
   it('renders a leader-chat indicator for private leader sessions', () => {
     render(
@@ -27,7 +38,7 @@ describe('SessionItem', () => {
       />,
     );
 
-    expect(screen.getByText('Leader Chat')).toBeInTheDocument();
+    expect(screen.getByText('LEADER_BADGE')).toBeInTheDocument();
   });
 
   it('invokes handlers for click, pin, and delete actions', () => {

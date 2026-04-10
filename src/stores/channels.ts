@@ -6,7 +6,6 @@ import { create } from 'zustand';
 import { hostApiFetch } from '@/lib/host-api';
 import {
   pickChannelRuntimeStatus,
-  isChannelRuntimeConnected,
   type ChannelRuntimeAccountSnapshot,
 } from '@/lib/channel-status';
 import { toOpenClawChannelType, toUiChannelType } from '@/lib/channel-alias';
@@ -96,10 +95,6 @@ export const useChannelsStore = create<ChannelsState>((set, get) => ({
           const accounts = data.channelAccounts?.[channelId] || [];
           const defaultAccountId = data.channelDefaultAccountId?.[channelId];
           const summarySignal = summary as { error?: string; lastError?: string } | undefined;
-          const primaryAccount =
-            (defaultAccountId ? accounts.find((a) => a.accountId === defaultAccountId) : undefined) ||
-            accounts.find((a) => isChannelRuntimeConnected(a as ChannelRuntimeAccountSnapshot)) ||
-            accounts[0];
           const status: Channel['status'] = pickChannelRuntimeStatus(accounts as ChannelRuntimeAccountSnapshot[], summarySignal);
           const summaryError =
             typeof summarySignal?.error === 'string'

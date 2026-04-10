@@ -30,7 +30,6 @@ import {
 } from '../../utils/agent-config';
 import { logger } from '../../utils/logger';
 import { whatsAppLoginManager } from '../../utils/whatsapp-login';
-import { weChatLoginManager } from '../../utils/wechat-login';
 import { createChannelConversationBindingStore, type ChannelConversationBindingRecord } from '../../services/channel-conversation-bindings';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
@@ -108,6 +107,11 @@ function scheduleGatewayChannelSaveRefresh(
   }
   ctx.gatewayManager.debouncedReload();
   void reason;
+}
+
+async function getWeChatLoginManager() {
+  const module = await import('../../utils/wechat-login');
+  return module.weChatLoginManager;
 }
 
 // ── Generic plugin installer with version-aware upgrades ─────────
@@ -2934,6 +2938,7 @@ export async function handleChannelRoutes(
   if (url.pathname === '/api/channels/wechat/qr' && req.method === 'GET') {
     try {
       await cleanupDanglingWeChatPluginState();
+      const weChatLoginManager = await getWeChatLoginManager();
       await weChatLoginManager.start();
       const state = weChatLoginManager.getState();
       if (!state) {
@@ -2963,6 +2968,7 @@ export async function handleChannelRoutes(
   }
 
   if (url.pathname === '/api/channels/wechat/qr/status' && req.method === 'GET') {
+    const weChatLoginManager = await getWeChatLoginManager();
     const state = weChatLoginManager.getState();
     if (!state) {
       sendJson(res, 200, { success: true, sessionKey: 'wechat-login', status: 'idle', connected: false });
@@ -2981,6 +2987,7 @@ export async function handleChannelRoutes(
   }
 
   if (url.pathname === '/api/channels/wechat/cancel' && req.method === 'POST') {
+    const weChatLoginManager = await getWeChatLoginManager();
     weChatLoginManager.stop();
     sendJson(res, 200, { success: true });
     return true;

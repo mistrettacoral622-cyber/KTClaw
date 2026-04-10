@@ -6,10 +6,15 @@ import { MemberActivityTab } from '@/components/team-map/MemberActivityTab';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
-      if (options?.defaultValue && typeof options.defaultValue === 'string') {
-        return options.defaultValue;
-      }
-      return key;
+      const translations: Record<string, string> = {
+        'teamMap.activity.status': 'STATUS_LABEL',
+        'teamMap.activity.currentWork': 'CURRENT_WORK_LABEL',
+        'teamMap.activity.blockingReason': 'BLOCKING_REASON_LABEL',
+        'teamMap.activity.recommendedNextStep': 'NEXT_STEP_LABEL',
+        'teamMap.activity.agentLabel': 'AGENT_LABEL',
+        'teamMap.activity.noActiveWork': 'NO_ACTIVE_WORK_LABEL',
+      };
+      return translations[key] ?? (typeof options?.defaultValue === 'string' ? options.defaultValue : key);
     },
   }),
 }));
@@ -44,9 +49,14 @@ describe('MemberActivityTab', () => {
     );
 
     expect(screen.getByText('Blocked')).toBeInTheDocument();
+    expect(screen.getByText('STATUS_LABEL')).toBeInTheDocument();
+    expect(screen.getByText('CURRENT_WORK_LABEL')).toBeInTheDocument();
     expect(screen.getByText('Review the latest evidence bundle')).toBeInTheDocument();
+    expect(screen.getByText('BLOCKING_REASON_LABEL')).toBeInTheDocument();
     expect(screen.getByText('Waiting for leader approval')).toBeInTheDocument();
+    expect(screen.getByText('NEXT_STEP_LABEL')).toBeInTheDocument();
     expect(screen.getByText('Review approval for Research')).toBeInTheDocument();
+    expect(screen.getByText('AGENT_LABEL: Research')).toBeInTheDocument();
   });
 
   it('shows the empty state when there is no active work', () => {
@@ -60,7 +70,7 @@ describe('MemberActivityTab', () => {
       />,
     );
 
-    expect(screen.getByText('No active work')).toBeInTheDocument();
+    expect(screen.getByText('NO_ACTIVE_WORK_LABEL')).toBeInTheDocument();
     expect(screen.getByText('Queue the next work item for Research')).toBeInTheDocument();
   });
 });

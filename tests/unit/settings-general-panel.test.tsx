@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsGeneralPanel } from '@/components/settings-center/settings-general-panel';
-import { useSettingsStore } from '@/stores/settings';
 import { hostApiFetch } from '@/lib/host-api';
+import { useSettingsStore } from '@/stores/settings';
 
 vi.mock('@/lib/host-api', () => ({
-  hostApiFetch: vi.fn().mockResolvedValue({}),
+  hostApiFetch: vi.fn(),
 }));
 
 describe('SettingsGeneralPanel', () => {
@@ -13,71 +13,113 @@ describe('SettingsGeneralPanel', () => {
     vi.clearAllMocks();
     localStorage.clear();
     useSettingsStore.getState().resetSettings();
+    vi.mocked(hostApiFetch).mockImplementation(async (path) => {
+      if (path === '/api/agents') {
+        return {
+          agents: [{ id: 'researcher', name: 'Researcher' }],
+        };
+      }
+      return {};
+    });
   });
 
-  it('keeps General Settings focused on baseline product controls', () => {
+  it('renders the canonical general sections and live controls', async () => {
     render(<SettingsGeneralPanel />);
 
-    expect(screen.getByRole('heading', { name: '账号与安全' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '账户与安全' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '外观与行为' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '品牌与身份' })).toBeInTheDocument();
-
-    expect(screen.queryByText('团队与角色策略')).not.toBeInTheDocument();
-    expect(screen.queryByText('通道高级配置')).not.toBeInTheDocument();
-    expect(screen.queryByText('自动化默认策略')).not.toBeInTheDocument();
-    expect(screen.queryByText('Agent 头像')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '桌面行为' })).toBeInTheDocument();
+    expect(screen.getByLabelText('工作台名称')).toBeInTheDocument();
+    expect(screen.getByLabelText('品牌副标题')).toBeInTheDocument();
+    expect(screen.getByLabelText('我的称呼')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: '系统通知' })).toBeInTheDocument();
+    expect(screen.getByTestId('desktop-start-minimized')).toBeInTheDocument();
+    expect(screen.getByTestId('desktop-minimize-to-tray')).toBeInTheDocument();
+    expect(screen.getByLabelText('上传品牌 Logo')).toBeInTheDocument();
+    expect(await screen.findByText('Researcher')).toBeInTheDocument();
   });
 
-  it('updates theme, language, launch, tray, notifications, and brand identity settings', async () => {
+  it('updates general settings and persists the live-backed values', async () => {
     render(<SettingsGeneralPanel />);
+    await screen.findByText('Researcher');
 
     fireEvent.click(screen.getByRole('button', { name: '深色模式' }));
-    expect(useSettingsStore.getState().theme).toBe('dark');
-
     fireEvent.change(screen.getByLabelText('界面语言'), {
       target: { value: 'en' },
     });
-    expect(useSettingsStore.getState().language).toBe('en');
-
     fireEvent.click(screen.getByRole('switch', { name: '开机自启' }));
-    expect(useSettingsStore.getState().launchAtStartup).toBe(true);
-
-    fireEvent.click(screen.getByRole('switch', { name: '启动后最小化' }));
-    expect(useSettingsStore.getState().startMinimized).toBe(true);
-
-    fireEvent.click(screen.getByRole('switch', { name: '关闭时隐藏到托盘' }));
-    expect(useSettingsStore.getState().minimizeToTray).toBe(false);
-
-    fireEvent.click(screen.getByRole('switch', { name: '通知提醒' }));
-    expect(useSettingsStore.getState().mobileAlert).toBe(false);
-
-    fireEvent.change(screen.getByLabelText('工作台名称'), {
-      target: { value: 'Acme Control' },
+    fireEvent.click(screen.getByRole('switch', { name: '显示 Tool Calls' }));
+    fireEvent.click(screen.getByRole('switch', { name: '系统通知' }));
+    fireEvent.click(screen.getByTestId('desktop-start-minimized').querySelector('[role=\"switch\"]') as HTMLElement);
+    fireEvent.click(screen.getByTestId('desktop-minimize-to-tray').querySelector('[role=\"switch\"]') as HTMLElement);
+    fireEvent.change(screen.getByLabelText('品牌副标题'), {
+      target: { value: 'Ops Center' },
     });
-    fireEvent.change(screen.getByLabelText('副标题'), {
-      target: { value: 'Operator Console' },
-    });
-    fireEvent.change(screen.getByLabelText('我的名字指代'), {
-      target: { value: 'Operator' },
+    fireEvent.change(screen.getByLabelText('我的称呼'), {
+      target: { value: 'Alice' },
     });
 
-    expect(useSettingsStore.getState().brandName).toBe('Acme Control');
-    expect(useSettingsStore.getState().brandSubtitle).toBe('Operator Console');
-    expect(useSettingsStore.getState().myName).toBe('Operator');
+    expect(useSettingsStore.getState()).toMatchObject({
+      theme: 'dark',
+      language: 'en',
+      launchAtStartup: true,
+      showToolCalls: true,
+      notificationsEnabled: false,
+      startMinimized: true,
+      minimizeToTray: false,
+      brandSubtitle: 'Ops Center',
+      myName: 'Alice',
+    });
 
     await waitFor(() => {
-      expect(vi.mocked(hostApiFetch)).toHaveBeenCalledWith(
+      expect(hostApiFetch).toHaveBeenCalledWith(
         '/api/settings/language',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ value: 'en' }),
         }),
       );
-      expect(vi.mocked(hostApiFetch)).toHaveBeenCalledWith(
+      expect(hostApiFetch).toHaveBeenCalledWith(
         '/api/settings/launchAtStartup',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({ value: true }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ notificationsEnabled: false }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ startMinimized: true }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ minimizeToTray: false }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ brandSubtitle: 'Ops Center' }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ myName: 'Alice' }),
         }),
       );
     });

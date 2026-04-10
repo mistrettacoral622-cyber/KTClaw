@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { SendHorizontal, Square, X, Paperclip, FileText, Film, Music, FileArchive, File, Loader2, AtSign, FolderOpen } from 'lucide-react';
+import { SendHorizontal, Square, X, Paperclip, FileText, Film, Music, FileArchive, File, Loader2, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +32,10 @@ import {
   isLeaderOnlyAgent,
   resolveReportingLeader,
 } from '@/lib/team-chat-access';
-import { FolderSelectorPopover } from './FolderSelectorPopover';
+import {
+  hasImageAttachments,
+  resolveImageUnderstandingAvailability,
+} from '../../../shared/chat-dispatch-hints';
 import { getChatInputSlashMatches, isSlashCommandPrefixInput, parseChatInputSlashCommand } from './slash-commands';
 
 const CHAT_REQUEST_FILE_UPLOAD_EVENT = 'chat:request-file-upload';
@@ -122,10 +125,9 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
   const [targetAgentId, setTargetAgentId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [workingDirectory, setWorkingDirectory] = useState<string | null>(null);
-  const [folderPopoverOpen, setFolderPopoverOpen] = useState(false);
+  const [, setFolderPopoverOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const folderBtnRef = useRef<HTMLButtonElement>(null);
   const isComposingRef = useRef(false);
   const agents = useAgentsStore((s) => s.agents);
   const currentAgentId = useChatStore((s) => s.currentAgentId);
@@ -162,9 +164,13 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     }
     return options;
   }, [providerAccounts, providerVendors]);
-  const mentionableAgents = useMemo(
-    () => agents.filter((agent) => agent.id !== currentAgentId),
-    [agents, currentAgentId],
+  const imageUnderstandingAvailability = useMemo(
+    () => resolveImageUnderstandingAvailability({
+      currentModel: currentAgent?.model || currentModelDisplay,
+      defaultModel,
+      accounts: providerAccounts,
+    }),
+    [currentAgent?.model, currentModelDisplay, defaultModel, providerAccounts],
   );
   const selectedTarget = useMemo(
     () => agents.find((agent) => agent.id === targetAgentId) ?? null,
@@ -178,7 +184,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     }
     toast.error(buildLeaderOnlyBlockedMessage(blockedAgent, resolveReportingLeader(blockedAgent, agents)));
   }, [agents]);
-  const showAgentPicker = mentionableAgents.length > 0;
   const slashMatches = useMemo(() => getChatInputSlashMatches(composerDraft), [composerDraft]);
   const showSlashMenu = useMemo(
     () => isSlashCommandPrefixInput(composerDraft) && slashMatches.length > 0,
@@ -574,6 +579,11 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     // but keep attachments available for the async send
     const textToSend = composerDraft.trim();
     const attachmentsToSend = readyAttachments.length > 0 ? readyAttachments : undefined;
+    if (attachmentsToSend && hasImageAttachments(attachmentsToSend) && imageUnderstandingAvailability === 'missing') {
+      toast.info(
+        'Image attachments were added, but no vision-capable model or image-analysis fallback is configured. KTClaw will send the files, but reliable image understanding is not available until you configure a provider such as OpenAI, Anthropic, Google, or another vision-capable model.',
+      );
+    }
     setComposerDraft('');
     setAttachments([]);
     if (textareaRef.current) {
@@ -583,7 +593,17 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     setTargetAgentId(null);
     setPickerOpen(false);
     setWorkingDirectory(null);
-  }, [attachments, canSend, executeLocalSlashCommand, composerDraft, onSend, setComposerDraft, targetAgentId, workingDirectory]);
+  }, [
+    attachments,
+    canSend,
+    composerDraft,
+    executeLocalSlashCommand,
+    imageUnderstandingAvailability,
+    onSend,
+    setComposerDraft,
+    targetAgentId,
+    workingDirectory,
+  ]);
 
   const handleStop = useCallback(() => {
     if (!canStop) return;
@@ -1040,7 +1060,7 @@ function ModelPickerDropdown({
 
 // ── Agent Picker Dropdown (portal) ──────────────────────────────
 
-function AgentPickerDropdown({
+export function AgentPickerDropdown({
   anchorRef,
   agents,
   targetAgentId,

@@ -12,13 +12,13 @@ describe('bundle preinstalled skills script', () => {
     });
 
     expect(commands).toEqual([
-      ['git', ['init', 'C:\\tmp\\repo']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'remote', 'add', 'origin', 'https://github.com/anthropics/skills.git']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'sparse-checkout', 'init', '--cone']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'sparse-checkout', 'set', 'skills/a', 'skills/b']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'fetch', '--depth', '1', 'origin', 'main']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'checkout', 'FETCH_HEAD']],
-      ['git', ['-C', 'C:\\tmp\\repo', 'rev-parse', 'HEAD']],
+      ['git', ['init', 'C:/tmp/repo']],
+      ['git', ['-C', 'C:/tmp/repo', 'remote', 'add', 'origin', 'https://github.com/anthropics/skills.git']],
+      ['git', ['-C', 'C:/tmp/repo', 'sparse-checkout', 'init', '--cone']],
+      ['git', ['-C', 'C:/tmp/repo', 'sparse-checkout', 'set', 'skills/a', 'skills/b']],
+      ['git', ['-C', 'C:/tmp/repo', 'fetch', '--depth', '1', 'origin', 'main']],
+      ['git', ['-C', 'C:/tmp/repo', 'checkout', 'FETCH_HEAD']],
+      ['git', ['-C', 'C:/tmp/repo', 'rev-parse', 'HEAD']],
     ]);
   });
 });

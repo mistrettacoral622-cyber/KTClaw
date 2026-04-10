@@ -210,8 +210,8 @@ describe('costs routes', () => {
           }),
         ]),
         insights: expect.arrayContaining([
-          expect.stringMatching(/week over week/i),
-          expect.stringMatching(/cache/i),
+          expect.stringMatching(/本周 Token 用量较上周/),
+          expect.stringMatching(/缓存命中约节省/),
         ]),
       }),
     );

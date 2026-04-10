@@ -1,75 +1,76 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsToolPermissionsPanel } from '@/components/settings-center/settings-tool-permissions-panel';
-import { useSettingsStore } from '@/stores/settings';
 import { hostApiFetch } from '@/lib/host-api';
+import { useSettingsStore } from '@/stores/settings';
 
 vi.mock('@/lib/host-api', () => ({
   hostApiFetch: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
 describe('SettingsToolPermissionsPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     useSettingsStore.getState().resetSettings();
   });
 
-  it('keeps Tool Permissions as a dedicated top-level panel', () => {
+  it('renders the dedicated tool permissions controls instead of a placeholder', () => {
     render(<SettingsToolPermissionsPanel />);
 
-    expect(screen.getByRole('heading', { name: '核心沙箱与内置权限' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '自定义工具授权' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '外观与行为' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '工具权限' })).toBeInTheDocument();
+    expect(screen.getByTestId('global-risk-level-select')).toBeInTheDocument();
+    expect(screen.getByTestId('file-acl-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('terminal-acl-toggle')).toBeInTheDocument();
+    expect(screen.getByTestId('network-acl-toggle')).toBeInTheDocument();
+    expect(screen.queryByTestId('tool-permissions-placeholder')).not.toBeInTheDocument();
   });
 
-  it('updates sandbox toggles and manages allowlists and custom grants', async () => {
+  it('persists risk level and action toggles through the settings api', async () => {
     render(<SettingsToolPermissionsPanel />);
 
-    fireEvent.change(screen.getByRole('combobox', { name: '全局风险级别设定' }), {
+    fireEvent.change(screen.getByTestId('global-risk-level-select'), {
       target: { value: 'strict' },
     });
-    expect(useSettingsStore.getState().globalRiskLevel).toBe('strict');
-
-    fireEvent.click(screen.getByRole('button', { name: '路径白名单' }));
-    fireEvent.change(screen.getByLabelText('新增允许访问路径'), {
-      target: { value: 'C:\\Projects\\KTClaw' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '保存路径' }));
+    fireEvent.click(screen.getByTestId('file-acl-toggle'));
+    fireEvent.click(screen.getByTestId('terminal-acl-toggle'));
+    fireEvent.click(screen.getByTestId('network-acl-toggle'));
 
     await waitFor(() => {
-      expect(screen.getByText('C:\\Projects\\KTClaw')).toBeInTheDocument();
-      expect(vi.mocked(hostApiFetch)).toHaveBeenCalledWith(
+      expect(hostApiFetch).toHaveBeenCalledWith(
         '/api/settings',
         expect.objectContaining({
           method: 'PUT',
-          body: JSON.stringify({ filePathAllowlist: ['C:\\Projects\\KTClaw'] }),
+          body: JSON.stringify({ globalRiskLevel: 'strict' }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ fileAcl: false }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ terminalAcl: false }),
+        }),
+      );
+      expect(hostApiFetch).toHaveBeenCalledWith(
+        '/api/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({ networkAcl: false }),
         }),
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: '添加工具许可' }));
-    fireEvent.change(screen.getByLabelText('新增工具许可'), {
-      target: { value: 'github-cli --repo anthropics/claude-code' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: '保存许可' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('github-cli --repo anthropics/claude-code')).toBeInTheDocument();
-      expect(vi.mocked(hostApiFetch)).toHaveBeenCalledWith(
-        '/api/settings',
-        expect.objectContaining({
-          method: 'PUT',
-          body: JSON.stringify({ customToolGrants: ['github-cli --repo anthropics/claude-code'] }),
-        }),
-      );
+    expect(useSettingsStore.getState()).toMatchObject({
+      globalRiskLevel: 'strict',
+      fileAcl: false,
+      terminalAcl: false,
+      networkAcl: false,
     });
   });
 });

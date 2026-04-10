@@ -45,7 +45,7 @@ describe('team progress brief', () => {
   });
 
   it('builds a structured leader brief from kanban and team ownership state', () => {
-    window.localStorage.setItem('clawport-kanban', JSON.stringify([
+    const tasks = [
       {
         id: 'ticket-1',
         title: 'Unblock data review',
@@ -54,10 +54,11 @@ describe('team progress brief', () => {
         priority: 'high',
         assigneeId: 'researcher',
         workState: 'waiting_approval',
+        isTeamTask: false,
         createdAt: '2026-03-27T09:00:00Z',
         updatedAt: '2026-03-27T09:15:00Z',
       },
-    ]));
+    ];
 
     const brief = buildLeaderProgressBrief({
       leaderId: 'main',
@@ -70,6 +71,7 @@ describe('team progress brief', () => {
       channelOwners: {
         feishu: 'main',
       },
+      tasks,
     });
 
     expect(brief.overallStatus).toBe('waiting_approval');

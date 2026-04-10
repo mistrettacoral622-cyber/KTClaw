@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { RawMessage } from '@/stores/chat';
 import { ChatMessage } from '@/pages/Chat/ChatMessage';
 
+vi.mock('@/stores/settings', () => ({
+  useSettingsStore: (selector: (state: { showToolCalls: boolean }) => unknown) =>
+    selector({ showToolCalls: true }),
+}));
+
 describe('ChatMessage', () => {
   it('renders user bubble with the current accent-token styling', () => {
     const message: RawMessage = {

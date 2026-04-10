@@ -88,7 +88,7 @@ describe('Settings memory shared contract', () => {
     render(<SettingsMemoryKnowledgePanel />);
 
     expect(getMemoryOverview).toHaveBeenCalled();
-    expect(await screen.findByRole('heading', { name: 'Shared memory spine' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '共享记忆中枢' })).toBeInTheDocument();
     expect(normalizeMemoryFiles).toHaveBeenCalled();
     expect(await screen.findByText('/workspace/main')).toBeInTheDocument();
   });

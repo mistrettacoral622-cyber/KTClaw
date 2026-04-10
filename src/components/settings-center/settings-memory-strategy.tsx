@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSettingsStore } from '@/stores/settings';
 import { hostApiFetch } from '@/lib/host-api';
+import { useSettingsStore } from '@/stores/settings';
 
 type ActionState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -80,7 +80,6 @@ export function SettingsMemoryStrategy() {
 
   return (
     <div className="space-y-4">
-      {/* Manual memory operations */}
       <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
         <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">
           {t('memoryStrategy.global.title')}
@@ -91,41 +90,32 @@ export function SettingsMemoryStrategy() {
             state={snapshot.state}
             onClick={() => void snapshot.run()}
           />
-          <ActionButton
-            label="Analyze"
-            state={analyze.state}
-            onClick={() => void analyze.run()}
-          />
-          <ActionButton
-            label="Reindex"
-            state={reindex.state}
-            onClick={() => void reindex.run()}
-          />
+          <ActionButton label="分析" state={analyze.state} onClick={() => void analyze.run()} />
+          <ActionButton label="重建索引" state={reindex.state} onClick={() => void reindex.run()} />
         </div>
       </section>
 
-      {/* Watched directories */}
       <section className="rounded-xl border border-[#c6c6c8] bg-white px-5 py-4">
         <h3 className="mb-4 text-[15px] font-semibold text-[#000000]">
           {t('memoryStrategy.localKnowledge.title')}
         </h3>
         <div className="space-y-3">
-          {watchedMemoryDirs.length === 0 && (
-            <p className="text-[13px] text-[#8e8e93]">No watched directories configured.</p>
-          )}
+          {watchedMemoryDirs.length === 0 ? (
+            <p className="text-[13px] text-[#8e8e93]">暂未配置监控目录。</p>
+          ) : null}
           {watchedMemoryDirs.map((dir) => (
             <div
               key={dir}
               className="flex items-center justify-between rounded-lg border border-black/10 bg-[#f9f9f9] px-4 py-3"
             >
-              <p className="text-[13px] font-medium text-[#000000] break-all">{dir}</p>
+              <p className="break-all text-[13px] font-medium text-[#000000]">{dir}</p>
               <button
                 type="button"
-                aria-label={`Remove ${dir}`}
+                aria-label={`移除 ${dir}`}
                 onClick={() => handleRemoveDir(dir)}
                 className="ml-3 shrink-0 rounded-md border border-black/10 px-2.5 py-1 text-[12px] text-[#ef4444] hover:bg-[#fee2e2]"
               >
-                Remove
+                移除
               </button>
             </div>
           ))}
@@ -136,8 +126,10 @@ export function SettingsMemoryStrategy() {
                 type="text"
                 value={newDirInput}
                 onChange={(e) => setNewDirInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddDir(); }}
-                placeholder="/path/to/directory"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddDir();
+                }}
+                placeholder="例如：D:\\Docs"
                 className="flex-1 rounded-lg border border-black/10 bg-white px-3 py-2 text-[13px] text-[#000000] outline-none focus:border-clawx-ac"
                 autoFocus
               />
@@ -146,14 +138,17 @@ export function SettingsMemoryStrategy() {
                 onClick={handleAddDir}
                 className="rounded-lg bg-[#0a7aff] px-4 py-2 text-[13px] font-semibold text-white transition hover:bg-[#075ac4]"
               >
-                Add
+                添加
               </button>
               <button
                 type="button"
-                onClick={() => { setShowInput(false); setNewDirInput(''); }}
+                onClick={() => {
+                  setShowInput(false);
+                  setNewDirInput('');
+                }}
                 className="rounded-lg border border-black/10 px-4 py-2 text-[13px] font-medium text-[#000000] transition hover:bg-[#f2f2f7]"
               >
-                Cancel
+                取消
               </button>
             </div>
           ) : (

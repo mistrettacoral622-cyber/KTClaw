@@ -62,15 +62,15 @@ export function SettingsMemoryKnowledgePanel() {
 
   const overviewItems = useMemo(() => ([
     {
-      label: t('memoryKnowledge.overview.filesLabel', { defaultValue: 'Tracked files' }),
+      label: t('memoryKnowledge.overview.filesLabel', { defaultValue: '跟踪文件数' }),
       value: String(totalFiles),
     },
     {
-      label: t('memoryKnowledge.overview.sizeLabel', { defaultValue: 'Workspace size' }),
+      label: t('memoryKnowledge.overview.sizeLabel', { defaultValue: '工作区大小' }),
       value: formatBytes(totalSizeBytes),
     },
     {
-      label: t('memoryKnowledge.overview.scopeLabel', { defaultValue: 'Active scope' }),
+      label: t('memoryKnowledge.overview.scopeLabel', { defaultValue: '当前作用域' }),
       value: activeScope || t('memoryKnowledge.overview.scopeFallback', { defaultValue: 'main' }),
     },
   ]), [activeScope, t, totalFiles, totalSizeBytes]);
@@ -81,25 +81,25 @@ export function SettingsMemoryKnowledgePanel() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#8e8e93]">
-              {t('memoryKnowledge.overview.eyebrow', { defaultValue: 'Shared memory spine' })}
+              {t('memoryKnowledge.overview.eyebrow', { defaultValue: '共享记忆中枢' })}
             </p>
             <h2 className="text-[18px] font-semibold text-[#111827]">
-              {t('memoryKnowledge.overview.title', { defaultValue: 'Shared memory spine' })}
+              {t('memoryKnowledge.overview.title', { defaultValue: '共享记忆中枢' })}
             </h2>
             <p className="max-w-2xl text-[13px] leading-6 text-[#4b5563]">
               {t('memoryKnowledge.overview.description', {
                 defaultValue:
-                  'Settings and Team Map both edit the same memory files, save contract, and reindex pipeline.',
+                  '设置页与 Team Map 共用同一套记忆文件、保存协议和重建索引流程。',
               })}
             </p>
           </div>
 
           <div className="rounded-xl border border-black/[0.06] bg-[#f8fafc] px-4 py-3 text-right">
             <div className="text-[11px] font-medium uppercase tracking-[0.4px] text-[#8e8e93]">
-              {t('memoryKnowledge.overview.workspaceLabel', { defaultValue: 'Workspace root' })}
+              {t('memoryKnowledge.overview.workspaceLabel', { defaultValue: '工作区根目录' })}
             </div>
             <div className="mt-1 max-w-[320px] break-all text-[12px] font-medium text-[#111827]">
-              {workspaceDir || t('memoryKnowledge.overview.workspaceFallback', { defaultValue: 'Loading workspace...' })}
+              {workspaceDir || t('memoryKnowledge.overview.workspaceFallback', { defaultValue: '正在加载工作区...' })}
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export function SettingsMemoryKnowledgePanel() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-[#dbeafe] bg-[#eff6ff] px-5 py-4 text-[13px] leading-6 text-[#1d4ed8]">
             {t('memoryKnowledge.overview.syncHint', {
-              defaultValue: 'Team Map member memory and Settings memory remain two editors over one shared knowledge base.',
+              defaultValue: 'Team Map 成员记忆与设置页记忆仍然是同一套共享知识库的两个编辑入口。',
             })}
           </div>
           <SettingsMemoryStrategy />

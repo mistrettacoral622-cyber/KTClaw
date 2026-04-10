@@ -202,7 +202,7 @@ describe('ChatInput agent targeting', () => {
     expect(screen.queryByTitle('Choose agent')).not.toBeInTheDocument();
   });
 
-  it('lets the user select an agent target and sends it with the message', () => {
+  it('shows the selected target chip after /agent and sends it with the message', () => {
     const onSend = vi.fn();
     agentsState.agents = [
       {
@@ -232,8 +232,8 @@ describe('ChatInput agent targeting', () => {
 
     render(<ChatInput onSend={onSend} />);
 
-    fireEvent.click(screen.getByTitle('Choose agent'));
-    fireEvent.click(screen.getByText('Research'));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '/agent research' } });
+    fireEvent.click(screen.getByTitle('Send'));
 
     expect(screen.getByText('@Research')).toBeInTheDocument();
 
@@ -263,7 +263,7 @@ describe('ChatInput agent targeting', () => {
     expect(screen.getByTestId('chat-composer-model-pill')).toHaveTextContent('gpt-5.2');
   });
 
-  it('passes selected workingDirectory as the 4th onSend argument', () => {
+  it('shows the selected workingDirectory chip and passes it as the 4th onSend argument', () => {
     const onSend = vi.fn();
     agentsState.agents = [
       {
@@ -281,7 +281,10 @@ describe('ChatInput agent targeting', () => {
 
     render(<ChatInput onSend={onSend} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'mock-select-folder' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '/cwd C:/Users/22688/Desktop/ClawX-main' } });
+    fireEvent.click(screen.getByTitle('Send'));
+
+    expect(screen.getByText('ClawX-main')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Run in selected dir' } });
     fireEvent.click(screen.getByTitle('Send'));
 
@@ -372,7 +375,7 @@ describe('ChatInput agent targeting', () => {
     expect(onSend).toHaveBeenCalledWith('Route this', undefined, 'research', null);
   });
 
-  it('blocks selecting a leader-only worker as the next target', () => {
+  it('shows an error and no target chip when a leader-only worker is requested via /agent', () => {
     const onSend = vi.fn();
     agentsState.agents = [
       {
@@ -404,8 +407,8 @@ describe('ChatInput agent targeting', () => {
 
     render(<ChatInput onSend={onSend} />);
 
-    fireEvent.click(screen.getByTitle('Choose agent'));
-    fireEvent.click(screen.getByText('Research'));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '/agent research' } });
+    fireEvent.click(screen.getByTitle('Send'));
 
     expect(screen.queryByText('@Research')).not.toBeInTheDocument();
     expect(toastErrorMock).toHaveBeenCalledTimes(1);

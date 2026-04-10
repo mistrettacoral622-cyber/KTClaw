@@ -183,6 +183,16 @@ export class GatewayManager extends EventEmitter {
     return this.stateController.isConnected(this.ws?.readyState === WebSocket.OPEN);
   }
 
+  setConfiguredPort(port: number): void {
+    if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+      return;
+    }
+    if (this.status.port === port) {
+      return;
+    }
+    this.setStatus({ port });
+  }
+
   /**
    * Start Gateway process
    */

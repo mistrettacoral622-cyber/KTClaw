@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, AlertTriangle, BookOpen, Code, Eye, FolderOpen, GitCommit, Info, Plus, RefreshCw, RotateCw, Save, Trash2, X, Zap } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BookOpen, Code, Eye, FolderOpen, GitCommit, Info, RefreshCw, RotateCw, Save, X, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,7 +10,7 @@ import { getMemoryOverview, reindexMemory, saveMemoryFile } from '@/lib/memory-c
 
 type MemoryFileCategory = 'evergreen' | 'daily' | 'other';
 type HealthSeverity = 'critical' | 'warning' | 'info' | 'ok';
-type Tab = 'overview' | 'browser' | 'guide' | 'extras';
+type Tab = 'overview' | 'browser' | 'guide';
 type FileTab = 'config' | 'logs';
 
 interface SnapshotResult {
@@ -665,70 +665,6 @@ function BrowserTab({
   );
 }
 
-function ExtrasTab({ extraPaths, onAdd, onRemove }: {
-  extraPaths: string[];
-  onAdd: (path: string) => void;
-  onRemove: (path: string) => void;
-}) {
-  const [newPath, setNewPath] = useState('');
-  const { t } = useTranslation('common');
-
-  const handleAdd = () => {
-    const trimmed = newPath.trim();
-    if (!trimmed) return;
-    onAdd(trimmed);
-    setNewPath('');
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-black/[0.06] bg-white p-5">
-        <div className="text-[14px] font-semibold text-[#000000]">{t('memory.extraSources')}</div>
-        <p className="mt-1 text-[12px] text-[#8e8e93]">{t('memory.extraSourcesDesc')}</p>
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={newPath}
-            onChange={(e) => setNewPath(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
-            placeholder={t('memory.pathPlaceholder')}
-            className="flex-1 rounded-lg border border-black/[0.08] bg-[#f2f2f7] px-3 py-2 text-[12px] outline-none focus:border-clawx-ac"
-          />
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={!newPath.trim()}
-            className="inline-flex items-center gap-1 rounded-lg bg-clawx-ac px-3 py-2 text-[12px] font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" /> {t('actions.add')}
-          </button>
-        </div>
-      </div>
-      {extraPaths.length === 0 ? (
-        <div className="rounded-xl border border-black/[0.06] bg-white px-4 py-6 text-center text-[13px] text-[#8e8e93]">
-          {t('memory.noExtraPaths')}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {extraPaths.map((p) => (
-            <div key={p} className="flex items-center justify-between rounded-xl border border-black/[0.06] bg-white px-4 py-3">
-              <span className="flex-1 truncate font-mono text-[12px] text-[#3c3c43]">{p}</span>
-              <button
-                type="button"
-                onClick={() => onRemove(p)}
-                aria-label={t('memory.removeExtraPath', { path: p })}
-                className="ml-3 shrink-0 rounded-lg p-1.5 text-[#ef4444] hover:bg-[#ef4444]/10"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function GuideTab({ config }: { config: MemoryConfig }) {
   const { t } = useTranslation('common');
   return (
@@ -762,10 +698,6 @@ export function Memory() {
   const [snapshotResult, setSnapshotResult] = useState<SnapshotResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [extraPaths, setExtraPaths] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('memory_extra_paths') ?? '[]') as string[]; } catch { return []; }
-  });
-
   const load = useCallback(async (nextScope = scopeId, nextQuery = searchQuery) => {
     setLoading(true);
     setError(null);
@@ -844,27 +776,9 @@ export function Memory() {
     }
   }, [scopeId, data?.activeScope]);
 
-  const handleAddExtraPath = useCallback((path: string) => {
-    setExtraPaths((prev) => {
-      if (prev.includes(path)) return prev;
-      const next = [...prev, path];
-      localStorage.setItem('memory_extra_paths', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const handleRemoveExtraPath = useCallback((path: string) => {
-    setExtraPaths((prev) => {
-      const next = prev.filter((p) => p !== path);
-      localStorage.setItem('memory_extra_paths', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
   const tabs: { key: Tab; label: string; Icon: typeof FolderOpen }[] = [
     { key: 'overview', label: t('memory.tabOverview'), Icon: Info },
     { key: 'browser', label: t('memory.tabBrowser'), Icon: FolderOpen },
-    { key: 'extras', label: t('memory.tabExtras'), Icon: Plus },
     { key: 'guide', label: t('memory.tabGuide'), Icon: BookOpen },
   ];
 
@@ -945,7 +859,6 @@ export function Memory() {
               />
             )}
             {tab === 'guide' && <GuideTab config={data.config} />}
-            {tab === 'extras' && <ExtrasTab extraPaths={extraPaths} onAdd={handleAddExtraPath} onRemove={handleRemoveExtraPath} />}
           </>
         )}
       </div>

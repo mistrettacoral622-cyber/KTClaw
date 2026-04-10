@@ -5,6 +5,7 @@
  */
 
 import { Crown, Pin, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ export function SessionItem({
   onPinToggle,
   onDelete,
 }: SessionItemProps) {
+  const { t } = useTranslation('common');
   const initials = label.slice(0, 1).toUpperCase();
   const displayName = session.isTeamSession && session.teamName
     ? `团队${session.teamName}：${label}`
@@ -88,7 +90,7 @@ export function SessionItem({
               {session.isPrivateChat && session.isLeaderChat && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
                   <Crown className="h-3 w-3" />
-                  Leader Chat
+                  {t('teamMap.session.leaderChatBadge', { defaultValue: 'Leader Chat' })}
                 </span>
               )}
               {isPinned && (

@@ -1,23 +1,46 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsMemoryStrategy } from '@/components/settings-center/settings-memory-strategy';
+import { useSettingsStore } from '@/stores/settings';
+import { hostApiFetch } from '@/lib/host-api';
+
+vi.mock('@/lib/host-api', () => ({
+  hostApiFetch: vi.fn(),
+}));
 
 describe('SettingsMemoryStrategy', () => {
-  it('renders the strategy sections and local knowledge controls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSettingsStore.getState().resetSettings();
+    vi.mocked(hostApiFetch).mockResolvedValue({ ok: true });
+  });
+
+  it('renders real controls instead of a placeholder', () => {
     render(<SettingsMemoryStrategy />);
 
-    expect(screen.getByRole('heading', { name: '全局长期记忆策略' })).toBeInTheDocument();
-    expect(screen.getByText('Local SQLite + BM25 全文检索 (默认最轻量)')).toBeInTheDocument();
-    expect(screen.getByText('text-embedding-3-small (OpenAI, 高性价比)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '分析' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重建索引' })).toBeInTheDocument();
+    expect(screen.getByText('暂未配置监控目录。')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /\+/ })).toBeInTheDocument();
+  });
 
-    expect(screen.getByRole('heading', { name: '自动浓缩与总结' })).toBeInTheDocument();
-    expect(screen.getByText(/多轮对话自动滚动压缩/)).toBeInTheDocument();
-    expect(screen.getByText(/每日复盘生成/)).toBeInTheDocument();
-    expect(screen.getAllByRole('switch')).toHaveLength(2);
+  it('calls memory endpoints and updates watched directories', async () => {
+    render(<SettingsMemoryStrategy />);
 
-    expect(screen.getByRole('heading', { name: '挂载本地目录知识' })).toBeInTheDocument();
-    expect(screen.getByText('D:/CompanyDocs/Handbook')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重做索引' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /\+ 添加本地监控目录集/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '分析' }));
+    fireEvent.click(screen.getByRole('button', { name: '重建索引' }));
+
+    await waitFor(() => {
+      expect(hostApiFetch).toHaveBeenCalledWith('/api/memory/analyze', { method: 'POST' });
+      expect(hostApiFetch).toHaveBeenCalledWith('/api/memory/reindex', { method: 'POST' });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /\+/ }));
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: 'C:\\docs' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '添加' }));
+
+    expect(useSettingsStore.getState().watchedMemoryDirs).toEqual(['C:\\docs']);
   });
 });

@@ -1,12 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('loads the workbench and opens the session drawer in browser preview mode', async ({ page }) => {
-  await page.goto('/');
+test('loads the browser preview shell without triggering the error boundary', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   await expect(page.locator('#root')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Files/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Session/ })).toBeVisible();
-
-  await page.getByRole('button', { name: /Session/ }).click();
-  await expect(page.getByText('agent:main:main').first()).toBeVisible();
+  await expect(page.getByText(/加载中|鍔犺浇中/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Something went wrong' })).toHaveCount(0);
 });

@@ -15,10 +15,6 @@ const {
   settingsState: {
     devModeUnlocked: false,
     setDevModeUnlocked: vi.fn(),
-    remoteRpcEnabled: false,
-    setRemoteRpcEnabled: vi.fn(),
-    p2pSyncEnabled: false,
-    setP2pSyncEnabled: vi.fn(),
     telemetryEnabled: true,
     setTelemetryEnabled: vi.fn(),
   },
@@ -59,12 +55,12 @@ describe('SettingsAboutPanel', () => {
     });
   });
 
-  it('renders product information while keeping diagnostics behind folded subsections', () => {
+  it('renders Chinese product information while keeping diagnostics folded by default', () => {
     render(<SettingsAboutPanel onRerunSetup={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'KTClaw' })).toBeInTheDocument();
-    expect(screen.getByText(/Graphical AI assistant for OpenClaw teams/i)).toBeInTheDocument();
-    expect(screen.getByText(/Version 1.0.0/)).toBeInTheDocument();
+    expect(screen.getByText(/桌面 AI 助手/)).toBeInTheDocument();
+    expect(screen.getByText(/版本 1.0.0/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '开发者诊断' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '维护与恢复' })).toBeInTheDocument();
 
@@ -99,13 +95,11 @@ describe('SettingsAboutPanel', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('switch', { name: '开发者模式' }));
+    const switches = screen.getAllByRole('switch');
+    fireEvent.click(switches[0] as HTMLElement);
     expect(settingsState.setDevModeUnlocked).toHaveBeenCalledWith(true);
 
-    fireEvent.click(screen.getByRole('switch', { name: '远程 RPC 访问' }));
-    expect(settingsState.setRemoteRpcEnabled).toHaveBeenCalledWith(true);
-
-    fireEvent.click(screen.getByRole('switch', { name: '匿名遥测' }));
+    fireEvent.click(switches[1] as HTMLElement);
     expect(settingsState.setTelemetryEnabled).toHaveBeenCalledWith(false);
   });
 

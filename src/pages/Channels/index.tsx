@@ -95,6 +95,13 @@ function formatToolDuration(durationMs?: number): string | null {
   return `${(durationMs / 1000).toFixed(1)}s`;
 }
 
+function formatVoiceDuration(durationSeconds?: number): string | null {
+  if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    return null;
+  }
+  return `${Math.round(durationSeconds)}s`;
+}
+
 function isVisibleConversationMessage(message: ChannelSyncMessage): boolean {
   if (message.role === 'system' && message.internal) return false;
   return true;
@@ -170,7 +177,27 @@ function MessageBubble({
     );
   }
 
-  if ((msgType === 'file' || msgType === 'audio' || msgType === 'video') && message.fileInfo) {
+  if (msgType === 'audio') {
+    const audioUrl = message.voiceUrl ?? message.fileInfo?.downloadUrl;
+    const durationLabel = formatVoiceDuration(message.voiceDuration) ?? formatToolDuration(message.durationMs);
+    if (audioUrl) {
+      return (
+        <div data-testid={`bubble-${message.id}`} className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-[#f8fafc] px-3 py-2.5">
+          <audio
+            controls
+            src={audioUrl}
+            data-testid={`audio-player-${message.id}`}
+            className="h-8 max-w-[200px]"
+          />
+          {durationLabel ? (
+            <span className="text-[11px] text-[#94a3b8]">{durationLabel}</span>
+          ) : null}
+        </div>
+      );
+    }
+  }
+
+  if ((msgType === 'file' || msgType === 'video') && message.fileInfo) {
     return (
       <div data-testid={`bubble-${message.id}`}>
         <FileCard info={message.fileInfo} />

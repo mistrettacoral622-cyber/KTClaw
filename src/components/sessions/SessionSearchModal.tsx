@@ -7,7 +7,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Search, X, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 import { searchSessionsWithContext, type SessionSearchResult } from '@/lib/session-search';
 import { SessionItem } from './SessionItem';
 import { useChatStore } from '@/stores/chat';

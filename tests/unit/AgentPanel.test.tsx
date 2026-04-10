@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { AgentPanel } from '@/components/team/AgentPanel';
 import { useAgentsStore } from '@/stores/agents';
 import { useTeamsStore } from '@/stores/teams';
@@ -74,58 +74,42 @@ const mockTeams: TeamSummary[] = [
 ];
 
 describe('AgentPanel', () => {
+  const onClose = vi.fn();
+
   beforeEach(() => {
+    onClose.mockReset();
     vi.mocked(useAgentsStore).mockReturnValue({
       agents: mockAgents,
       fetchAgents: vi.fn(),
       loading: false,
       error: null,
-    } as any);
+    } as never);
 
     vi.mocked(useTeamsStore).mockReturnValue({
       teams: mockTeams,
-    } as any);
-
-    // Mock localStorage
-    Storage.prototype.getItem = vi.fn(() => null);
-    Storage.prototype.setItem = vi.fn();
+    } as never);
   });
 
   it('renders all agents', () => {
-    render(<AgentPanel />);
+    render(<AgentPanel onClose={onClose} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
-  it('displays team badge for agents in teams', () => {
-    render(<AgentPanel />);
-    // Both Alice (leader) and Bob (member) are in 1 team
-    const badges = screen.getAllByText('1 个团队');
-    expect(badges).toHaveLength(2);
+  it('displays the joined-team badge for agents already assigned to teams', () => {
+    render(<AgentPanel onClose={onClose} />);
+    expect(screen.getAllByText(/已加入 1 个团队/)).toHaveLength(2);
   });
 
-  it('can be collapsed and expanded', async () => {
-    render(<AgentPanel />);
-
-    // Find collapse button
-    const collapseButton = screen.getByRole('button', { name: /collapse|expand/i });
-    fireEvent.click(collapseButton);
-
-    // Panel should be collapsed (agents not visible)
-    await waitFor(() => {
-      expect(screen.queryByText('Alice')).not.toBeInTheDocument();
-    });
+  it('shows the drag-and-drop helper copy', () => {
+    render(<AgentPanel onClose={onClose} />);
+    expect(screen.getByText('拖拽 Agent 到左侧创建区来组建团队')).toBeInTheDocument();
   });
 
-  it('persists collapse state to localStorage', async () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-
-    render(<AgentPanel />);
-
-    const collapseButton = screen.getByRole('button', { name: /collapse|expand/i });
-    fireEvent.click(collapseButton);
-
-    expect(setItemSpy).toHaveBeenCalledWith('agentPanelCollapsed', 'true');
+  it('calls onClose when the close button is clicked', () => {
+    render(<AgentPanel onClose={onClose} />);
+    fireEvent.click(screen.getByRole('button', { name: '关闭' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('fetches agents on mount', () => {
@@ -135,9 +119,9 @@ describe('AgentPanel', () => {
       fetchAgents,
       loading: false,
       error: null,
-    } as any);
+    } as never);
 
-    render(<AgentPanel />);
+    render(<AgentPanel onClose={onClose} />);
     expect(fetchAgents).toHaveBeenCalled();
   });
 });

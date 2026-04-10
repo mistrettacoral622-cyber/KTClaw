@@ -78,23 +78,17 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   const [editedDescription, setEditedDescription] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [runtimeTree, setRuntimeTree] = useState<RuntimeTreeResponse | null>(null);
-
-  if (!task) {
-    return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        任务不存在
-      </div>
-    );
-  }
-
-  const assignee = agents.find((a) => a.id === task.assigneeId);
+  const taskRuntimeSessionId = task?.runtimeSessionId ?? null;
+  const assignee = task ? agents.find((a) => a.id === task.assigneeId) : null;
 
   const handleSave = async () => {
+    if (!task) return;
     await updateTask(task.id, { description: editedDescription });
     setIsEditing(false);
   };
 
   const handleDelete = async () => {
+    if (!task) return;
     await deleteTask(task.id);
     closePanel();
     setShowDeleteConfirm(false);
@@ -106,13 +100,13 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
   }, [fetchApprovals]);
 
   useEffect(() => {
-    if (!task?.runtimeSessionId) {
+    if (!taskRuntimeSessionId) {
       setRuntimeTree(null);
       return;
     }
 
     let cancelled = false;
-    void hostApiFetch<{ tree?: RuntimeTreeResponse }>(`/api/sessions/subagents/${encodeURIComponent(task.runtimeSessionId)}/tree`)
+    void hostApiFetch<{ tree?: RuntimeTreeResponse }>(`/api/sessions/subagents/${encodeURIComponent(taskRuntimeSessionId)}/tree`)
       .then((response) => {
         if (!cancelled) {
           setRuntimeTree(response?.tree ?? null);
@@ -127,20 +121,28 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [task?.runtimeSessionId]);
+  }, [taskRuntimeSessionId]);
 
   const relatedSessionKeys = [
     ...new Set([
-      ...(task.relatedSessionKeys ?? []),
-      ...(task.runtimeSessionKey ? [task.runtimeSessionKey] : []),
+      ...(task?.relatedSessionKeys ?? []),
+      ...(task?.runtimeSessionKey ? [task.runtimeSessionKey] : []),
     ]),
   ];
   const taskApprovalItems = approvals.filter((approval: ApprovalItem) => {
     if (approval.sessionKey) {
       return relatedSessionKeys.includes(approval.sessionKey);
     }
-    return Boolean(task.assigneeId && approval.agentId === task.assigneeId);
+    return Boolean(task?.assigneeId && approval.agentId === task.assigneeId);
   });
+
+  if (!task) {
+    return (
+      <div className="flex h-full items-center justify-center text-muted-foreground">
+        任务不存在
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">

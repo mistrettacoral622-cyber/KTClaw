@@ -1,7 +1,3 @@
-/**
- * Desktop Behavior Settings Panel
- * Real controls for startMinimized, minimizeToTray, and system notifications.
- */
 import { Switch } from '@/components/ui/switch';
 import { useSettingsStore } from '@/stores/settings';
 
@@ -11,13 +7,15 @@ export function DesktopBehaviorPanel() {
     setStartMinimized,
     minimizeToTray,
     setMinimizeToTray,
+    notificationsEnabled,
+    setNotificationsEnabled,
   } = useSettingsStore();
 
   return (
     <div className="space-y-3">
       <ToggleRow
-        label="开机后最小化启动"
-        description="通过系统自启动（--autostart）启动时，窗口保持隐藏，可从托盘图标打开。手动启动时始终显示窗口。"
+        label="自启动时最小化"
+        description="通过系统自启动启动 KTClaw 时保持窗口隐藏；手动启动仍会正常显示窗口。"
         checked={startMinimized}
         onCheckedChange={setStartMinimized}
         testId="desktop-start-minimized"
@@ -25,29 +23,37 @@ export function DesktopBehaviorPanel() {
 
       <ToggleRow
         label="关闭时隐藏到托盘"
-        description="点击顶部关闭按钮时不退出进程，维持 Cron 和通道在线。可从托盘图标重新打开窗口。"
+        description="点击关闭按钮时不退出进程，保持通道和定时任务继续在后台运行。"
         checked={minimizeToTray}
         onCheckedChange={setMinimizeToTray}
         testId="desktop-minimize-to-tray"
       />
 
+      <ToggleRow
+        label="系统通知"
+        description="允许为任务完成、同步失败和人工介入请求发送桌面通知。"
+        checked={notificationsEnabled}
+        onCheckedChange={setNotificationsEnabled}
+        testId="desktop-system-notifications"
+      />
+
       <div className="rounded-xl border border-black/5 bg-[#f8fafc] px-4 py-3">
-        <p className="text-[13px] font-medium text-[#0f172a]">系统通知</p>
+        <p className="text-[13px] font-medium text-[#0f172a]">通知事件</p>
         <p className="mt-1 text-[12px] text-[#64748b]">
-          以下事件会触发桌面系统通知（需系统通知权限）：
+          启用后，KTClaw 会在以下场景发送桌面通知：
         </p>
         <ul className="mt-2 space-y-1 text-[12px] text-[#475569]">
           <li className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />
-            任务完成（task-completed）
+            任务完成
           </li>
           <li className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
-            同步失败（sync-failed）
+            同步失败
           </li>
           <li className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b]" />
-            需要人工介入（human-intervention-required）
+            需要人工介入
           </li>
         </ul>
       </div>

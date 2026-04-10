@@ -101,7 +101,7 @@ Complete the entire setup—from installation to your first AI interaction—thr
 Communicate with AI agents through a modern chat experience. Support for multiple conversation contexts, message history, rich content rendering with Markdown, and direct `@agent` routing in the main composer for multi-agent setups.
 When you target another agent with `@agent`, KTClaw switches into that agent's own conversation context directly instead of relaying through the default agent. Agent workspaces stay separate by default, and stronger isolation depends on OpenClaw sandbox settings.
 The chat composer also includes slash commands such as `/new`, `/stop`, `/agent`, `/cwd`, `/memory`, `/cron`, `/settings`, and `/export` for fast local actions without leaving the keyboard.
-Sidebar global search is available with `Ctrl/Cmd+K`, and now searches sessions, agents, pages, and cached chat-history text. Sessions can be pinned in the Sidebar, and exports remain available via `/export` and the Chat page's `Session` drawer. The Sidebar footer is now a single upload entry for quick file intake, and the Activity page upgrades raw logs into filterable structured event cards with raw-line expansion and live auto-refresh.
+Sidebar global search is available with `Ctrl/Cmd+K`, and now searches sessions, agents, pages, and cached chat-history text. Sessions can be pinned in the Sidebar, and exports remain available via `/export` and the Chat page's `Session` drawer. The Sidebar footer is now a single upload entry for quick file intake.
 
 ### 🧪 Rich Markdown Rendering
 Chat markdown now covers standard math rendering and KaTeX `mhchem` chemistry formulas, alongside syntax highlighting, local file links, and copy-friendly code blocks.
@@ -138,6 +138,8 @@ Environment variables for bundled search skills:
 - `TAVILY_API_KEY` for `tavily-search` (OAuth may also be supported by upstream skill runtime)
 - `BOCHA_API_KEY` for `bocha-skill`
 - `find-skills` and `self-improving-agent` do not require API keys
+
+Image understanding in chat requires either a vision-capable active model or an image-analysis fallback path (for example OpenAI, Anthropic, Google, or MiniMax through OpenClaw image-model/provider auth). KTClaw now warns before image sends when no such path is configured, and it nudges the agent to proactively use the relevant local skills/tools for browser, screenshot, and other multi-step tasks instead of stopping at manual instructions.
 
 ### 🔐 Secure Provider Integration
 Connect to multiple AI providers (OpenAI, Anthropic, and more) with credentials stored securely in your system's native keychain. OpenAI supports both API key and browser OAuth (Codex subscription) sign-in.
@@ -385,7 +387,7 @@ pnpm run test:a11y
 pnpm run governance:check
 ```
 
-`lint:a11y` currently covers the Activity, Cron, Settings, and Workbench empty-state surfaces. `test:a11y` runs the matching `vitest-axe` regressions, and `governance:check` combines `knip` with `dependency-cruiser` boundary checks.
+`lint:a11y` currently covers the Cron, Settings, and Workbench empty-state surfaces. `test:a11y` runs the matching `vitest-axe` regressions, and `governance:check` combines `knip` with `dependency-cruiser` boundary checks.
 
 ### Codex Ralph Loop
 

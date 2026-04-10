@@ -16,7 +16,7 @@ const SYSTEMD_GATEWAY_SERVICE_NAMES = [
 
 /**
  * Stop any openclaw gateway systemd user services on Linux to prevent
- * auto-respawn conflicts when ClawX manages its own gateway process.
+ * auto-respawn conflicts when KTClaw manages its own gateway process.
  * Equivalent to unloadLaunchctlGatewayService() on macOS.
  */
 export async function stopSystemdGatewayService(): Promise<void> {

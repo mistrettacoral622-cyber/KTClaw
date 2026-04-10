@@ -3,6 +3,7 @@ import { PORTS } from '../../utils/config';
 import { listAgentsSnapshot } from '../../utils/agent-config';
 import { buildOpenClawControlUiUrl } from '../../utils/openclaw-control-ui';
 import { isOutboundMediaPath } from '../../utils/outbound-media';
+import { appendDispatchHints } from '../../../shared/chat-dispatch-hints';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
 
@@ -110,9 +111,10 @@ export async function handleGatewayRoutes(
         }
       }
 
+      const dispatchAwareMessage = appendDispatchHints(body.message, body.media);
       const message = fileReferences.length > 0
-        ? [body.message, ...fileReferences].filter(Boolean).join('\n')
-        : body.message;
+        ? [dispatchAwareMessage, ...fileReferences].filter(Boolean).join('\n')
+        : dispatchAwareMessage;
       const snapshot = await listAgentsSnapshot().catch(() => null);
       const blockedAgent = snapshot?.agents.find((agent) => (
         agent.chatAccess === 'leader_only' && agent.mainSessionKey === body.sessionKey

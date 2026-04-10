@@ -189,7 +189,6 @@
     "vectorSearch": "Vector search",
     "tabOverview": "Overview",
     "tabBrowser": "File Browser",
-    "tabExtras": "Extra Sources",
     "tabGuide": "Usage Guide"
   },
   "costs": {
@@ -572,6 +571,14 @@
       "blockingReason": "Blocking reason",
       "nextStep": "Recommended next step"
     },
+    "activity": {
+      "status": "Status",
+      "currentWork": "Current Work",
+      "blockingReason": "Blocking Reason",
+      "recommendedNextStep": "Recommended Next Step",
+      "agentLabel": "Agent",
+      "noActiveWork": "No active work"
+    },
     "zoom": {
       "in": "Zoom in",
       "out": "Zoom out",
@@ -582,12 +589,34 @@
       "hierarchy": "Hierarchy"
     },
     "role": {
-      "leader": "leader",
-      "worker": "worker"
+      "leader": "Leader",
+      "worker": "Worker"
     },
     "access": {
-      "direct": "direct",
-      "leader_only": "leader_only"
+      "direct": "Direct",
+      "leader_only": "Leader only"
+    },
+    "memberDetail": {
+      "tabs": {
+        "overview": "Overview",
+        "memory": "Memory",
+        "skills": "Skills",
+        "activity": "Activity"
+      },
+      "openChat": "Open Chat",
+      "removeFromTeam": "Remove from Team",
+      "removeConfirm": "Are you sure you want to remove {{agentName}} from this team? This does not delete the agent.",
+      "notSet": "Not set",
+      "fields": {
+        "role": "Role",
+        "chatAccess": "Chat Access",
+        "responsibility": "Responsibility",
+        "team": "Team",
+        "ownedEntryPoints": "Owned Entry Points"
+      }
+    },
+    "session": {
+      "leaderChatBadge": "Leader Chat"
     },
     "allGroup": "All",
     "rail": {

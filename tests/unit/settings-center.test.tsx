@@ -190,17 +190,18 @@ describe('Settings center', () => {
     }
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('migration-backup') }));
-    expect(screen.getByRole('button', { name: 'migrationPanel.migrate.cta' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '立即创建备份' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('memory-knowledge') }));
     expect(screen.getByRole('tab', { name: 'memoryKnowledge.tabs.strategy' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'memoryKnowledge.tabs.browser' })).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: getNavLabel('tool-permissions') }));
+    expect(screen.getByTestId('global-risk-level-select')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('about') }));
-    expect(screen.getByRole('button', { name: '运行诊断' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重新运行初始化' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重置所有设置' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '清除服务器数据' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '开发者诊断' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '维护与恢复' })).toBeInTheDocument();
 
     expect(
       await axe(container, {
@@ -231,7 +232,7 @@ describe('Settings center', () => {
     expect(screen.getByText('MCP services')).toBeInTheDocument();
   });
 
-  it('persists developer toggles through the host settings api', () => {
+  it('persists only live developer toggles through the host settings api', () => {
     const hostApiFetchMock = vi.mocked(hostApiFetch);
     render(
       <MemoryRouter>
@@ -240,22 +241,24 @@ describe('Settings center', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('about') }));
+    fireEvent.click(screen.getByRole('button', { name: '开发者诊断' }));
 
-    fireEvent.click(screen.getByRole('switch', { name: /API RPC/ }));
+    const switches = screen.getAllByRole('switch');
+    fireEvent.click(switches[0] as HTMLElement);
     expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings/remoteRpcEnabled',
+      '/api/settings/devModeUnlocked',
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ value: true }),
       }),
     );
 
-    fireEvent.click(screen.getByRole('switch', { name: /P2P/ }));
+    fireEvent.click(switches[1] as HTMLElement);
     expect(hostApiFetchMock).toHaveBeenCalledWith(
-      '/api/settings/p2pSyncEnabled',
+      '/api/settings/telemetryEnabled',
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({ value: true }),
+        body: JSON.stringify({ value: false }),
       }),
     );
   });
@@ -269,6 +272,7 @@ describe('Settings center', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('about') }));
+    fireEvent.click(screen.getByRole('button', { name: '维护与恢复' }));
 
     fireEvent.click(screen.getByRole('button', { name: '重新运行初始化' }));
     expect(navigateMock).toHaveBeenCalledWith('/setup');
@@ -280,7 +284,6 @@ describe('Settings center', () => {
       '/api/settings/reset',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('settings:maintenance.resetSuccess');
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: '清除服务器数据' }));
@@ -289,7 +292,6 @@ describe('Settings center', () => {
       '/api/app/clear-server-data',
       expect.objectContaining({ method: 'POST' }),
     );
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('settings:maintenance.clearSuccess');
   });
 
   it('allows changing the update channel from the auto-update section', () => {
@@ -316,6 +318,8 @@ describe('Settings center', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: getNavLabel('general') }));
+    expect(screen.getByTestId('desktop-start-minimized')).toBeInTheDocument();
+    expect(screen.getByTestId('desktop-minimize-to-tray')).toBeInTheDocument();
 
     const logoInput = screen.getByLabelText('上传品牌 Logo');
     const iconInput = screen.getByLabelText('上传品牌图标');

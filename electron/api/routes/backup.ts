@@ -3,8 +3,8 @@
  * REST endpoints for backup CRUD and archive import/export.
  */
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createReadStream } from 'fs';
 import { basename } from 'path';
+import { copyFile } from 'fs/promises';
 import type { HostApiContext } from '../context';
 import { sendJson, parseJsonBody } from '../route-utils';
 import {
@@ -48,14 +48,19 @@ export async function handleBackupRoutes(
   // POST /api/backup/export
   if (url.pathname === '/api/backup/export' && req.method === 'POST') {
     try {
+      const body = await parseJsonBody<{ targetPath?: string }>(req);
       const archivePath = await exportArchive();
-      const filename = basename(archivePath);
-      res.writeHead(200, {
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+      const targetPath = typeof body.targetPath === 'string' && body.targetPath.trim()
+        ? body.targetPath.trim()
+        : archivePath;
+      if (targetPath !== archivePath) {
+        await copyFile(archivePath, targetPath);
+      }
+      sendJson(res, 200, {
+        success: true,
+        archivePath: targetPath,
+        filename: basename(targetPath),
       });
-      const stream = createReadStream(archivePath);
-      stream.pipe(res);
     } catch (error) {
       sendJson(res, 500, { success: false, error: String(error) });
     }

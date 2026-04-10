@@ -108,6 +108,19 @@ export async function handleTaskRoutes(
       }
 
       const task = await appendTaskExecutionEvent(taskId, body);
+      if (body.status === 'done') {
+        ctx.eventBus.emit('task:completed', {
+          taskId,
+          content: body.content,
+        });
+      }
+      if (body.status === 'blocked' || body.status === 'waiting_approval') {
+        ctx.eventBus.emit('human-intervention-required', {
+          taskId,
+          status: body.status,
+          content: body.content,
+        });
+      }
       sendJson(res, 200, { success: true, task });
     } catch (error) {
       logger.error('[tasks] Failed to append task execution event:', error);

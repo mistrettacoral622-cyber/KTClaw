@@ -6,10 +6,16 @@ import { MemberDetailSheet } from '@/components/team-map/MemberDetailSheet';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
-      if (options?.defaultValue && typeof options.defaultValue === 'string') {
-        return options.defaultValue;
-      }
-      return key;
+      const translations: Record<string, string> = {
+        'teamMap.memberDetail.tabs.overview': 'OVERVIEW_TAB',
+        'teamMap.memberDetail.tabs.memory': 'MEMORY_TAB',
+        'teamMap.memberDetail.tabs.skills': 'SKILLS_TAB',
+        'teamMap.memberDetail.tabs.activity': 'ACTIVITY_TAB',
+        'teamMap.memberDetail.openChat': 'OPEN_CHAT_ACTION',
+        'teamMap.memberDetail.removeFromTeam': 'REMOVE_FROM_TEAM_ACTION',
+        'teamMap.memberDetail.removeConfirm': 'REMOVE_CONFIRM_MESSAGE',
+      };
+      return translations[key] ?? (typeof options?.defaultValue === 'string' ? options.defaultValue : key);
     },
   }),
 }));
@@ -46,12 +52,12 @@ describe('MemberDetailSheet', () => {
       />,
     );
 
-    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Memory' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Skills' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Activity' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Chat' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove from Team' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'OVERVIEW_TAB' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'MEMORY_TAB' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'SKILLS_TAB' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'ACTIVITY_TAB' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'OPEN_CHAT_ACTION' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'REMOVE_FROM_TEAM_ACTION' })).toBeInTheDocument();
   });
 
   it('hides remove action for the leader and opens a destructive confirm dialog for members', async () => {
@@ -70,7 +76,7 @@ describe('MemberDetailSheet', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Remove from Team' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'REMOVE_FROM_TEAM_ACTION' })).not.toBeInTheDocument();
 
     rerender(
       <MemberDetailSheet
@@ -85,14 +91,10 @@ describe('MemberDetailSheet', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove from Team' }));
+    fireEvent.click(screen.getByRole('button', { name: 'REMOVE_FROM_TEAM_ACTION' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getAllByText('Remove from Team').length).toBeGreaterThan(1);
-    expect(
-      screen.getByText(
-        'Are you sure you want to remove Researcher from this team? This does not delete the agent.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText('REMOVE_FROM_TEAM_ACTION').length).toBeGreaterThan(1);
+    expect(screen.getByText('REMOVE_CONFIRM_MESSAGE')).toBeInTheDocument();
   });
 });

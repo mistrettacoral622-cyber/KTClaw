@@ -190,7 +190,7 @@ export function SettingsMemoryBrowser() {
                     onClick={() => { setEditing(true); setSaveMsg(''); }}
                     className="flex h-6 items-center gap-1 rounded px-2 text-[11px] text-[#3c3c43] hover:bg-[#f2f2f7]"
                   >
-                    {t('memoryBrowser.actions.edit')}
+                    {t('memoryBrowser.actions.edit', { defaultValue: '编辑' })}
                   </button>
                 )}
               </div>

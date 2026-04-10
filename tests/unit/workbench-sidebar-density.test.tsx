@@ -134,8 +134,8 @@ describe('workbench sidebar density', () => {
     );
 
     const toggleButton = screen.getByRole('button', { name: 'Toggle sidebar' });
-    expect(screen.getByRole('button', { name: 'Upload file' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'common:sidebar.selectAvatar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upload file' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:sidebar.selectAvatar' })).toBeInTheDocument();
     expect(toggleButton).not.toHaveClass('border');
     expect(mockFetchAgents).toHaveBeenCalledTimes(1);
     expect(mockFetchChannels).toHaveBeenCalledTimes(1);

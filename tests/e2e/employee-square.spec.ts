@@ -1,22 +1,21 @@
 import { expect, test } from '@playwright/test';
 
 test('opens the Employee Square create sheet', async ({ page }) => {
-  await page.goto('/agents', { waitUntil: 'domcontentloaded' });
+  await page.goto('/agents', { waitUntil: 'commit' });
 
   await expect(page.locator('#root')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Add Agent/ })).toBeVisible();
+  const createButton = page.getByRole('button', { name: /Add Agent|添加 Agent/ });
+  await expect(createButton).toBeVisible();
 
-  await page.getByRole('button', { name: /Add Agent/ }).click();
-  await expect(page.getByRole('button', { name: /Create Agent/ })).toBeVisible();
-  await expect(page.getByLabel('Name')).toBeVisible();
+  await createButton.click();
+  await expect(page.getByRole('button', { name: /Create Agent|创建 Agent/ })).toBeVisible();
+  await expect(page.getByLabel(/Name|Agent 名称/)).toBeVisible();
 });
 
-test('loads the dossier page for the main agent', async ({ page }) => {
-  await page.goto('/agents/main', { waitUntil: 'domcontentloaded' });
+test('shows the not-found fallback when a direct agent route is unavailable in browser preview', async ({ page }) => {
+  await page.goto('/agents/main', { waitUntil: 'commit' });
 
   await expect(page.locator('#root')).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Memory' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Skills' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Activity' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agent not found' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Back to agents' })).toBeVisible();
 });

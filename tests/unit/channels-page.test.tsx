@@ -897,8 +897,10 @@ describe('Channels sync workbench', () => {
 
     // Optimistic message should appear immediately and input should clear
     expect(input).toHaveValue('');
-    expect(await screen.findByTestId('optimistic-bubble')).toBeInTheDocument();
-    expect(screen.getByTestId('optimistic-bubble')).toHaveTextContent('这是一条测试消息');
+    await waitFor(() => {
+      expect(screen.getByTestId('optimistic-bubble')).toBeInTheDocument();
+      expect(screen.getByTestId('optimistic-bubble')).toHaveTextContent('这是一条测试消息');
+    }, { timeout: 3000 });
 
     // Resolve the send
     resolveFirstMessages?.();
@@ -1221,6 +1223,86 @@ describe('WeChat workbench', () => {
     expect(hostApiFetchMock).toHaveBeenCalledWith(
       '/api/channels/workbench/wechat/members?sessionId=wechat%3Adefault%3Agc_001',
     );
+  });
+
+  it('renders wechat audio messages with an inline player and duration label', async () => {
+    const wechatSessions = {
+      success: true,
+      sessions: [
+        {
+          id: 'wechat:default:gc_audio',
+          channelId: 'wechat-default',
+          channelType: 'wechat',
+          sessionType: 'group',
+          title: '语音群',
+          pinned: true,
+          syncState: 'synced',
+          latestActivityAt: new Date().toISOString(),
+          previewText: '收到一条语音',
+        },
+      ],
+    };
+    hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/channels/capabilities') {
+        return {
+          success: true,
+          capabilities: [{
+            channelId: 'wechat-default',
+            channelType: 'wechat',
+            accountId: 'default',
+            status: 'connected',
+            availableActions: ['send'],
+            capabilityFlags: {
+              supportsConnect: true,
+              supportsDisconnect: true,
+              supportsTest: true,
+              supportsSend: true,
+              supportsSchemaSummary: false,
+              supportsCredentialValidation: false,
+            },
+            configSchemaSummary: {
+              totalFieldCount: 0,
+              requiredFieldCount: 0,
+              optionalFieldCount: 0,
+              sensitiveFieldCount: 0,
+              fieldKeys: [],
+            },
+          }],
+        };
+      }
+      if (path === '/api/channels/workbench/sessions?channelType=wechat') {
+        return wechatSessions;
+      }
+      if (path.startsWith('/api/channels/workbench/conversations/wechat%3Adefault%3Agc_audio/messages')) {
+        return {
+          success: true,
+          conversation: {
+            id: 'wechat:default:gc_audio',
+            title: '语音群',
+            syncState: 'synced',
+          },
+          messages: [
+            {
+              id: 'wx-audio-1',
+              role: 'human',
+              authorName: '微信同事',
+              messageType: 'audio',
+              voiceUrl: '/api/channels/workbench/wechat/media?url=https%3A%2F%2Fwx.qq.com%2Faudio.amr&accountId=default',
+              voiceDuration: 32,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+          hasMore: false,
+        };
+      }
+      return { success: true };
+    });
+
+    render(<Channels />);
+
+    const bubble = await screen.findByTestId('bubble-wx-audio-1');
+    expect(within(bubble).getByTestId('audio-player-wx-audio-1')).toBeInTheDocument();
+    expect(within(bubble).getByText('32s')).toBeInTheDocument();
   });
 
   it('keeps the wechat workbench selected when the persisted active id becomes stale', async () => {

@@ -1,18 +1,15 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
-  Bell,
   Bot,
   ChevronRight,
   LayoutDashboard,
   MessageSquare,
   PanelLeft,
   PanelLeftClose,
-  Pin,
   Plus,
   Radio,
   Search,
   Settings as SettingsIcon,
-  Trash2,
   Users,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -28,10 +25,7 @@ import { useChatStore } from '@/stores/chat';
 import { useGatewayStore } from '@/stores/gateway';
 import { useSettingsStore } from '@/stores/settings';
 import { useRightPanelStore } from '@/stores/rightPanelStore';
-import { CHANNEL_ICONS, type Channel } from '@/types/channel';
-
-const CHAT_REQUEST_FILE_UPLOAD_EVENT = 'chat:request-file-upload';
-const CHAT_UPLOAD_PENDING_KEY = 'ktclaw:pending-upload';
+import { CHANNEL_ICONS } from '@/types/channel';
 const NICKNAME_STORAGE_KEY = 'ktclaw-user-nickname';
 const LEGACY_NICKNAME_STORAGE_KEY = 'clawx-user-nickname';
 const AVATAR_STORAGE_KEY = 'ktclaw-user-avatar';
@@ -348,16 +342,6 @@ export function Sidebar() {
     reportsTo: agent.reportsTo,
     isDefault: agent.isDefault,
   }));
-
-  const handleUploadClick = () => {
-    try {
-      sessionStorage.setItem(CHAT_UPLOAD_PENDING_KEY, '1');
-    } catch {
-      // ignore storage write issues
-    }
-    navigate('/');
-    window.dispatchEvent(new CustomEvent(CHAT_REQUEST_FILE_UPLOAD_EVENT));
-  };
 
   const handleNewSession = () => {
     setSessionsOpen(true);

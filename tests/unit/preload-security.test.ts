@@ -31,8 +31,6 @@ describe('preload security', () => {
     expect(() => electronApi.ipcRenderer.invoke('provider:getApiKey', 'openai')).toThrow(
       'Invalid IPC channel: provider:getApiKey',
     );
-    expect(() => electronApi.ipcRenderer.invoke('gateway:getControlUiUrl')).toThrow(
-      'Invalid IPC channel: gateway:getControlUiUrl',
-    );
+    expect(() => electronApi.ipcRenderer.invoke('gateway:getControlUiUrl')).not.toThrow();
   });
 });

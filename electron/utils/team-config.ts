@@ -38,7 +38,7 @@ async function writeTeamsConfig(teams: Team[]): Promise<void> {
  * Calculate team status based on member activity
  * Per D-23: active if any member working, blocked if any blocked, else idle
  */
-function calculateTeamStatus(memberIds: string[], leaderId: string): TeamStatus {
+function calculateTeamStatus(_memberIds: string[], _leaderId: string): TeamStatus {
   // TODO: Implement actual status calculation based on agent activity
   // For now, default to 'idle' - will be enhanced when agent activity tracking is available
   return 'idle';

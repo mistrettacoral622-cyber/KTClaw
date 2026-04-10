@@ -64,10 +64,18 @@ export function MemberDetailSheet({
           <div className="mt-6">
             <Tabs defaultValue="overview">
               <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="memory">Memory</TabsTrigger>
-                <TabsTrigger value="skills">Skills</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
+                <TabsTrigger value="overview">
+                  {t('teamMap.memberDetail.tabs.overview', { defaultValue: 'Overview' })}
+                </TabsTrigger>
+                <TabsTrigger value="memory">
+                  {t('teamMap.memberDetail.tabs.memory', { defaultValue: 'Memory' })}
+                </TabsTrigger>
+                <TabsTrigger value="skills">
+                  {t('teamMap.memberDetail.tabs.skills', { defaultValue: 'Skills' })}
+                </TabsTrigger>
+                <TabsTrigger value="activity">
+                  {t('teamMap.memberDetail.tabs.activity', { defaultValue: 'Activity' })}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4 pt-4">
@@ -84,25 +92,43 @@ export function MemberDetailSheet({
 
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Role</span>
-                    <span className="font-medium text-slate-900">{agent.teamRole}</span>
+                    <span className="text-slate-500">
+                      {t('teamMap.memberDetail.fields.role', { defaultValue: 'Role' })}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {t(`teamMap.role.${agent.teamRole}`, { defaultValue: agent.teamRole })}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Chat Access</span>
-                    <span className="font-medium text-slate-900">{agent.chatAccess}</span>
+                    <span className="text-slate-500">
+                      {t('teamMap.memberDetail.fields.chatAccess', { defaultValue: 'Chat Access' })}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {t(`teamMap.access.${agent.chatAccess}`, { defaultValue: agent.chatAccess })}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Responsibility</span>
-                    <span className="font-medium text-slate-900">{agent.responsibility || '—'}</span>
+                    <span className="text-slate-500">
+                      {t('teamMap.memberDetail.fields.responsibility', { defaultValue: 'Responsibility' })}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {agent.responsibility || t('teamMap.memberDetail.notSet', { defaultValue: 'Not set' })}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Team</span>
+                    <span className="text-slate-500">
+                      {t('teamMap.memberDetail.fields.team', { defaultValue: 'Team' })}
+                    </span>
                     <span className="font-medium text-slate-900">{teamId}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-500">Owned Entry Points</span>
+                    <span className="text-slate-500">
+                      {t('teamMap.memberDetail.fields.ownedEntryPoints', { defaultValue: 'Owned Entry Points' })}
+                    </span>
                     <span className="font-medium text-slate-900">
-                      {ownedEntryPoints.length > 0 ? ownedEntryPoints.join(', ') : '—'}
+                      {ownedEntryPoints.length > 0
+                        ? ownedEntryPoints.join(', ')
+                        : t('teamMap.memberDetail.notSet', { defaultValue: 'Not set' })}
                     </span>
                   </div>
                 </div>
@@ -134,7 +160,8 @@ export function MemberDetailSheet({
         open={confirmOpen}
         title={t('teamMap.memberDetail.removeFromTeam', { defaultValue: 'Remove from Team' })}
         message={t('teamMap.memberDetail.removeConfirm', {
-          defaultValue: `Are you sure you want to remove ${agent.name} from this team? This does not delete the agent.`,
+          agentName: agent.name,
+          defaultValue: 'Are you sure you want to remove {{agentName}} from this team? This does not delete the agent.',
         })}
         confirmLabel={t('teamMap.memberDetail.removeFromTeam', { defaultValue: 'Remove from Team' })}
         cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}

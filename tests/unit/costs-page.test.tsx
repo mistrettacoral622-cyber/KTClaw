@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { Costs } from '@/pages/Costs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsCostsUsagePanel } from '@/components/settings-center/settings-costs-usage-panel';
 import { hostApiFetch } from '@/lib/host-api';
+import { Costs } from '@/pages/Costs';
 
 const { subscribeHostEventMock } = vi.hoisted(() => ({
   subscribeHostEventMock: vi.fn(),
@@ -149,12 +149,12 @@ describe('Costs page usage display', () => {
         totalTokens: 980,
         costUsd: 0.31,
         zScore: 2.4,
-        reason: 'Nightly Digest spike',
+        reason: 'Nightly Digest 用量激增',
       },
     ],
     insights: [
-      'Costs climbed week over week; consider tuning prompts.',
-      'Cache usage avoided measurable spend this period.',
+      '本周成本继续上升，建议检查提示词和调用策略。',
+      '本周期缓存命中带来了明显的费用节省。',
     ],
   };
 
@@ -187,40 +187,37 @@ describe('Costs page usage display', () => {
   it('renders recent usage, summary KPIs, and by-agent breakdown', async () => {
     render(<Costs />);
 
-    expect(await screen.findByText('最近记录 (2)')).toBeInTheDocument();
+    expect(await screen.findByText('planner-agent')).toBeInTheDocument();
     const realtimeTable = screen.getByRole('table');
     const realtimeCells = within(realtimeTable);
-    expect(realtimeCells.getByText('planner-agent')).toBeInTheDocument();
     expect(realtimeCells.getByText('gpt-5.2')).toBeInTheDocument();
     expect(realtimeCells.getByText('$0.1234')).toBeInTheDocument();
     expect(screen.getByText('$0.1278')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '大盘监控' }));
-    expect(await screen.findByText('12 次会话')).toBeInTheDocument();
-    expect(screen.getByText('$1.2345')).toBeInTheDocument();
-    expect(screen.getByText('Top Crons')).toBeInTheDocument();
+    expect(await screen.findByText('$1.2345')).toBeInTheDocument();
+    expect(screen.getByText('高消耗 Cron')).toBeInTheDocument();
     expect(screen.getAllByText('Nightly Digest').length).toBeGreaterThan(0);
-    const agentTable = screen.getByRole('table', { name: 'Agent usage ranking table' });
+    const agentTable = screen.getByRole('table', { name: 'Agent 用量排行表' });
     const dashboardCells = within(agentTable);
     expect(dashboardCells.getByText('planner-agent')).toBeInTheDocument();
     expect(dashboardCells.getByText('$0.9000')).toBeInTheDocument();
-    expect(screen.getByText('Model Costs')).toBeInTheDocument();
-    const modelTable = screen.getByRole('table', { name: 'Model cost table' });
+    expect(screen.getByText('模型费用')).toBeInTheDocument();
+    const modelTable = screen.getByRole('table', { name: '模型费用表' });
     const modelCells = within(modelTable);
     expect(modelCells.getByText('gpt-5.2')).toBeInTheDocument();
     expect(modelCells.getByText('$0.1234')).toBeInTheDocument();
-    expect(screen.getByText('Cron Job Costs')).toBeInTheDocument();
-    const cronTable = screen.getByRole('table', { name: 'Cron job costs table' });
+    expect(screen.getByText('Cron 任务费用')).toBeInTheDocument();
+    const cronTable = screen.getByRole('table', { name: 'Cron 任务费用表' });
     const cronCells = within(cronTable);
     expect(cronCells.getByText('Nightly Digest')).toBeInTheDocument();
     expect(cronCells.getByText('Hourly Cleanup')).toBeInTheDocument();
     expect(cronCells.getByText('900')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Show details for Nightly Digest' }));
-    expect(screen.getByText('Avg/run: 300 tokens 路 $0.1400')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '查看 Nightly Digest' }));
+    expect(screen.getByText('单次均值： 300 Tokens · $0.1400')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '用量分析' }));
-    expect(await screen.findByText('统计范围: 全部 Agent 累计')).toBeInTheDocument();
-    expect(screen.getByText('planner-agent')).toBeInTheDocument();
+    expect(await screen.findByText('planner-agent')).toBeInTheDocument();
     expect(screen.getByText('80.0% (2.0K)')).toBeInTheDocument();
   });
 
@@ -232,11 +229,11 @@ describe('Costs page usage display', () => {
         await Promise.resolve();
       });
 
-      const toggle = screen.getByRole('checkbox', { name: 'Auto refresh' });
+      const toggle = screen.getByRole('checkbox');
       expect(toggle).toBeInTheDocument();
 
       fireEvent.click(toggle);
-      fireEvent.change(screen.getByLabelText('Refresh interval'), { target: { value: '15' } });
+      fireEvent.change(screen.getAllByRole('combobox')[0] as HTMLElement, { target: { value: '15' } });
 
       await act(async () => {
         vi.advanceTimersByTime(15_000);
@@ -251,14 +248,14 @@ describe('Costs page usage display', () => {
       await act(async () => {
         await Promise.resolve();
       });
-      expect(screen.getByText('Optimization Score')).toBeInTheDocument();
+      expect(screen.getByText('优化评分')).toBeInTheDocument();
       expect(screen.getByText('74')).toBeInTheDocument();
-      expect(screen.getByText('Cache Savings')).toBeInTheDocument();
+      expect(screen.getAllByText('缓存节省').length).toBeGreaterThan(0);
       expect(screen.getByText('$0.2100')).toBeInTheDocument();
-      expect(screen.getByText('Week-over-week')).toBeInTheDocument();
+      expect(screen.getByText('周环比')).toBeInTheDocument();
       expect(screen.getByText('2026-03-22')).toBeInTheDocument();
-      expect(screen.getByText('Nightly Digest spike')).toBeInTheDocument();
-      expect(screen.getByText('Costs climbed week over week; consider tuning prompts.')).toBeInTheDocument();
+      expect(screen.getByText('Nightly Digest 用量激增')).toBeInTheDocument();
+      expect(screen.getByText('本周成本继续上升，建议检查提示词和调用策略。')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
