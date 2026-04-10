@@ -66,12 +66,19 @@ const VISION_MODEL_PATTERNS = [
   /\bgpt-4o\b/i,
   /\bgpt-5\b/i,
   /\bvision\b/i,
+  /\bgemma[-_ ]?3\b/i,
+  /\bminicpm(?:[-_ ]?v)?\b/i,
   /\bmini?max-vl\b/i,
   /\bglm-4\.?6v\b/i,
   /\bqwen.*vl\b/i,
+  /\bmoondream\b/i,
   /\bomni\b/i,
   /\bllava\b/i,
+  /\bbakllava\b/i,
   /\bpixtral\b/i,
+  /\binternvl\b/i,
+  /\bidefics\b/i,
+  /\bphi[-_ ]?3(?:\.\d+)?[-_ ]?vision\b/i,
   /\bkimi-k2\.5\b/i,
   /\bgrok\b/i,
 ];
@@ -98,6 +105,9 @@ export function hasImageAttachments(
 export function modelLooksVisionCapable(modelId?: string | null): boolean {
   const normalized = normalizeText(modelId).toLowerCase();
   if (!normalized) return false;
+  if (normalized.startsWith('ollama/')) {
+    return true;
+  }
   if (normalized.includes('deepseek-chat') || normalized.includes('deepseek-reasoner')) {
     return false;
   }
@@ -117,6 +127,9 @@ function accountHasVisionFallback(account: DispatchProviderAccountLike): boolean
   }
 
   const vendorId = normalizeText(account.vendorId).toLowerCase();
+  if (vendorId === 'ollama') {
+    return true;
+  }
   return IMAGE_TOOL_FALLBACK_VENDORS.has(vendorId);
 }
 

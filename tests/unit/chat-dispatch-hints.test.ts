@@ -55,6 +55,18 @@ describe('chat dispatch hints', () => {
     expect(availability).toBe('native');
   });
 
+  it('treats common local multimodal Ollama models as vision-capable', () => {
+    expect(resolveImageUnderstandingAvailability({
+      currentModel: 'ollama/gemma3:12b',
+      accounts: [],
+    })).toBe('native');
+
+    expect(resolveImageUnderstandingAvailability({
+      currentModel: 'ollama/minicpm-v:8b',
+      accounts: [],
+    })).toBe('native');
+  });
+
   it('reports fallback image understanding when an OpenAI account is available', () => {
     const availability = resolveImageUnderstandingAvailability({
       currentModel: 'deepseek-chat',
@@ -63,6 +75,21 @@ describe('chat dispatch hints', () => {
           enabled: true,
           vendorId: 'openai',
           model: 'gpt-5.4',
+        },
+      ],
+    });
+
+    expect(availability).toBe('fallback');
+  });
+
+  it('treats any enabled Ollama account as an image-understanding fallback', () => {
+    const availability = resolveImageUnderstandingAvailability({
+      currentModel: 'plain-local-model-name',
+      accounts: [
+        {
+          enabled: true,
+          vendorId: 'ollama',
+          model: 'qwen3:latest',
         },
       ],
     });
