@@ -22,6 +22,7 @@ const nodeTestInclude = [
   'tests/unit/task-store.test.ts',
   'tests/unit/token-usage*.test.ts',
   'tests/unit/uv-download-script.test.ts',
+  'tests/unit/channel-*.test.ts',
 ];
 
 const sharedResolve = {
