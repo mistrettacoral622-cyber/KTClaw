@@ -26,7 +26,6 @@ const mocks = vi.hoisted(() => ({
   weChatStart: vi.fn(),
   weChatStop: vi.fn(),
   weChatGetState: vi.fn(() => null),
-  sendFeishuViaPreferredPath: vi.fn(),
   bindingGet: vi.fn(),
   bindingUpsert: vi.fn(),
 }));
@@ -74,10 +73,6 @@ vi.mock('@electron/utils/wechat-login', () => ({
   },
 }));
 
-vi.mock('@electron/utils/feishu-send-path', () => ({
-  sendFeishuViaPreferredPath: mocks.sendFeishuViaPreferredPath,
-}));
-
 vi.mock('@electron/utils/openclaw-sdk', () => ({
   listDiscordDirectoryGroupsFromConfig: vi.fn(async () => []),
   listDiscordDirectoryPeersFromConfig: vi.fn(async () => []),
@@ -119,14 +114,6 @@ describe('channel sync workbench routes', () => {
       ...record,
       updatedAt: Date.now(),
     }));
-    mocks.sendFeishuViaPreferredPath.mockImplementation(async (params: {
-      runtimeSend?: () => Promise<unknown>;
-      directSend?: () => Promise<unknown>;
-    }) => {
-      if (params.runtimeSend) return params.runtimeSend();
-      if (params.directSend) return params.directSend();
-      throw new Error('No Feishu send path is available');
-    });
   });
 
   it('returns feishu-first synchronized sessions derived from configured accounts', async () => {
@@ -521,7 +508,7 @@ describe('channel sync workbench routes', () => {
     });
   });
 
-  it('prefers direct feishu send over runtime chat.send when the plugin path is available', async () => {
+  it('sends feishu workbench messages through runtime chat.send like wechat', async () => {
     const { handleChannelRoutes } = await import('@electron/api/routes/channels');
     mocks.bindingGet.mockResolvedValue({
       channelType: 'feishu',
@@ -535,13 +522,12 @@ describe('channel sync workbench routes', () => {
       text: '你好',
       conversationId: 'feishu:default:oc_bound_send',
     });
-    mocks.sendFeishuViaPreferredPath.mockResolvedValue({
-      transport: 'direct',
-      messageId: 'om_direct_1',
-      chatId: 'oc_bound_send',
-    });
-
     const gatewayRpc = vi.fn(async (method: string) => {
+      if (method === 'chat.send') {
+        return {
+          runId: 'run-feishu-1',
+        };
+      }
       if (method === 'channels.status') {
         return {
           channels: {
@@ -582,12 +568,15 @@ describe('channel sync workbench routes', () => {
     );
 
     expect(handled).toBe(true);
-    expect(mocks.sendFeishuViaPreferredPath).toHaveBeenCalledTimes(1);
-    expect(gatewayRpc).not.toHaveBeenCalledWith('chat.send', expect.anything());
+    expect(gatewayRpc).toHaveBeenCalledWith('chat.send', expect.objectContaining({
+      sessionKey: 'agent:main:feishu:group:oc_bound_send',
+      message: '你好',
+      idempotencyKey: expect.any(String),
+    }));
     expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, expect.objectContaining({
       success: true,
-      messageId: 'om_direct_1',
-      chatId: 'oc_bound_send',
+      sessionKey: 'agent:main:feishu:group:oc_bound_send',
+      runId: 'run-feishu-1',
     }));
   });
 
@@ -948,18 +937,19 @@ describe('channel sync workbench routes', () => {
     }));
   });
 
-  it('send with identity=self falls back to bot send with warning when feishu user auth unavailable', async () => {
-    mocks.sendFeishuViaPreferredPath
-      .mockRejectedValueOnce(new Error('need_user_authorization'))
-      .mockResolvedValueOnce({
-        transport: 'runtime',
-        sessionKey: 'agent:main:feishu:group:oc_test',
-        runId: 'run-fallback-1',
-      });
+  it('ignores identity switching hints and keeps feishu send on the runtime path', async () => {
     const { handleChannelRoutes } = await import('@electron/api/routes/channels');
     mocks.parseJsonBody.mockResolvedValue({ text: '你好', conversationId: 'feishu:default:oc_test', identity: 'self' });
+    mocks.bindingGet.mockResolvedValue({
+      channelType: 'feishu',
+      accountId: 'default',
+      externalConversationId: 'oc_test',
+      agentId: 'main',
+      sessionKey: 'agent:main:feishu:group:oc_test',
+      updatedAt: Date.now(),
+    });
     const gatewayRpc = vi.fn(async (method: string) => {
-      if (method === 'chat.send') return { success: true };
+      if (method === 'chat.send') return { runId: 'run-feishu-self-ignored' };
       if (method === 'channels.status') return { channels: { feishu: { configured: true, running: true } }, channelAccounts: { feishu: [{ accountId: 'default', configured: true, connected: true, name: 'R&D Bot' }] }, defaultAgentId: 'main', channelOwners: { feishu: 'main' } };
       throw new Error(`Unexpected: ${method}`);
     });
@@ -980,13 +970,15 @@ describe('channel sync workbench routes', () => {
     );
 
     expect(handled).toBe(true);
+    expect(gatewayRpc).toHaveBeenCalledWith('chat.send', expect.objectContaining({
+      sessionKey: 'agent:main:feishu:group:oc_test',
+      message: '你好',
+      idempotencyKey: expect.any(String),
+    }));
     expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, expect.objectContaining({
       success: true,
-      requestedIdentity: 'self',
-      effectiveIdentity: 'bot',
-      warning: expect.any(String),
       sessionKey: 'agent:main:feishu:group:oc_test',
-      runId: 'run-fallback-1',
+      runId: 'run-feishu-self-ignored',
     }));
   });
   it('renames a workbench conversation by persisting displayTitle metadata', async () => {

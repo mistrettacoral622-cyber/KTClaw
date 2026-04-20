@@ -48,6 +48,28 @@ describe('process instance file lock', () => {
     }
   });
 
+  it('replaces stale lock owner when the pid was reused by another executable', () => {
+    const userDataDir = createTempDir();
+    try {
+      const lockPath = join(userDataDir, 'ktclaw.instance.lock');
+      writeFileSync(lockPath, '4321', 'utf8');
+
+      const lock = acquireProcessInstanceFileLock({
+        userDataDir,
+        lockName: 'ktclaw',
+        pid: 5678,
+        isPidAlive: () => true,
+        readProcessExecutablePath: () => 'C:\\Windows\\System32\\svchost.exe',
+        currentProcessExecutablePath: 'C:\\Users\\me\\AppData\\Local\\Programs\\ktclaw\\electron.exe',
+      });
+
+      expect(lock.acquired).toBe(true);
+      lock.release();
+    } finally {
+      rmSync(userDataDir, { recursive: true, force: true });
+    }
+  });
+
   it('force mode removes existing lock before acquisition', () => {
     const userDataDir = createTempDir();
     try {

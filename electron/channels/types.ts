@@ -37,6 +37,8 @@ export interface SendResult {
   messageId: string;
   chatId?: string;
   conversationId?: string;
+  sessionKey?: string;
+  runId?: string;
 }
 
 export interface OutboundSendParams {

@@ -50,6 +50,7 @@ import { syncAllProviderAuthToRuntime } from '../services/providers/provider-run
 import { McpRuntimeManager } from '../services/mcp/runtime-manager';
 import { SessionRuntimeManager, type RuntimeSessionRecord } from '../services/session-runtime-manager';
 import { loadMcpConfig } from '../api/routes/mcp';
+import { resolveWindowChromeOptions } from './window-chrome';
 
 // Disable GPU hardware acceleration globally for maximum stability across
 // all GPU configurations (no GPU, integrated, discrete).
@@ -169,8 +170,7 @@ function getAppIcon(): Electron.NativeImage | undefined {
  */
 function createWindow(): BrowserWindow {
   const isMac = process.platform === 'darwin';
-  const isWindows = process.platform === 'win32';
-  const useCustomTitleBar = isWindows;
+  const chrome = resolveWindowChromeOptions(process.platform, process.env);
 
   const win = new BrowserWindow({
     width: 1280,
@@ -198,10 +198,15 @@ function createWindow(): BrowserWindow {
     // On Linux: default (native window frame — required for Kylin V11 / cx4 GPU
     //   compatibility; frame:false triggers a frameless compositing path that
     //   the Jingjia Micro cx4 driver cannot render, causing a white screen)
-    titleBarStyle: isMac ? 'hiddenInset' : useCustomTitleBar ? 'hidden' : 'default',
+    titleBarStyle: chrome.titleBarStyle,
     trafficLightPosition: isMac ? { x: 16, y: 16 } : undefined,
-    frame: isMac || !useCustomTitleBar,
+    frame: chrome.frame,
+    autoHideMenuBar: chrome.autoHideMenuBar,
   });
+
+  if (process.platform === 'linux' && chrome.useCustomTitleBar) {
+    win.setMenuBarVisibility(false);
+  }
 
   // Handle external links
   win.webContents.setWindowOpenHandler(({ url }) => {

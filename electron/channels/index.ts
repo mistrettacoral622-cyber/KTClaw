@@ -42,3 +42,29 @@ export { ConnectionHealthMonitor } from './shared/health';
 export type { HealthMonitorOptions } from './shared/health';
 
 export { chunkMarkdownText, chunkPlainText } from './shared/chunker';
+
+// Feishu
+export { feishuChannel, FeishuChannelConfigSchema, createFeishuOutboundAdapter } from './feishu';
+export type {
+  FeishuChannelConfig,
+  CreateFeishuOutboundAdapterOptions,
+  FeishuOutboundTransport,
+} from './feishu';
+
+// WeChat
+export {
+  wechatChannel,
+  WeChatChannelConfigSchema,
+  createWeChatChannel,
+  createWeChatOutboundAdapter,
+  buildWeChatRuntime,
+  createWeChatRuntime,
+} from './wechat';
+export type {
+  WeChatChannelConfig,
+  CreateWeChatChannelOptions,
+  CreateWeChatOutboundAdapterOptions,
+  WeChatOutboundTransport,
+  BuildWeChatRuntimeOptions,
+  WeChatRuntime,
+} from './wechat';

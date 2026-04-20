@@ -69,4 +69,23 @@ describe('wechat plugin compatibility shim', () => {
     expect(patched).toContain("const docs = formatDocsLink('/channels/feishu', 'feishu');");
     expect(patched).toContain('return DEFAULT_ACCOUNT_ID;');
   });
+
+  it('forces per-account-channel-peer dmScope in feishu inbound route resolution', () => {
+    const source = [
+      'const route = core.channel.routing.resolveAgentRoute({',
+      '        cfg: accountScopedCfg,',
+      "        channel: 'feishu',",
+      '        accountId: account.accountId,',
+      '        peer: {',
+      "            kind: isGroup ? 'group' : 'direct',",
+      '            id: isGroup ? ctx.chatId : ctx.senderId,',
+      '        },',
+      '    });',
+    ].join('\n');
+
+    const patched = patchFeishuPluginCompatibilitySource(source);
+
+    expect(patched).toContain('dmScope: "per-account-channel-peer"');
+    expect(patched).toContain("kind: isGroup ? 'group' : 'direct'");
+  });
 });

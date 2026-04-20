@@ -202,10 +202,32 @@ function fixEsmExtensions(dir) {
   }
 }
 
+function patchFeishuInboundDmScope(dir) {
+  if (!fs.existsSync(dir)) return;
+  const target = path.join(dir, 'messaging', 'inbound', 'dispatch-context.js');
+  if (!fs.existsSync(target)) return;
+
+  const original = fs.readFileSync(target, 'utf-8');
+  const routePeerBlock = [
+    '        peer: {',
+    "            kind: isGroup ? 'group' : 'direct',",
+    '            id: isGroup ? ctx.chatId : ctx.senderId,',
+    '        },',
+  ].join('\n');
+  const patchedPeerBlock = `${routePeerBlock}\n        dmScope: "per-account-channel-peer",`;
+
+  if (original.includes('dmScope: "per-account-channel-peer"') || !original.includes(routePeerBlock)) {
+    return;
+  }
+
+  fs.writeFileSync(target, original.replace(routePeerBlock, patchedPeerBlock), 'utf-8');
+}
+
 const feishuBuildDir = path.join(OUTPUT_ROOT, 'feishu-openclaw-plugin', 'src');
 if (fs.existsSync(feishuBuildDir)) {
   echo`🔧 Patching bare ESM specifiers in feishu-openclaw-plugin...`;
   fixEsmExtensions(feishuBuildDir);
+  patchFeishuInboundDmScope(feishuBuildDir);
   echo`   ✅ ESM specifiers patched`;
 }
 

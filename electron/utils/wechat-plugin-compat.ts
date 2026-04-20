@@ -51,6 +51,20 @@ const FEISHU_MONITOR_STATIC_IMPORT_JS = "import { monitorFeishuProvider } from '
 const FEISHU_MONITOR_STATIC_IMPORT_TS = "import { monitorFeishuProvider } from './monitor';";
 const FEISHU_MONITOR_DYNAMIC_IMPORT_JS = "const { monitorFeishuProvider } = await import('./monitor.js');";
 const FEISHU_MONITOR_DYNAMIC_IMPORT_TS = "const { monitorFeishuProvider } = await import('./monitor');";
+const FEISHU_ROUTE_PEER_BLOCK_JS = [
+  '        peer: {',
+  "            kind: isGroup ? 'group' : 'direct',",
+  '            id: isGroup ? ctx.chatId : ctx.senderId,',
+  '        },',
+].join('\n');
+const FEISHU_ROUTE_PEER_BLOCK_TS = [
+  '        peer: {',
+  "            kind: isGroup ? 'group' : 'direct',",
+  '            id: isGroup ? ctx.chatId : ctx.senderId,',
+  '        },',
+].join('\n');
+const FEISHU_ROUTE_PEER_BLOCK_WITH_DM_SCOPE_JS = `${FEISHU_ROUTE_PEER_BLOCK_JS}\n        dmScope: "per-account-channel-peer",`;
+const FEISHU_ROUTE_PEER_BLOCK_WITH_DM_SCOPE_TS = `${FEISHU_ROUTE_PEER_BLOCK_TS}\n        dmScope: "per-account-channel-peer",`;
 
 function getImportedLocalName(specifier: string): string {
   const trimmed = specifier.trim().replace(/^type\s+/, '');
@@ -132,6 +146,14 @@ export function patchFeishuPluginCompatibilitySource(source: string): string {
     next = next.replace(FEISHU_MONITOR_DYNAMIC_IMPORT_TS, '');
   }
 
+  if (next.includes(FEISHU_ROUTE_PEER_BLOCK_JS) && !next.includes('dmScope: "per-account-channel-peer"')) {
+    next = next.replace(FEISHU_ROUTE_PEER_BLOCK_JS, FEISHU_ROUTE_PEER_BLOCK_WITH_DM_SCOPE_JS);
+  }
+
+  if (next.includes(FEISHU_ROUTE_PEER_BLOCK_TS) && !next.includes('dmScope: "per-account-channel-peer"')) {
+    next = next.replace(FEISHU_ROUTE_PEER_BLOCK_TS, FEISHU_ROUTE_PEER_BLOCK_WITH_DM_SCOPE_TS);
+  }
+
   return next;
 }
 
@@ -145,6 +167,8 @@ export function patchInstalledFeishuPluginCompatibility(pluginRoot: string): boo
     join(pluginRoot, 'src', 'channel', 'plugin.ts'),
     join(pluginRoot, 'src', 'channel', 'onboarding.js'),
     join(pluginRoot, 'src', 'channel', 'onboarding.ts'),
+    join(pluginRoot, 'src', 'messaging', 'inbound', 'dispatch-context.js'),
+    join(pluginRoot, 'src', 'messaging', 'inbound', 'dispatch-context.ts'),
   ];
 
   let patched = false;
