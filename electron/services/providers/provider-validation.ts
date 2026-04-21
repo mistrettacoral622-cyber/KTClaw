@@ -45,6 +45,11 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
   return next;
 }
 
+function extractApiErrorMessage(status: number, data: unknown): string {
+  const obj = data as { error?: { message?: string }; message?: string } | null;
+  return obj?.error?.message || obj?.message || `API error: ${status}`;
+}
+
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
 }
@@ -141,11 +146,8 @@ function classifyAuthResponse(
 ): { valid: boolean; error?: string } {
   if (status >= 200 && status < 300) return { valid: true };
   if (status === 429) return { valid: true };
-  if (status === 401 || status === 403) return { valid: false, error: 'Invalid API key' };
-
-  const obj = data as { error?: { message?: string }; message?: string } | null;
-  const msg = obj?.error?.message || obj?.message || `API error: ${status}`;
-  return { valid: false, error: msg };
+  if (status === 401) return { valid: false, error: 'Invalid API key' };
+  return { valid: false, error: extractApiErrorMessage(status, data) };
 }
 
 async function validateOpenAiCompatibleKey(
@@ -153,6 +155,7 @@ async function validateOpenAiCompatibleKey(
   apiKey: string,
   apiProtocol: 'openai-completions' | 'openai-responses',
   baseUrl?: string,
+  probeModel?: string,
 ): Promise<ValidationResult> {
   const trimmedBaseUrl = baseUrl?.trim();
   if (!trimmedBaseUrl) {
@@ -168,9 +171,9 @@ async function validateOpenAiCompatibleKey(
       `[ktclaw-validate] ${providerType} /models returned 404, falling back to ${apiProtocol} probe`,
     );
     if (apiProtocol === 'openai-responses') {
-      return await performResponsesProbe(providerType, probeUrl, headers);
+      return await performResponsesProbe(providerType, probeUrl, headers, probeModel);
     }
-    return await performChatCompletionsProbe(providerType, probeUrl, headers);
+    return await performChatCompletionsProbe(providerType, probeUrl, headers, probeModel);
   }
 
   return modelsResult;
@@ -180,6 +183,7 @@ async function performResponsesProbe(
   providerLabel: string,
   url: string,
   headers: Record<string, string>,
+  model?: string,
 ): Promise<ValidationResult> {
   try {
     logValidationRequest(providerLabel, 'POST', url, headers);
@@ -187,14 +191,14 @@ async function performResponsesProbe(
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'validation-probe',
+        model: model || 'validation-probe',
         input: 'hi',
       }),
     });
     logValidationStatus(providerLabel, response.status);
     const data = await response.json().catch(() => ({}));
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       return { valid: false, error: 'Invalid API key' };
     }
     if (
@@ -203,6 +207,9 @@ async function performResponsesProbe(
       response.status === 429
     ) {
       return { valid: true };
+    }
+    if (response.status === 403) {
+      return { valid: false, error: extractApiErrorMessage(response.status, data) };
     }
     return classifyAuthResponse(response.status, data);
   } catch (error) {
@@ -217,6 +224,7 @@ async function performChatCompletionsProbe(
   providerLabel: string,
   url: string,
   headers: Record<string, string>,
+  model?: string,
 ): Promise<ValidationResult> {
   try {
     logValidationRequest(providerLabel, 'POST', url, headers);
@@ -224,7 +232,7 @@ async function performChatCompletionsProbe(
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'validation-probe',
+        model: model || 'validation-probe',
         messages: [{ role: 'user', content: 'hi' }],
         max_tokens: 1,
       }),
@@ -232,7 +240,7 @@ async function performChatCompletionsProbe(
     logValidationStatus(providerLabel, response.status);
     const data = await response.json().catch(() => ({}));
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       return { valid: false, error: 'Invalid API key' };
     }
     if (
@@ -241,6 +249,9 @@ async function performChatCompletionsProbe(
       response.status === 429
     ) {
       return { valid: true };
+    }
+    if (response.status === 403) {
+      return { valid: false, error: extractApiErrorMessage(response.status, data) };
     }
     return classifyAuthResponse(response.status, data);
   } catch (error) {
@@ -343,10 +354,11 @@ async function validateOpenRouterKey(
 export async function validateApiKeyWithProvider(
   providerType: string,
   apiKey: string,
-  options?: { baseUrl?: string; apiProtocol?: string },
+  options?: { baseUrl?: string; apiProtocol?: string; model?: string },
 ): Promise<ValidationResult> {
   const profile = getValidationProfile(providerType, options);
   const resolvedBaseUrl = options?.baseUrl || getProviderConfig(providerType)?.baseUrl;
+  const resolvedModel = options?.model?.trim() || undefined;
 
   if (profile === 'none') {
     return { valid: true };
@@ -365,6 +377,7 @@ export async function validateApiKeyWithProvider(
           trimmedKey,
           'openai-completions',
           resolvedBaseUrl,
+          resolvedModel,
         );
       case 'openai-responses':
         return await validateOpenAiCompatibleKey(
@@ -372,6 +385,7 @@ export async function validateApiKeyWithProvider(
           trimmedKey,
           'openai-responses',
           resolvedBaseUrl,
+          resolvedModel,
         );
       case 'google-query-key':
         return await validateGoogleQueryKey(providerType, trimmedKey, resolvedBaseUrl);

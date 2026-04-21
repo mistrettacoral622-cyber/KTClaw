@@ -449,7 +449,7 @@ describe('channel target routes', () => {
     );
   });
 
-  it('lists Telegram targets from directory providers', async () => {
+  it('returns no directory targets for retired Telegram channel support', async () => {
     sdkMocks.listTelegramDirectoryPeersFromConfig.mockResolvedValueOnce([
       { kind: 'user', id: 'telegram:user:alice', name: 'Alice Telegram' },
     ]);
@@ -479,15 +479,13 @@ describe('channel target routes', () => {
       expect.objectContaining({
         success: true,
         channelType: 'telegram',
-        targets: expect.arrayContaining([
-          expect.objectContaining({ value: 'telegram:user:alice', kind: 'user' }),
-          expect.objectContaining({ value: 'telegram:group:ops', kind: 'group' }),
-        ]),
+        accountId: 'default',
+        targets: [],
       }),
     );
   });
 
-  it('lists Discord targets from directory providers', async () => {
+  it('returns no directory targets for retired Discord channel support', async () => {
     sdkMocks.listDiscordDirectoryPeersFromConfig.mockResolvedValueOnce([
       { kind: 'user', id: 'discord:user:alice', name: 'Alice Discord' },
     ]);
@@ -517,10 +515,8 @@ describe('channel target routes', () => {
       expect.objectContaining({
         success: true,
         channelType: 'discord',
-        targets: expect.arrayContaining([
-          expect.objectContaining({ value: 'discord:user:alice', kind: 'user' }),
-          expect.objectContaining({ value: 'discord:channel:ops', kind: 'channel' }),
-        ]),
+        accountId: 'default',
+        targets: [],
       }),
     );
   });

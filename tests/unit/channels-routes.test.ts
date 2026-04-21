@@ -607,7 +607,7 @@ describe('channels routes', () => {
     });
   });
 
-  it('rejects WhatsApp login start for unknown scoped account ids', async () => {
+  it('does not expose the retired WhatsApp login start route', async () => {
     const { handleChannelRoutes } = await import('@electron/api/routes/channels');
     mocks.parseJsonBody.mockResolvedValue({ accountId: 'ghost-agent' });
 
@@ -625,15 +625,12 @@ describe('channels routes', () => {
       } as never,
     );
 
-    expect(handled).toBe(true);
+    expect(handled).toBe(false);
     expect(mocks.whatsAppStart).not.toHaveBeenCalled();
-    expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 404, {
-      success: false,
-      error: 'Scoped channel account not found',
-    });
+    expect(mocks.sendJson).not.toHaveBeenCalledWith(expect.anything(), 404, expect.anything());
   });
 
-  it('allows known scoped account ids for config save and whatsapp login', async () => {
+  it('allows known scoped account ids for config save without reviving retired WhatsApp login', async () => {
     const { handleChannelRoutes } = await import('@electron/api/routes/channels');
     const ctx = {
       gatewayManager: {
@@ -667,7 +664,7 @@ describe('channels routes', () => {
       ctx,
     );
 
-    expect(handled).toBe(true);
-    expect(mocks.whatsAppStart).toHaveBeenCalledWith('agent-a');
+    expect(handled).toBe(false);
+    expect(mocks.whatsAppStart).not.toHaveBeenCalled();
   });
 });

@@ -195,7 +195,7 @@ The wizard preselects your system language when it is supported, and falls back 
 
 ### Proxy Settings
 
-KTClaw includes built-in proxy settings for environments where Electron, the OpenClaw Gateway, or channels such as Telegram need to reach the internet through a local proxy client.
+KTClaw includes built-in proxy settings for environments where Electron or the OpenClaw Gateway need to reach the internet through a local proxy client.
 
 Open **Settings → Gateway → Proxy** and configure:
 
@@ -216,7 +216,7 @@ Notes:
 - A bare `host:port` value is treated as HTTP.
 - If advanced proxy fields are left empty, KTClaw falls back to `Proxy Server`.
 - Saving proxy settings reapplies Electron networking immediately and restarts the Gateway automatically.
-- KTClaw also syncs the proxy to OpenClaw's Telegram channel config when Telegram is enabled.
+- KTClaw no longer syncs proxy settings into retired hidden channel configs.
 - In **Settings → Advanced → Developer**, you can run **OpenClaw Doctor** to execute `openclaw doctor --json` and inspect the diagnostic output without leaving the app.
 
 ---

@@ -21,9 +21,9 @@ describe('ChannelIcon', () => {
     }
   });
 
-  it('falls back to emoji rendering for channels without a dedicated asset', () => {
-    render(<ChannelIcon type="telegram" />);
+  it('falls back to emoji rendering for unsupported channels without a dedicated asset', () => {
+    render(<ChannelIcon type={'telegram' as never} />);
 
-    expect(screen.getByRole('img', { name: 'Telegram' })).toHaveTextContent('✈️');
+    expect(screen.getByRole('img', { name: 'telegram' })).toBeInTheDocument();
   });
 });

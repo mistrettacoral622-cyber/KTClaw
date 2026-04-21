@@ -1,7 +1,7 @@
 ﻿appId: app.ktclaw.desktop
 productName: KTClaw
 copyright: Copyright 漏 2026 KTClaw
-compression: maximum
+compression: normal
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 directories:

@@ -1004,6 +1004,7 @@ function ProviderContent({
           apiKey,
           {
             baseUrl: baseUrl.trim() || undefined,
+            model: modelId.trim() || undefined,
             apiProtocol: (selectedProvider === 'custom' || selectedProvider === 'ollama')
               ? apiProtocol
               : undefined,

@@ -7,7 +7,7 @@ import { GatewayManager, GatewayStatus } from './manager';
 /**
  * Channel types supported by OpenClaw
  */
-export type ChannelType = 'whatsapp' | 'dingtalk' | 'telegram' | 'discord' | 'wechat';
+export type ChannelType = 'dingtalk' | 'feishu' | 'wecom' | 'qqbot' | 'wechat';
 
 /**
  * Channel status
@@ -154,7 +154,7 @@ export class GatewayClient {
   }
 
   /**
-   * Get QR code for channel connection (e.g., WhatsApp)
+   * Get QR code for QR-based channel connection.
    */
   async getChannelQRCode(channelType: ChannelType): Promise<string> {
     return this.manager.rpc<string>('channels.getQRCode', { channelType });

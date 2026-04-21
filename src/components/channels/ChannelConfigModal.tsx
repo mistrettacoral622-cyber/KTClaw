@@ -37,9 +37,6 @@ import {
 import { buildQrChannelEventName, usesPluginManagedQrAccounts } from '@/lib/channel-alias';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import telegramIcon from '@/assets/channels/telegram.svg';
-import discordIcon from '@/assets/channels/discord.svg';
-import whatsappIcon from '@/assets/channels/whatsapp.svg';
 import dingtalkIcon from '@/assets/channels/dingtalk.svg';
 import feishuIcon from '@/assets/channels/feishu.svg';
 import wecomIcon from '@/assets/channels/wecom.svg';
@@ -283,21 +280,11 @@ export function ChannelConfigModal({
       const data = args[0] as { accountId?: string } | undefined;
       void data?.accountId;
       toast.success(translateRef.current('toast.qrConnected', { name: CHANNEL_NAMES[channelType] }));
+      try {
+        await persistAgentBinding(channelType, resolvedAccountId || 'default');
         try {
-          if (channelType === 'whatsapp') {
-            const saveResult = await hostApiFetch<{ success?: boolean; error?: string }>('/api/channels/config', {
-              method: 'POST',
-              body: JSON.stringify({ channelType: 'whatsapp', config: { enabled: true }, accountId: resolvedAccountId }),
-          });
-          if (!saveResult?.success) {
-            throw new Error(saveResult?.error || 'Failed to save WhatsApp config');
-            }
-          }
-
-          await persistAgentBinding(channelType, resolvedAccountId || 'default');
-          try {
-            await finishSaveRef.current(channelType);
-          } catch (postSaveError) {
+          await finishSaveRef.current(channelType);
+        } catch (postSaveError) {
           toast.warning(translateRef.current('toast.savedButRefreshFailed'));
           console.warn('Channel saved but post-save refresh failed:', postSaveError);
         }
@@ -816,12 +803,6 @@ interface ConfigFieldProps {
 
 function ChannelLogo({ type }: { type: ChannelType }) {
   switch (type) {
-    case 'telegram':
-      return <img src={telegramIcon} alt="Telegram" className="w-[22px] h-[22px] dark:invert" />;
-    case 'discord':
-      return <img src={discordIcon} alt="Discord" className="w-[22px] h-[22px] dark:invert" />;
-    case 'whatsapp':
-      return <img src={whatsappIcon} alt="WhatsApp" className="w-[22px] h-[22px] dark:invert" />;
     case 'dingtalk':
       return <img src={dingtalkIcon} alt="DingTalk" className="w-[22px] h-[22px] dark:invert" />;
     case 'feishu':

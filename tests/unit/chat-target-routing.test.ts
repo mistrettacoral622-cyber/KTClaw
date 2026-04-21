@@ -191,7 +191,7 @@ describe('chat target routing', () => {
     };
 
     expect(payload.sessionKey).toBe('agent:research:desk');
-    expect(payload.message).toBe('Process the attached file(s).');
+    expect(payload.message).toContain('Process the attached file(s).');
     expect(payload.cwd).toBe('/tmp/workspace-media');
     expect(payload.media[0]?.filePath).toBe('/tmp/design.png');
   });

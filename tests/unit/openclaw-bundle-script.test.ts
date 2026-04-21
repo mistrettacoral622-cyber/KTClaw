@@ -4,11 +4,6 @@ import { getBundleRootPackages } from '../../scripts/bundle-openclaw-lib.mjs';
 
 describe('bundle openclaw script', () => {
   it('includes explicit runtime packages that KTClaw resolves from the OpenClaw context', () => {
-    expect(getBundleRootPackages()).toEqual(
-      expect.arrayContaining([
-        'openclaw',
-        '@whiskeysockets/baileys',
-      ]),
-    );
+    expect(getBundleRootPackages()).toEqual(['openclaw']);
   });
 });

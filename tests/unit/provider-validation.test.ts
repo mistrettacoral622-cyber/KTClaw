@@ -121,6 +121,76 @@ describe('validateApiKeyWithProvider', () => {
     );
   });
 
+  it('uses the provided model when probing custom chat completions fallback', async () => {
+    proxyAwareFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: 'Not Found' } }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          id: 'chatcmpl-test',
+          choices: [{ index: 0, message: { role: 'assistant', content: 'ok' } }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const { validateApiKeyWithProvider } = await import('@electron/services/providers/provider-validation');
+    const result = await validateApiKeyWithProvider('custom', 'sk-chat-test', {
+      baseUrl: 'https://chat.example.com/v1',
+      apiProtocol: 'openai-completions',
+      model: 'kt_qwen',
+    });
+
+    expect(result).toMatchObject({ valid: true });
+    expect(proxyAwareFetch).toHaveBeenNthCalledWith(
+      2,
+      'https://chat.example.com/v1/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'kt_qwen',
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 1,
+        }),
+      })
+    );
+  });
+
+  it('surfaces model access errors from chat completions probes instead of reporting invalid api keys', async () => {
+    proxyAwareFetch
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: 'Not Found' } }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          error: { message: 'Token cannot access model kt_qwen' },
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const { validateApiKeyWithProvider } = await import('@electron/services/providers/provider-validation');
+    const result = await validateApiKeyWithProvider('custom', 'sk-chat-test', {
+      baseUrl: 'https://chat.example.com/v1',
+      apiProtocol: 'openai-completions',
+      model: 'kt_qwen',
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: 'Token cannot access model kt_qwen',
+    });
+  });
+
   it('does not duplicate endpoint suffix when baseUrl already points to /responses', async () => {
     proxyAwareFetch
       .mockResolvedValueOnce(

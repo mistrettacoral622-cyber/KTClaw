@@ -327,8 +327,8 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
           }
           if (request.action === 'validateKey') {
             const payload = request.payload as
-              | { providerId?: string; apiKey?: string; options?: { baseUrl?: string; apiProtocol?: string } }
-              | [string, string, { baseUrl?: string; apiProtocol?: string }?]
+              | { providerId?: string; apiKey?: string; options?: { baseUrl?: string; apiProtocol?: string; model?: string } }
+              | [string, string, { baseUrl?: string; apiProtocol?: string; model?: string }?]
               | undefined;
             const providerId = Array.isArray(payload) ? payload[0] : payload?.providerId;
             const apiKey = Array.isArray(payload) ? payload[1] : payload?.apiKey;
@@ -342,9 +342,11 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
             const registryBaseUrl = getProviderConfig(providerType)?.baseUrl;
             const resolvedBaseUrl = options?.baseUrl || provider?.baseUrl || registryBaseUrl;
             const resolvedProtocol = options?.apiProtocol || provider?.apiProtocol;
+            const resolvedModel = options?.model || provider?.model;
             data = await validateApiKeyWithProvider(providerType, apiKey, {
               baseUrl: resolvedBaseUrl,
               apiProtocol: resolvedProtocol,
+              model: resolvedModel,
             });
             break;
           }
@@ -2080,7 +2082,7 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
       _,
       providerId: string,
       apiKey: string,
-      options?: { baseUrl?: string; apiProtocol?: string }
+      options?: { baseUrl?: string; apiProtocol?: string; model?: string }
     ) => {
       logLegacyProviderChannel('provider:validateKey');
       try {
@@ -2095,11 +2097,13 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
         // This ensures Setup/Settings validation reflects unsaved edits immediately.
         const resolvedBaseUrl = options?.baseUrl || provider?.baseUrl || registryBaseUrl;
         const resolvedProtocol = options?.apiProtocol || provider?.apiProtocol;
+        const resolvedModel = options?.model || provider?.model;
 
         logger.info('[ktclaw-validate] validating provider type', { providerType });
         return await validateApiKeyWithProvider(providerType, apiKey, {
           baseUrl: resolvedBaseUrl,
           apiProtocol: resolvedProtocol,
+          model: resolvedModel,
         });
       } catch (error) {
         logger.error('Validation error', { scope: 'provider.validate' }, error);

@@ -21,7 +21,6 @@ import {
   resolveSelectedChannel,
 } from '@/pages/Channels/channel-selection';
 import {
-  CHANNEL_ICONS,
   CHANNEL_NAMES,
   getPrimaryChannels,
   type ChannelRuntimeCapability,
@@ -44,16 +43,6 @@ const CHANNEL_FAMILY_UI: Record<ChannelType, { railLabel: string; panelTitle: st
   dingtalk: { railLabel: '钉钉接入', panelTitle: '钉钉配置详情', icon: '💙' },
   wecom: { railLabel: '企微接入', panelTitle: '企微配置详情', icon: '🍀' },
   qqbot: { railLabel: 'QQ接入', panelTitle: 'QQ配置详情', icon: '🐧' },
-  whatsapp: { railLabel: 'WhatsApp', panelTitle: 'WhatsApp', icon: CHANNEL_ICONS.whatsapp },
-  telegram: { railLabel: 'Telegram', panelTitle: 'Telegram', icon: CHANNEL_ICONS.telegram },
-  discord: { railLabel: 'Discord', panelTitle: 'Discord', icon: CHANNEL_ICONS.discord },
-  signal: { railLabel: 'Signal', panelTitle: 'Signal', icon: CHANNEL_ICONS.signal },
-  imessage: { railLabel: 'iMessage', panelTitle: 'iMessage', icon: CHANNEL_ICONS.imessage },
-  matrix: { railLabel: 'Matrix', panelTitle: 'Matrix', icon: CHANNEL_ICONS.matrix },
-  line: { railLabel: 'LINE', panelTitle: 'LINE', icon: CHANNEL_ICONS.line },
-  msteams: { railLabel: 'Microsoft Teams', panelTitle: 'Microsoft Teams', icon: CHANNEL_ICONS.msteams },
-  googlechat: { railLabel: 'Google Chat', panelTitle: 'Google Chat', icon: CHANNEL_ICONS.googlechat },
-  mattermost: { railLabel: 'Mattermost', panelTitle: 'Mattermost', icon: CHANNEL_ICONS.mattermost },
   wechat: { railLabel: '微信接入', panelTitle: '微信配置详情', icon: '💬' },
 };
 

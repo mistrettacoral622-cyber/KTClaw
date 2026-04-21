@@ -29,7 +29,6 @@ import {
   listConfiguredAgentIds,
 } from '../../utils/agent-config';
 import { logger } from '../../utils/logger';
-import { whatsAppLoginManager } from '../../utils/whatsapp-login';
 import { createChannelConversationBindingStore, type ChannelConversationBindingRecord } from '../../services/channel-conversation-bindings';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
@@ -38,15 +37,6 @@ import { OPENCLAW_WECHAT_CHANNEL_TYPE, toOpenClawChannelType, toUiChannelType } 
 import { proxyAwareFetch } from '../../utils/proxy-fetch';
 import { createFeishuChannel, createFeishuRuntimeTransport } from '../../channels/feishu';
 import { createWeChatChannel, createWeChatRuntimeTransport } from '../../channels/wechat';
-import {
-  listDiscordDirectoryGroupsFromConfig,
-  listDiscordDirectoryPeersFromConfig,
-  normalizeDiscordMessagingTarget,
-  listTelegramDirectoryGroupsFromConfig,
-  listTelegramDirectoryPeersFromConfig,
-  normalizeTelegramMessagingTarget,
-  normalizeWhatsAppMessagingTarget,
-} from '../../utils/openclaw-sdk';
 
 const CHANNEL_RATE_LIMITS = {
   test: { max: 2, windowMs: 30_000 },
@@ -91,7 +81,7 @@ function scheduleGatewayChannelRestart(ctx: HostApiContext, reason: string): voi
 
 // Keep reload-first for feishu to avoid restart storms when channel auth/network is flaky.
 // GatewayManager.reload() already falls back to restart when reload is unhealthy.
-const FORCE_RESTART_CHANNELS = new Set(['dingtalk', 'wecom', 'whatsapp']);
+const FORCE_RESTART_CHANNELS = new Set(['dingtalk', 'wecom']);
 
 function scheduleGatewayChannelSaveRefresh(
   ctx: HostApiContext,
@@ -403,7 +393,7 @@ const CHANNEL_SCHEMA_SUMMARY_HINTS: Record<string, { required: string[]; optiona
   qqbot: { required: ['appId', 'clientSecret'], optional: [], sensitive: ['clientSecret'] },
 };
 
-const CREDENTIAL_VALIDATION_CHANNELS = new Set(['discord', 'telegram']);
+const CREDENTIAL_VALIDATION_CHANNELS = new Set<string>();
 
 function summarizeSchema(channelType: string): NormalizedChannelCapability['configSchemaSummary'] {
   const hint = CHANNEL_SCHEMA_SUMMARY_HINTS[channelType];
@@ -2065,44 +2055,6 @@ function buildDirectoryTargetOptions(
   return results;
 }
 
-async function listConfigDirectoryTargetOptions(params: {
-  channelType: 'discord' | 'telegram' | 'whatsapp';
-  accountId?: string;
-  query?: string;
-}): Promise<ChannelTargetOptionView[]> {
-  const cfg = await readOpenClawConfig();
-  const commonParams = {
-    cfg,
-    accountId: params.accountId ?? null,
-    query: params.query ?? null,
-    limit: 100,
-  };
-
-  if (params.channelType === 'discord') {
-    const [users, groups] = await Promise.all([
-      listDiscordDirectoryPeersFromConfig(commonParams),
-      listDiscordDirectoryGroupsFromConfig(commonParams),
-    ]);
-    return buildDirectoryTargetOptions(
-      [...users, ...groups] as DirectoryEntry[],
-      normalizeDiscordMessagingTarget,
-    );
-  }
-
-  if (params.channelType === 'telegram') {
-    const [users, groups] = await Promise.all([
-      listTelegramDirectoryPeersFromConfig(commonParams),
-      listTelegramDirectoryGroupsFromConfig(commonParams),
-    ]);
-    return buildDirectoryTargetOptions(
-      [...users, ...groups] as DirectoryEntry[],
-      normalizeTelegramMessagingTarget,
-    );
-  }
-
-  return buildDirectoryTargetOptions([], normalizeWhatsAppMessagingTarget);
-}
-
 async function listQQBotKnownTargetOptions(accountId?: string, query?: string): Promise<ChannelTargetOptionView[]> {
   const knownUsersPath = join(getOpenClawConfigDir(), 'qqbot', 'data', 'known-users.json');
   const raw = await readFile(knownUsersPath, 'utf8').catch(() => '');
@@ -2237,17 +2189,6 @@ async function listChannelTargetOptions(params: {
   }
   if (storedChannelType === OPENCLAW_WECHAT_CHANNEL_TYPE) {
     return await listWeChatTargetOptions(params.accountId, params.query);
-  }
-  if (
-    storedChannelType === 'discord'
-    || storedChannelType === 'telegram'
-    || storedChannelType === 'whatsapp'
-  ) {
-    return await listConfigDirectoryTargetOptions({
-      channelType: storedChannelType,
-      accountId: params.accountId,
-      query: params.query,
-    });
   }
   return [];
 }
@@ -2946,21 +2887,6 @@ export async function handleChannelRoutes(
       sendJson(res, 200, { success: true, ...(await validateChannelCredentials(body.channelType, body.config)) });
     } catch (error) {
       sendJson(res, 500, { success: false, valid: false, errors: [String(error)], warnings: [] });
-    }
-    return true;
-  }
-
-  if (url.pathname === '/api/channels/whatsapp/start' && req.method === 'POST') {
-    try {
-      const body = await parseJsonBody<{ accountId: string }>(req);
-      if (!(await ensureKnownScopedAccountId(body.accountId))) {
-        sendJson(res, 404, { success: false, error: 'Scoped channel account not found' });
-        return true;
-      }
-      await whatsAppLoginManager.start(body.accountId);
-      sendJson(res, 200, { success: true });
-    } catch (error) {
-      sendJson(res, 500, { success: false, error: String(error) });
     }
     return true;
   }
