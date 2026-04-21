@@ -33,7 +33,6 @@ import {
 } from '../utils/channel-config';
 import { checkUvInstalled, installUv, setupManagedPython } from '../utils/uv-setup';
 import { updateSkillConfig, getSkillConfig, getAllSkillConfigs } from '../utils/skill-config';
-import { whatsAppLoginManager } from '../utils/whatsapp-login';
 import { getProviderConfig } from '../utils/provider-registry';
 import { deviceOAuthManager, OAuthProviderType } from '../utils/device-oauth';
 import { browserOAuthManager, type BrowserOAuthProviderType } from '../utils/browser-oauth';
@@ -76,6 +75,24 @@ type AppResponse = {
     details?: unknown;
   };
 };
+
+type WhatsAppLoginManagerShape = {
+  start: (accountId?: string) => Promise<void>;
+  stop: () => Promise<void>;
+  on: (event: 'qr' | 'success' | 'error', listener: (payload: unknown) => void) => void;
+};
+
+let cachedWhatsAppLoginManager: WhatsAppLoginManagerShape | null = null;
+let whatsappEventBridgeRegistered = false;
+
+async function getWhatsAppLoginManager(): Promise<WhatsAppLoginManagerShape> {
+  if (cachedWhatsAppLoginManager) {
+    return cachedWhatsAppLoginManager;
+  }
+  const mod = await import('../utils/whatsapp-login');
+  cachedWhatsAppLoginManager = mod.whatsAppLoginManager;
+  return cachedWhatsAppLoginManager;
+}
 
 /**
  * Register all IPC handlers
@@ -1267,11 +1284,6 @@ function registerGatewayHandlers(
           const exists = await fsP.access(m.filePath).then(() => true, () => false);
           logger.info(`[chat:sendWithMedia] Processing file: ${m.fileName} (${m.mimeType}), path: ${m.filePath}, exists: ${exists}, isVision: ${VISION_MIME_TYPES.has(m.mimeType)}`);
 
-          // Always add file path reference so the model can access it via tools
-          fileReferences.push(
-            `[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`,
-          );
-
           if (VISION_MIME_TYPES.has(m.mimeType)) {
             // Send as base64 attachment in the format the Gateway expects:
             // { content: base64String, mimeType: string, fileName?: string }
@@ -1284,6 +1296,10 @@ function registerGatewayHandlers(
               mimeType: m.mimeType,
               fileName: m.fileName,
             });
+          } else {
+            fileReferences.push(
+              `[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`,
+            );
           }
         }
       }
@@ -1729,6 +1745,7 @@ function registerWhatsAppHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('channel:requestWhatsAppQr', async (_, accountId: string) => {
     try {
       logger.info('channel:requestWhatsAppQr', { accountId });
+      const whatsAppLoginManager = await getWhatsAppLoginManager();
       await whatsAppLoginManager.start(accountId);
       return { success: true };
     } catch (error) {
@@ -1740,6 +1757,7 @@ function registerWhatsAppHandlers(mainWindow: BrowserWindow): void {
   // Cancel WhatsApp login
   ipcMain.handle('channel:cancelWhatsAppQr', async () => {
     try {
+      const whatsAppLoginManager = await getWhatsAppLoginManager();
       await whatsAppLoginManager.stop();
       return { success: true };
     } catch (error) {
@@ -1752,25 +1770,33 @@ function registerWhatsAppHandlers(mainWindow: BrowserWindow): void {
   // ipcMain.handle('channel:checkWhatsAppStatus', ...)
 
   // Forward events to renderer
-  whatsAppLoginManager.on('qr', (data) => {
-    if (!mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('channel:whatsapp-qr', data);
-    }
-  });
+  if (!whatsappEventBridgeRegistered) {
+    whatsappEventBridgeRegistered = true;
+    void getWhatsAppLoginManager().then((whatsAppLoginManager) => {
+      whatsAppLoginManager.on('qr', (data) => {
+        if (!mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('channel:whatsapp-qr', data);
+        }
+      });
 
-  whatsAppLoginManager.on('success', (data) => {
-    if (!mainWindow.isDestroyed()) {
-      logger.info('whatsapp:login-success', data);
-      mainWindow.webContents.send('channel:whatsapp-success', data);
-    }
-  });
+      whatsAppLoginManager.on('success', (data) => {
+        if (!mainWindow.isDestroyed()) {
+          logger.info('whatsapp:login-success', data);
+          mainWindow.webContents.send('channel:whatsapp-success', data);
+        }
+      });
 
-  whatsAppLoginManager.on('error', (error) => {
-    if (!mainWindow.isDestroyed()) {
-      logger.error('whatsapp:login-error', error);
-      mainWindow.webContents.send('channel:whatsapp-error', error);
-    }
-  });
+      whatsAppLoginManager.on('error', (error) => {
+        if (!mainWindow.isDestroyed()) {
+          logger.error('whatsapp:login-error', error);
+          mainWindow.webContents.send('channel:whatsapp-error', error);
+        }
+      });
+    }).catch((error) => {
+      whatsappEventBridgeRegistered = false;
+      logger.warn('WhatsApp login manager unavailable; skipping IPC event bridge', error);
+    });
+  }
 }
 
 /**

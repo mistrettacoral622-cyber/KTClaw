@@ -99,7 +99,6 @@ export async function handleGatewayRoutes(
         }
         const fsP = await import('node:fs/promises');
         for (const m of body.media) {
-          fileReferences.push(`[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`);
           if (VISION_MIME_TYPES.has(m.mimeType)) {
             const fileBuffer = await fsP.readFile(m.filePath);
             imageAttachments.push({
@@ -107,6 +106,8 @@ export async function handleGatewayRoutes(
               mimeType: m.mimeType,
               fileName: m.fileName,
             });
+          } else {
+            fileReferences.push(`[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`);
           }
         }
       }

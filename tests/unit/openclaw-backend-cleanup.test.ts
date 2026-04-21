@@ -31,4 +31,12 @@ describe('backend cleanup guards', () => {
     expect(source).not.toContain('rawMessages.length < 0');
     expect(source).not.toContain('no_substantial_content');
   });
+
+  it('does not statically import the WhatsApp login manager into startup-critical main-process modules', () => {
+    const mainEntry = readRepoFile('electron/main/index.ts');
+    const ipcHandlers = readRepoFile('electron/main/ipc-handlers.ts');
+
+    expect(mainEntry).not.toContain("from '../utils/whatsapp-login'");
+    expect(ipcHandlers).not.toContain("from '../utils/whatsapp-login'");
+  });
 });

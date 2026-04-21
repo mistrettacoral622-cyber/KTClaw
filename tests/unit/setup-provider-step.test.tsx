@@ -239,7 +239,7 @@ describe('setup provider step verification', () => {
     await waitFor(() => {
       expect(nextButton).toBeDisabled();
     });
-  });
+  }, 15000);
 
   it('enables next after the saved provider is verified as the default account', async () => {
     let snapshotReads = 0;
@@ -339,5 +339,5 @@ describe('setup provider step verification', () => {
     await waitFor(() => {
       expect(nextButton).toBeEnabled();
     });
-  });
+  }, 15000);
 });

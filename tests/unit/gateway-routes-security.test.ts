@@ -11,6 +11,7 @@ const listAgentsSnapshotMock = vi.fn();
 const expandPathMock = vi.fn((p: string) => p.replace('~', homedir()));
 const writeFileMock = vi.fn();
 const readdirMock = vi.fn();
+const readFileMock = vi.fn();
 
 vi.mock('@electron/utils/store', () => ({
   getSetting: (...args: unknown[]) => getSettingMock(...args),
@@ -34,7 +35,7 @@ vi.mock('../../utils/paths', () => ({
 }));
 
 vi.mock('node:fs/promises', () => ({
-  readFile: vi.fn(),
+  readFile: (...args: unknown[]) => readFileMock(...args),
   writeFile: (...args: unknown[]) => writeFileMock(...args),
   readdir: (...args: unknown[]) => readdirMock(...args),
 }));
@@ -43,6 +44,7 @@ describe('gateway routes security', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     getSettingMock.mockResolvedValue('secret-token');
+    readFileMock.mockResolvedValue(Buffer.from('image-bytes'));
     listAgentsSnapshotMock.mockResolvedValue({
       agents: [
         { id: 'main', mainSessionKey: 'agent:main:main', chatAccess: 'direct', workspace: '~/.openclaw/workspace' },
@@ -159,6 +161,43 @@ describe('gateway routes security', () => {
       error: 'LEADER_ONLY_DIRECT_CHAT_BLOCKED',
       sessionKey: 'agent:research:main',
     });
+  });
+
+  it('does not append local path references for image attachments in send-with-media', async () => {
+    const { handleGatewayRoutes } = await import('@electron/api/routes/gateway');
+    const rpcMock = vi.fn(async () => ({ runId: 'run-image' }));
+    const imagePath = join(homedir(), '.openclaw', 'media', 'outbound', 'vision.png');
+    parseJsonBodyMock.mockResolvedValue({
+      sessionKey: 'session-1',
+      message: 'Describe this image',
+      idempotencyKey: 'idem-image',
+      media: [
+        {
+          filePath: imagePath,
+          mimeType: 'image/png',
+          fileName: 'vision.png',
+        },
+      ],
+    });
+    readdirMock.mockResolvedValue([]);
+
+    const handled = await handleGatewayRoutes(
+      { method: 'POST' } as IncomingMessage,
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/chat/send-with-media'),
+      {
+        gatewayManager: {
+          rpc: rpcMock,
+        },
+      } as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(rpcMock).toHaveBeenCalled();
+    const [, rpcParams] = rpcMock.mock.calls[0] as [string, { message: string; attachments?: unknown[] }];
+    expect(rpcParams.attachments?.length).toBe(1);
+    expect(rpcParams.message).not.toContain(imagePath);
+    expect(rpcParams.message).toContain('Describe this image');
   });
 
   it('PUT /api/agents/:id/workspace/AGENTS.md writes file when content provided', async () => {

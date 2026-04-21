@@ -23,6 +23,29 @@ import {
   markAsRead as markAsReadInStorage,
 } from '@/lib/session-unread';
 
+function hasImageAttachments(
+  attachments?: Array<{ mimeType: string }> | null,
+): boolean {
+  return (attachments ?? []).some((attachment) => attachment.mimeType.startsWith('image/'));
+}
+
+function isImageUnderstandingErrorMessage(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return normalized.includes('image')
+    || normalized.includes('vision')
+    || normalized.includes('multimodal')
+    || normalized.includes('image_url')
+    || normalized.includes('content[1]')
+    || normalized.includes('content type');
+}
+
+function normalizeSendErrorMessage(message: string, hasImages: boolean): string {
+  if (hasImages && isImageUnderstandingErrorMessage(message)) {
+    return '该模型暂时不能识别图片哦。';
+  }
+  return message;
+}
+
 // ── Types ────────────────────────────────────────────────────────
 
 /** Metadata for locally-attached files (not from Gateway) */
@@ -1878,13 +1901,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       if (!result.success) {
         clearHistoryPoll();
-        set({ error: result.error || 'Failed to send message', sending: false });
+        set({
+          error: normalizeSendErrorMessage(result.error || 'Failed to send message', hasImageAttachments(attachments)),
+          sending: false,
+        });
       } else if (result.result?.runId) {
         set({ activeRunId: result.result.runId });
       }
     } catch (err) {
       clearHistoryPoll();
-      set({ error: err instanceof Error ? err.message : String(err), sending: false });
+      const message = err instanceof Error ? err.message : String(err);
+      set({ error: normalizeSendErrorMessage(message, hasImageAttachments(attachments)), sending: false });
       throw err;
     }
   },

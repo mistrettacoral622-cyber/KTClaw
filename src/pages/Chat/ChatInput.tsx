@@ -33,10 +33,6 @@ import {
   isLeaderOnlyAgent,
   resolveReportingLeader,
 } from '@/lib/team-chat-access';
-import {
-  hasImageAttachments,
-  resolveImageUnderstandingAvailability,
-} from '../../../shared/chat-dispatch-hints';
 import { getChatInputSlashMatches, isSlashCommandPrefixInput, parseChatInputSlashCommand } from './slash-commands';
 
 const CHAT_REQUEST_FILE_UPLOAD_EVENT = 'chat:request-file-upload';
@@ -174,14 +170,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     void refreshProviderSnapshot();
   }, [providerAccounts.length, providerVendors.length, refreshProviderSnapshot]);
 
-  const imageUnderstandingAvailability = useMemo(
-    () => resolveImageUnderstandingAvailability({
-      currentModel: currentAgent?.model || currentModelDisplay,
-      defaultModel,
-      accounts: providerAccounts,
-    }),
-    [currentAgent?.model, currentModelDisplay, defaultModel, providerAccounts],
-  );
   const selectedTarget = useMemo(
     () => agents.find((agent) => agent.id === targetAgentId) ?? null,
     [agents, targetAgentId],
@@ -589,11 +577,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     // but keep attachments available for the async send
     const textToSend = composerDraft.trim();
     const attachmentsToSend = readyAttachments.length > 0 ? readyAttachments : undefined;
-    if (attachmentsToSend && hasImageAttachments(attachmentsToSend) && imageUnderstandingAvailability === 'missing') {
-      toast.info(
-        'Image attachments were added, but no vision-capable model or image-analysis fallback is configured. KTClaw will send the files, but reliable image understanding is not available until you configure a provider such as OpenAI, Anthropic, Google, or another vision-capable model.',
-      );
-    }
     setComposerDraft('');
     setAttachments([]);
     if (textareaRef.current) {
@@ -608,7 +591,6 @@ export function ChatInput({ onSend, onStop, disabled = false, sending = false, i
     canSend,
     composerDraft,
     executeLocalSlashCommand,
-    imageUnderstandingAvailability,
     onSend,
     setComposerDraft,
     targetAgentId,

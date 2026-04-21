@@ -45,7 +45,6 @@ import { startHostApiServer } from '../api/server';
 import { HostEventBus } from '../api/event-bus';
 import { deviceOAuthManager } from '../utils/device-oauth';
 import { browserOAuthManager } from '../utils/browser-oauth';
-import { whatsAppLoginManager } from '../utils/whatsapp-login';
 import { syncAllProviderAuthToRuntime } from '../services/providers/provider-runtime-sync';
 import { McpRuntimeManager } from '../services/mcp/runtime-manager';
 import { SessionRuntimeManager, type RuntimeSessionRecord } from '../services/session-runtime-manager';
@@ -137,6 +136,19 @@ const quitLifecycleState = createQuitLifecycleState();
 let _minimizeToTray = true;
 let _suppressInitialShow = false;
 let _notificationsEnabled = true;
+
+async function loadWhatsAppLoginManager(): Promise<{
+  whatsAppLoginManager: {
+    on: (event: 'qr' | 'success' | 'error', listener: (payload: unknown) => void) => void;
+  };
+} | null> {
+  try {
+    return await import('../utils/whatsapp-login');
+  } catch (error) {
+    logger.warn('WhatsApp login manager unavailable; skipping startup event bridge', error);
+    return null;
+  }
+}
 
 /**
  * Resolve the icons directory path (works in both dev and packaged mode)
@@ -540,17 +552,20 @@ async function initialize(): Promise<void> {
     hostEventBus.emit('oauth:error', error);
   });
 
-  whatsAppLoginManager.on('qr', (data) => {
-    hostEventBus.emit('channel:whatsapp-qr', data);
-  });
+  const whatsappModule = await loadWhatsAppLoginManager();
+  if (whatsappModule) {
+    whatsappModule.whatsAppLoginManager.on('qr', (data) => {
+      hostEventBus.emit('channel:whatsapp-qr', data);
+    });
 
-  whatsAppLoginManager.on('success', (data) => {
-    hostEventBus.emit('channel:whatsapp-success', data);
-  });
+    whatsappModule.whatsAppLoginManager.on('success', (data) => {
+      hostEventBus.emit('channel:whatsapp-success', data);
+    });
 
-  whatsAppLoginManager.on('error', (error) => {
-    hostEventBus.emit('channel:whatsapp-error', error);
-  });
+    whatsappModule.whatsAppLoginManager.on('error', (error) => {
+      hostEventBus.emit('channel:whatsapp-error', error);
+    });
+  }
 
   // Start Gateway automatically (this seeds missing bootstrap files with full templates)
   const gatewayAutoStart = await getSetting('gatewayAutoStart');

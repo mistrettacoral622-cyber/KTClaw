@@ -192,8 +192,56 @@ describe('chat target routing', () => {
 
     expect(payload.sessionKey).toBe('agent:research:desk');
     expect(payload.message).toContain('Process the attached file(s).');
+    expect(payload.message).not.toContain('/tmp/design.png');
     expect(payload.cwd).toBe('/tmp/workspace-media');
     expect(payload.media[0]?.filePath).toBe('/tmp/design.png');
+  });
+
+  it('maps image capability failures to a friendly Chinese message', async () => {
+    const { useChatStore } = await import('@/stores/chat');
+
+    hostApiFetchMock.mockResolvedValueOnce({
+      success: false,
+      error: 'This model does not support image_url inputs',
+    });
+
+    useChatStore.setState({
+      currentSessionKey: 'agent:main:main',
+      currentAgentId: 'main',
+      sessions: [{ key: 'agent:main:main' }],
+      messages: [],
+      sessionLabels: {},
+      sessionLastActivity: {},
+      sending: false,
+      activeRunId: null,
+      streamingText: '',
+      streamingMessage: null,
+      streamingTools: [],
+      pendingFinal: false,
+      lastUserMessageAt: null,
+      pendingToolImages: [],
+      error: null,
+      loading: false,
+      thinkingLevel: null,
+      showThinking: true,
+    });
+
+    await useChatStore.getState().sendMessage(
+      '',
+      [
+        {
+          fileName: 'design.png',
+          mimeType: 'image/png',
+          fileSize: 128,
+          stagedPath: '/tmp/design.png',
+          preview: 'data:image/png;base64,abc',
+        },
+      ],
+      'research',
+      '/tmp/workspace-media',
+    );
+
+    expect(useChatStore.getState().error).toBe('该模型暂时不能识别图片哦。');
   });
 
   it('rejects leader-only workers as direct target agents before switching sessions', async () => {
