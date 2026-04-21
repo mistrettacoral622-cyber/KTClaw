@@ -20,8 +20,8 @@ describe('chat dispatch hints', () => {
     ]);
 
     expect(augmented).toContain('[KTCLAW_DISPATCH_HINTS]');
-    expect(augmented).toContain('Image attachments are present');
-    expect(augmented).toContain('use the best available local image-analysis tool or skill');
+    expect(augmented).toContain('Use the current attached image content directly');
+    expect(augmented).toContain('Do not search the workspace for unrelated older images');
   });
 
   it('removes hidden dispatch hints from stored user text for display', () => {

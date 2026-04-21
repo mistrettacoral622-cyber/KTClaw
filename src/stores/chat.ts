@@ -6,7 +6,10 @@
 import { create } from 'zustand';
 import { hostApiFetch } from '@/lib/host-api';
 import type { TaskLatestInternalExcerpt } from '@/types/task';
-import { appendDispatchHints } from '../../shared/chat-dispatch-hints';
+import {
+  appendDispatchHints,
+  resolveImageUnderstandingAvailability,
+} from '../../shared/chat-dispatch-hints';
 import {
   buildLeaderOnlyBlockedMessage,
   findAgentBySessionKey,
@@ -16,6 +19,8 @@ import {
 } from '@/lib/team-chat-access';
 import { useGatewayStore } from './gateway';
 import { useAgentsStore } from './agents';
+import { useProviderStore } from './providers';
+import { useSettingsStore } from './settings';
 import { buildCronSessionHistoryPath, isCronSessionKey } from './chat/cron-session-utils';
 import {
   getUnreadCounts,
@@ -47,6 +52,27 @@ function normalizeSendErrorMessage(message: string, hasImages: boolean): string 
 }
 
 // ── Types ────────────────────────────────────────────────────────
+
+function resolvePreferredProviderModelRef(): string | undefined {
+  const { accounts, vendors, defaultAccountId } = useProviderStore.getState();
+  const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor]));
+  const preferredAccount =
+    (defaultAccountId ? accounts.find((account) => account.id === defaultAccountId) : undefined)
+    || accounts.find((account) => account.isDefault)
+    || accounts[0];
+
+  if (!preferredAccount) {
+    return undefined;
+  }
+
+  const vendor = vendorMap.get(preferredAccount.vendorId);
+  const modelId = preferredAccount.model || vendor?.defaultModelId;
+  if (!modelId) {
+    return undefined;
+  }
+
+  return `${preferredAccount.vendorId}/${modelId}`;
+}
 
 /** Metadata for locally-attached files (not from Gateway) */
 export interface AttachedFileMeta {
@@ -1784,6 +1810,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Mark this session as most recently active
     set((s) => ({ sessionLastActivity: { ...s.sessionLastActivity, [currentSessionKey]: nowMs } }));
+
+    const imageAvailability = hasImageAttachments(attachments)
+      ? resolveImageUnderstandingAvailability({
+          currentModel: resolvePreferredProviderModelRef(),
+          defaultModel: useSettingsStore.getState().defaultModel,
+          accounts: useProviderStore.getState().accounts,
+        })
+      : 'native';
+
+    if (hasImageAttachments(attachments) && imageAvailability === 'missing') {
+      const unsupportedImageMsg: RawMessage = {
+        role: 'assistant',
+        content: '该模型暂时不能识别图片哦。',
+        timestamp: nowMs / 1000,
+        id: crypto.randomUUID(),
+      };
+
+      set((s) => ({
+        messages: [...s.messages, unsupportedImageMsg],
+        sending: false,
+        activeRunId: null,
+        streamingText: '',
+        streamingMessage: null,
+        streamingTools: [],
+        pendingFinal: false,
+        lastUserMessageAt: null,
+        pendingToolImages: [],
+        error: null,
+      }));
+      return;
+    }
 
     // Start the history poll and safety timeout IMMEDIATELY (before the
     // RPC await) because the gateway's chat.send RPC may block until the

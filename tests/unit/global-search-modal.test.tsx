@@ -102,4 +102,20 @@ describe('GlobalSearchModal', () => {
     expect(onSelectSession).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
   });
+
+  it('includes dark-theme aware classes on the search dialog shell', () => {
+    render(
+      <GlobalSearchModal
+        onOpenChange={vi.fn()}
+        sessions={[]}
+        agents={[]}
+        onSelectSession={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Global search' });
+    expect(dialog.className).toContain('dark:bg-card');
+    expect(dialog.className).toContain('dark:border-white/10');
+  });
 });

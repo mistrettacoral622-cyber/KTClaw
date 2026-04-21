@@ -195,4 +195,15 @@ describe('Settings shell integration', () => {
     renderSettingsAt(_section);
     await assertPanel();
   });
+
+  it('includes dark-theme aware classes on the settings shell', async () => {
+    renderSettingsAt('general');
+
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    expect(nav.className).toContain('dark:bg-card/60');
+    expect(nav.className).toContain('dark:border-white/10');
+
+    const main = document.querySelector('main');
+    expect(main?.className).toContain('dark:bg-background');
+  });
 });

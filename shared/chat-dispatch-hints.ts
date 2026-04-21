@@ -178,8 +178,8 @@ function buildDispatchHints(
   }
 
   if (needsImageHints) {
-    hints.push('Image attachments are present. Inspect the attached image content before answering.');
-    hints.push('If your current model cannot read images natively, use the best available local image-analysis tool or skill on the attached file paths before replying.');
+    hints.push('Image attachments are present. Use the current attached image content directly before answering.');
+    hints.push('Do not search the workspace for unrelated older images unless the user explicitly asks for that.');
   }
 
   return hints;

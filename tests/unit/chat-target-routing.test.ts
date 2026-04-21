@@ -1,10 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { gatewayRpcMock, hostApiFetchMock, agentsState } = vi.hoisted(() => ({
+const { gatewayRpcMock, hostApiFetchMock, agentsState, settingsState, providerStoreState } = vi.hoisted(() => ({
   gatewayRpcMock: vi.fn(),
   hostApiFetchMock: vi.fn(),
   agentsState: {
     agents: [] as Array<Record<string, unknown>>,
+  },
+  settingsState: {
+    defaultModel: 'claude-sonnet-4-6',
+  },
+  providerStoreState: {
+    accounts: [] as Array<Record<string, unknown>>,
+    vendors: [] as Array<Record<string, unknown>>,
+    defaultAccountId: null as string | null,
   },
 }));
 
@@ -19,6 +27,18 @@ vi.mock('@/stores/gateway', () => ({
 vi.mock('@/stores/agents', () => ({
   useAgentsStore: {
     getState: () => agentsState,
+  },
+}));
+
+vi.mock('@/stores/settings', () => ({
+  useSettingsStore: {
+    getState: () => settingsState,
+  },
+}));
+
+vi.mock('@/stores/providers', () => ({
+  useProviderStore: {
+    getState: () => providerStoreState,
   },
 }));
 
@@ -61,6 +81,10 @@ describe('chat target routing', () => {
         reportsTo: 'main',
       },
     ];
+    settingsState.defaultModel = 'claude-sonnet-4-6';
+    providerStoreState.accounts = [];
+    providerStoreState.vendors = [];
+    providerStoreState.defaultAccountId = null;
 
     gatewayRpcMock.mockReset();
     gatewayRpcMock.mockImplementation(async (method: string) => {
@@ -282,5 +306,55 @@ describe('chat target routing', () => {
       'chat.send',
       expect.objectContaining({ sessionKey: 'agent:research:desk' }),
     );
+  });
+
+  it('short-circuits image sends for text-only models with a friendly assistant reply', async () => {
+    const { useChatStore } = await import('@/stores/chat');
+    settingsState.defaultModel = 'qwen3.5-0.8b';
+
+    useChatStore.setState({
+      currentSessionKey: 'agent:main:main',
+      currentAgentId: 'main',
+      sessions: [{ key: 'agent:main:main' }],
+      messages: [],
+      sessionLabels: {},
+      sessionLastActivity: {},
+      sending: false,
+      activeRunId: null,
+      streamingText: '',
+      streamingMessage: null,
+      streamingTools: [],
+      pendingFinal: false,
+      lastUserMessageAt: null,
+      pendingToolImages: [],
+      error: null,
+      loading: false,
+      thinkingLevel: null,
+      showThinking: true,
+    });
+
+    await useChatStore.getState().sendMessage(
+      '',
+      [
+        {
+          fileName: 'design.png',
+          mimeType: 'image/png',
+          fileSize: 128,
+          stagedPath: '/tmp/design.png',
+          preview: 'data:image/png;base64,abc',
+        },
+      ],
+      'research',
+      '/tmp/workspace-media',
+    );
+
+    expect(hostApiFetchMock).not.toHaveBeenCalled();
+    const state = useChatStore.getState();
+    expect(state.sending).toBe(false);
+    expect(state.error).toBeNull();
+    expect(state.messages.at(-1)).toMatchObject({
+      role: 'assistant',
+      content: '该模型暂时不能识别图片哦。',
+    });
   });
 });

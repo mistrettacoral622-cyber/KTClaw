@@ -1284,6 +1284,9 @@ function registerGatewayHandlers(
           const exists = await fsP.access(m.filePath).then(() => true, () => false);
           logger.info(`[chat:sendWithMedia] Processing file: ${m.fileName} (${m.mimeType}), path: ${m.filePath}, exists: ${exists}, isVision: ${VISION_MIME_TYPES.has(m.mimeType)}`);
 
+          const mediaReference =
+            `[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`;
+
           if (VISION_MIME_TYPES.has(m.mimeType)) {
             // Send as base64 attachment in the format the Gateway expects:
             // { content: base64String, mimeType: string, fileName?: string }
@@ -1296,11 +1299,12 @@ function registerGatewayHandlers(
               mimeType: m.mimeType,
               fileName: m.fileName,
             });
-          } else {
-            fileReferences.push(
-              `[media attached: ${m.filePath} (${m.mimeType}) | ${m.filePath}]`,
-            );
           }
+
+          // Keep an explicit staged path in the message text for every upload.
+          // If the model/runtime ignores inline attachments, fallback tools can
+          // still inspect the exact current file instead of scanning old workspace images.
+          fileReferences.push(mediaReference);
         }
       }
 

@@ -124,4 +124,18 @@ describe('SettingsGeneralPanel', () => {
       );
     });
   });
+
+  it('includes dark-theme aware classes for cards and theme buttons', async () => {
+    render(<SettingsGeneralPanel />);
+    await screen.findByText('Researcher');
+
+    const sections = document.querySelectorAll('section');
+    expect(sections[0]?.className).toContain('dark:bg-card');
+    expect(sections[0]?.className).toContain('dark:border-border');
+
+    const darkThemeButton = document.querySelector('button[title="深色模式"]') as HTMLButtonElement | null;
+    expect(darkThemeButton).not.toBeNull();
+    expect(darkThemeButton.className).toContain('dark:border-white/10');
+    expect(darkThemeButton.className).toContain('ring-offset-background');
+  });
 });

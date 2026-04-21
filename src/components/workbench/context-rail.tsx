@@ -75,14 +75,14 @@ export function ContextRail() {
 
   if (rightPanelMode === 'files') {
     return (
-      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-card/60">
         <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
-          <span className="text-[14px] font-semibold text-[#000000]">会话文件</span>
+          <span className="text-[14px] font-semibold text-[#000000] dark:text-foreground">会话文件</span>
           <button
             type="button"
             aria-label="关闭文件面板"
             onClick={() => setRightPanelMode(null)}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000] dark:text-muted-foreground dark:hover:bg-white/10 dark:hover:text-foreground"
           >
             ✕
           </button>
@@ -90,11 +90,11 @@ export function ContextRail() {
         {sessionFiles.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 text-center">
             <span className="text-[40px]">📂</span>
-            <p className="text-[13px] text-[#8e8e93]">当前会话暂无文件</p>
+            <p className="text-[13px] text-[#8e8e93] dark:text-muted-foreground">当前会话暂无文件</p>
           </div>
         ) : (
           <div className="flex flex-col gap-0 px-4 py-3">
-            <p className="mb-2 text-[12px] text-[#8e8e93]">{sessionFiles.length} 个文件</p>
+            <p className="mb-2 text-[12px] text-[#8e8e93] dark:text-muted-foreground">{sessionFiles.length} 个文件</p>
             {sessionFiles.map((f, i) => (
               <FileRow key={f.filePath ?? f.fileName ?? i} file={f} />
             ))}
@@ -147,45 +147,45 @@ export function ContextRail() {
     };
 
     return (
-      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+      <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-card/60">
         <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
-          <span className="text-[14px] font-semibold text-[#000000]">会话详情</span>
+          <span className="text-[14px] font-semibold text-[#000000] dark:text-foreground">会话详情</span>
           <button
             type="button"
             aria-label="关闭会话详情面板"
             onClick={() => setRightPanelMode(null)}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000] dark:text-muted-foreground dark:hover:bg-white/10 dark:hover:text-foreground"
           >
             ✕
           </button>
         </header>
 
         <div className="px-5 py-5">
-          <div className="rounded-2xl border border-black/[0.06] bg-[#fafafc] p-4">
+          <div className="rounded-2xl border border-black/[0.06] bg-[#fafafc] p-4 dark:border-white/10 dark:bg-background/70">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-[16px] font-semibold text-[#000000]">{currentSessionLabel}</p>
-                <p className="mt-1 text-[12px] text-[#8e8e93]">{currentAgent?.name ?? 'KTClaw'}</p>
+                <p className="truncate text-[16px] font-semibold text-[#000000] dark:text-foreground">{currentSessionLabel}</p>
+                <p className="mt-1 text-[12px] text-[#8e8e93] dark:text-muted-foreground">{currentAgent?.name ?? 'KTClaw'}</p>
               </div>
               {isPinnedSession ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-white px-2 py-1 text-[11px] text-[#3c3c43]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-white px-2 py-1 text-[11px] text-[#3c3c43] dark:border-white/10 dark:bg-white/8 dark:text-foreground/85">
                   <Pin className="h-3 w-3" />
                   已置顶
                 </span>
               ) : null}
             </div>
 
-            <div className="space-y-2 text-[12px] text-[#3c3c43]">
+            <div className="space-y-2 text-[12px] text-[#3c3c43] dark:text-foreground/85">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[#8e8e93]">会话 Key</span>
+                <span className="text-[#8e8e93] dark:text-muted-foreground">会话 Key</span>
                 <span className="max-w-[180px] truncate font-mono">{currentSessionKey}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[#8e8e93]">消息数</span>
+                <span className="text-[#8e8e93] dark:text-muted-foreground">消息数</span>
                 <span>{messages.length}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[#8e8e93]">最后活跃</span>
+                <span className="text-[#8e8e93] dark:text-muted-foreground">最后活跃</span>
                 <span className="inline-flex items-center gap-1">
                   <Clock3 className="h-3 w-3" />
                   {formatSessionActivity(currentSessionActivity)}
@@ -199,26 +199,26 @@ export function ContextRail() {
               type="button"
               onClick={handleNewSession}
               aria-label="新建会话"
-              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7] dark:border-white/10 dark:bg-background dark:text-foreground dark:hover:bg-white/8"
             >
               <span className="inline-flex items-center gap-2">
                 <Plus className="h-4 w-4" />
                 新建会话
               </span>
-              <span className="text-[11px] text-[#8e8e93]">开始新上下文</span>
+              <span className="text-[11px] text-[#8e8e93] dark:text-muted-foreground">开始新上下文</span>
             </button>
 
             <button
               type="button"
               onClick={() => void handleExportSession()}
               aria-label="导出 Markdown"
-              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+              className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7] dark:border-white/10 dark:bg-background dark:text-foreground dark:hover:bg-white/8"
             >
               <span className="inline-flex items-center gap-2">
                 <Download className="h-4 w-4" />
                 导出 Markdown
               </span>
-              <span className="text-[11px] text-[#8e8e93]">当前会话</span>
+              <span className="text-[11px] text-[#8e8e93] dark:text-muted-foreground">当前会话</span>
             </button>
 
             {!isMainSession ? (
@@ -226,16 +226,16 @@ export function ContextRail() {
                 type="button"
                 onClick={() => toggleSessionPinned(currentSessionKey)}
                 aria-label={isPinnedSession ? '取消置顶会话' : '置顶会话'}
-                className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7]"
+                className="flex w-full items-center justify-between rounded-xl border border-black/[0.08] bg-white px-3 py-3 text-left text-[13px] font-medium text-[#000000] transition-colors hover:bg-[#f2f2f7] dark:border-white/10 dark:bg-background dark:text-foreground dark:hover:bg-white/8"
               >
                 <span className="inline-flex items-center gap-2">
                   <Pin className="h-4 w-4" />
                   {isPinnedSession ? '取消置顶会话' : '置顶会话'}
                 </span>
-                <span className="text-[11px] text-[#8e8e93]">同步侧边栏排序</span>
+                <span className="text-[11px] text-[#8e8e93] dark:text-muted-foreground">同步侧边栏排序</span>
               </button>
             ) : (
-              <div className="rounded-xl border border-dashed border-black/[0.08] px-3 py-3 text-[12px] text-[#8e8e93]">
+              <div className="rounded-xl border border-dashed border-black/[0.08] px-3 py-3 text-[12px] text-[#8e8e93] dark:border-white/10 dark:text-muted-foreground">
                 主会话会跟随分身固定存在，因此不提供置顶或删除。
               </div>
             )}
@@ -261,15 +261,15 @@ export function ContextRail() {
   }
 
   return (
-    <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-background">
+    <aside className="flex h-full w-[320px] shrink-0 flex-col overflow-y-auto border-l border-black/[0.06] bg-white dark:border-white/10 dark:bg-card/60">
       {/* Header */}
       <header className="flex h-[52px] shrink-0 items-center justify-between border-b border-black/[0.06] px-5">
-        <span className="text-[14px] font-semibold text-[#000000]">Agent 检查器</span>
+        <span className="text-[14px] font-semibold text-[#000000] dark:text-foreground">Agent 检查器</span>
         <button
           type="button"
           aria-label="关闭 Agent 检查器"
           onClick={() => setRightPanelMode(null)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000]"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[#8e8e93] transition-colors hover:bg-[#f2f2f7] hover:text-[#000000] dark:text-muted-foreground dark:hover:bg-white/10 dark:hover:text-foreground"
         >
           ✕
         </button>
@@ -280,8 +280,8 @@ export function ContextRail() {
         <div className="mb-3 flex h-[80px] w-[80px] items-center justify-center rounded-full bg-clawx-ac text-[32px] text-white shadow-[0_4px_16px_rgba(0,122,255,0.25)]">
           ✦
         </div>
-        <p className="text-[16px] font-semibold text-[#000000]">{currentAgent?.name ?? 'KTClaw 主脑'}</p>
-        <p className="mt-0.5 text-[13px] text-[#8e8e93]">{currentAgent?.id ?? 'AI coworker'}</p>
+        <p className="text-[16px] font-semibold text-[#000000] dark:text-foreground">{currentAgent?.name ?? 'KTClaw 主脑'}</p>
+        <p className="mt-0.5 text-[13px] text-[#8e8e93] dark:text-muted-foreground">{currentAgent?.id ?? 'AI coworker'}</p>
       </div>
 
       {/* Accordions */}

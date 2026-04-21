@@ -229,4 +229,44 @@ describe('app:request security', () => {
       filePath,
     });
   });
+
+  it('includes staged image references in the Gateway message text for image fallback inspection', async () => {
+    const handler = handlers.get('chat:sendWithMedia');
+    expect(handler).toBeDefined();
+
+    const filePath = join(homedir(), '.openclaw', 'media', 'outbound', 'current-upload.png');
+    gatewayManager.rpc.mockResolvedValueOnce({ runId: 'run-image' });
+
+    const response = await handler?.({}, {
+      sessionKey: 'session-1',
+      message: 'Process the attached file(s).',
+      idempotencyKey: 'idem-image',
+      media: [
+        {
+          filePath,
+          mimeType: 'image/png',
+          fileName: 'current-upload.png',
+        },
+      ],
+    });
+
+    expect(response).toEqual({
+      success: true,
+      result: { runId: 'run-image' },
+    });
+    expect(gatewayManager.rpc).toHaveBeenCalledWith(
+      'chat.send',
+      expect.objectContaining({
+        sessionKey: 'session-1',
+        attachments: [
+          expect.objectContaining({
+            mimeType: 'image/png',
+            fileName: 'current-upload.png',
+          }),
+        ],
+        message: expect.stringContaining(`[media attached: ${filePath} (image/png) | ${filePath}]`),
+      }),
+      120000,
+    );
+  });
 });

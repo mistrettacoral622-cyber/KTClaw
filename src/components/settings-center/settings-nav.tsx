@@ -13,13 +13,13 @@ export function SettingsNav({ groups, activeItemId, onChange }: SettingsNavProps
   return (
     <nav
       aria-label="Settings sections"
-      className="w-full max-w-[220px] shrink-0 border-r border-[#c6c6c8] bg-[#fcfcfc] px-3 py-7"
+      className="w-full max-w-[220px] shrink-0 border-r border-[#c6c6c8] bg-[#fcfcfc] px-3 py-7 dark:border-white/10 dark:bg-card/60"
     >
       <div className="flex flex-col gap-5">
         {groups.map((group) => (
           <section key={group.id} className="flex flex-col">
             {group.labelKey ? (
-              <div className="px-[10px] pb-[6px] text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8e8e93]">
+              <div className="px-[10px] pb-[6px] text-[10px] font-semibold uppercase tracking-[0.05em] text-[#8e8e93] dark:text-muted-foreground">
                 {t(group.labelKey)}
               </div>
             ) : null}
@@ -36,8 +36,8 @@ export function SettingsNav({ groups, activeItemId, onChange }: SettingsNavProps
                     className={cn(
                       'w-full rounded-lg px-[10px] py-[7px] text-left text-[13px] transition-all',
                       active
-                        ? 'bg-[#e5e5ea] font-medium text-[#000000]'
-                        : 'text-[#000000] hover:bg-[#e5e5ea]',
+                        ? 'bg-[#e5e5ea] font-medium text-[#000000] dark:bg-white/12 dark:text-foreground'
+                        : 'text-[#000000] hover:bg-[#e5e5ea] dark:text-foreground dark:hover:bg-white/8',
                     )}
                   >
                     {t(item.labelKey)}

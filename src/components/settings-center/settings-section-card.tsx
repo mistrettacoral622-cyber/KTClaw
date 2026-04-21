@@ -18,12 +18,12 @@ export function SettingsSectionCard({
   return (
     <section
       className={cn(
-        'rounded-xl border border-[#c6c6c8] bg-white p-5',
+        'rounded-xl border border-[#c6c6c8] bg-white p-5 dark:border-border dark:bg-card',
         className,
       )}
     >
       <header className="mb-[14px]">
-        <h3 className="text-[15px] font-semibold text-[#000000]">{title}</h3>
+        <h3 className="text-[15px] font-semibold text-[#000000] dark:text-foreground">{title}</h3>
       </header>
       <div className="space-y-5">{children}</div>
     </section>

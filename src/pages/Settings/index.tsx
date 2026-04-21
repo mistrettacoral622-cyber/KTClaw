@@ -227,7 +227,7 @@ export function Settings() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,#f3f4f6_0%,#eceff3_100%)] p-6 dark:bg-background">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[linear-gradient(180deg,#f3f4f6_0%,#eceff3_100%)] p-6 dark:bg-[linear-gradient(180deg,#111318_0%,#0b0d12_100%)]">
       <div className="mx-auto flex min-h-full min-h-0 flex-1 w-full max-w-[1360px] overflow-hidden rounded-[32px] border border-black/[0.05] bg-white shadow-[0_24px_64px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-background">
         <SettingsNav
           groups={SETTINGS_NAV_GROUPS}
@@ -240,14 +240,14 @@ export function Settings() {
             <header className="mb-8">
               <button
                 onClick={() => navigate('/')}
-                className="mb-4 flex items-center gap-2 text-[13px] text-[#8e8e93] transition-colors hover:text-[#000000]"
+                className="mb-4 flex items-center gap-2 text-[13px] text-[#8e8e93] transition-colors hover:text-[#000000] dark:text-muted-foreground dark:hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
                 返回工作台
               </button>
               <h1 className="text-[24px] font-semibold text-[#000000] dark:text-foreground">
                 {t(activeMeta.titleKey)}{' '}
-                <span className="text-[#3c3c43]">{t(activeMeta.kickerKey)}</span>
+                <span className="text-[#3c3c43] dark:text-foreground/80">{t(activeMeta.kickerKey)}</span>
               </h1>
               <p className="mt-2 text-[13px] text-[#3c3c43] dark:text-muted-foreground">
                 {t(activeMeta.subtitleKey)}

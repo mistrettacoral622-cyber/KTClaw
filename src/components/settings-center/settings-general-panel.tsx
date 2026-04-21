@@ -80,14 +80,14 @@ export function SettingsGeneralPanel() {
   return (
     <>
       <SettingsSectionCard title="账户与安全">
-        <div className="rounded-xl border border-dashed border-black/10 bg-[#f8fafc] px-4 py-3 text-[13px] text-[#475569]">
+        <div className="rounded-xl border border-dashed border-black/10 bg-[#f8fafc] px-4 py-3 text-[13px] text-[#475569] dark:border-white/10 dark:bg-muted/40 dark:text-muted-foreground">
           当前桌面端暂不提供账户管理入口，请前往其他官方入口处理账户相关操作。
         </div>
       </SettingsSectionCard>
 
       <SettingsSectionCard title="外观与行为">
         <div className="space-y-2">
-          <label htmlFor={languageSelectId} className="block text-[13px] font-medium text-[#0f172a]">
+          <label htmlFor={languageSelectId} className="block text-[13px] font-medium text-[#0f172a] dark:text-foreground">
             界面语言
           </label>
           <select
@@ -95,7 +95,7 @@ export function SettingsGeneralPanel() {
             aria-label="界面语言"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
-            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]"
+            className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb] dark:border-white/10 dark:bg-background dark:text-foreground"
           >
             {SUPPORTED_LANGUAGES.map((lang) => (
               <option key={lang.code} value={lang.code}>
@@ -118,8 +118,10 @@ export function SettingsGeneralPanel() {
                   aria-label={option.label}
                   onClick={() => setTheme(option.value)}
                   className={cn(
-                    'h-10 w-10 rounded-full border-2 transition-all hover:scale-105',
-                    theme === option.value ? 'border-black/25 scale-105' : 'border-black/5',
+                    'h-10 w-10 rounded-full border-2 transition-all hover:scale-105 ring-offset-2 ring-offset-background',
+                    theme === option.value
+                      ? 'border-black/25 scale-105 ring-2 ring-primary dark:border-white/40'
+                      : 'border-black/5 dark:border-white/10',
                   )}
                   style={{ background: option.preview }}
                   title={option.label}
@@ -189,10 +191,10 @@ function SettingsRow({
   right: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#f8fafc] px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#f8fafc] px-4 py-3 dark:border-white/10 dark:bg-muted/40">
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-[#0f172a]">{label}</p>
-        <p className="mt-1 text-[12px] text-[#64748b]">{description}</p>
+        <p className="text-[13px] font-medium text-[#0f172a] dark:text-foreground">{label}</p>
+        <p className="mt-1 text-[12px] text-[#64748b] dark:text-muted-foreground">{description}</p>
       </div>
       <div className="shrink-0">{right}</div>
     </div>
@@ -211,10 +213,10 @@ function ToggleRow({
   onCheckedChange: (value: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#f8fafc] px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#f8fafc] px-4 py-3 dark:border-white/10 dark:bg-muted/40">
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium text-[#0f172a]">{label}</p>
-        <p className="mt-1 text-[12px] text-[#64748b]">{description}</p>
+        <p className="text-[13px] font-medium text-[#0f172a] dark:text-foreground">{label}</p>
+        <p className="mt-1 text-[12px] text-[#64748b] dark:text-muted-foreground">{description}</p>
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
     </div>
@@ -234,13 +236,13 @@ function TextField({
 }) {
   return (
     <label htmlFor={id} className="block space-y-2">
-      <span className="block text-[13px] font-medium text-[#0f172a]">{label}</span>
+      <span className="block text-[13px] font-medium text-[#0f172a] dark:text-foreground">{label}</span>
       <input
         id={id}
         aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb]"
+        className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-[13px] text-[#0f172a] outline-none focus:border-[#2563eb] dark:border-white/10 dark:bg-background dark:text-foreground"
       />
     </label>
   );
@@ -266,10 +268,10 @@ function BrandImageUploadField({
   const inputId = useId();
 
   return (
-    <div className="rounded-xl border border-black/5 bg-[#f8fafc] p-4">
-      <p className="text-[13px] font-medium text-[#0f172a]">{label}</p>
+    <div className="rounded-xl border border-black/5 bg-[#f8fafc] p-4 dark:border-white/10 dark:bg-muted/40">
+      <p className="text-[13px] font-medium text-[#0f172a] dark:text-foreground">{label}</p>
       <div className="mt-3 flex items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-black/10 bg-white">
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-black/10 bg-white dark:border-white/10 dark:bg-background">
           {dataUrl ? (
             <img src={dataUrl} alt={previewAlt} className="h-full w-full object-cover" />
           ) : (
@@ -279,7 +281,7 @@ function BrandImageUploadField({
         <div className="flex flex-wrap gap-2">
           <label
             htmlFor={inputId}
-            className="cursor-pointer rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] text-[#334155] hover:bg-[#f1f5f9]"
+            className="cursor-pointer rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] text-[#334155] hover:bg-[#f1f5f9] dark:border-white/10 dark:bg-background dark:text-foreground dark:hover:bg-white/10"
           >
             {inputLabel}
           </label>
@@ -294,7 +296,7 @@ function BrandImageUploadField({
           <button
             type="button"
             onClick={onClear}
-            className="rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] text-[#334155] hover:bg-[#f1f5f9]"
+            className="rounded-xl border border-black/10 bg-white px-3 py-2 text-[12px] text-[#334155] hover:bg-[#f1f5f9] dark:border-white/10 dark:bg-background dark:text-foreground dark:hover:bg-white/10"
           >
             {clearLabel}
           </button>
