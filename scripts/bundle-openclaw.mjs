@@ -371,10 +371,14 @@ function cleanupBundle(outputDir) {
   const LARGE_REMOVALS = [
     'node_modules/pdfjs-dist/legacy',
     'node_modules/pdfjs-dist/types',
+    'node_modules/@node-llama-cpp',
     'node_modules/node-llama-cpp/llama',
     'node_modules/koffi/src',
     'node_modules/koffi/vendor',
     'node_modules/koffi/doc',
+    'dist/extensions/discord',
+    'dist/extensions/slack',
+    'dist/extensions/telegram',
     'extensions/feishu', // Removed in favor of official @larksuite/openclaw-lark plugin
   ];
   for (const rel of LARGE_REMOVALS) {

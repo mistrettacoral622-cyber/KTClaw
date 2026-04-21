@@ -95,6 +95,14 @@ describe('setup layout shell', () => {
     settingsState.devModeUnlocked = false;
 
     hostApiFetchMock.mockImplementation(async (path: string) => {
+      if (path === '/api/local-embeddings-runtime/status') {
+        return {
+          state: 'not_installed',
+          version: '3.16.2',
+          targetId: 'win32-x64',
+          requiredByConfig: false,
+        };
+      }
       if (path === '/api/provider-accounts') return [];
       if (path === '/api/providers') return [];
       if (path === '/api/provider-vendors') {

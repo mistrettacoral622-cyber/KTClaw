@@ -165,6 +165,14 @@ describe('setup provider step verification', () => {
           },
         ];
       }
+      if (path === '/api/local-embeddings-runtime/status') {
+        return {
+          state: 'not_installed',
+          version: '3.16.2',
+          targetId: 'win32-x64',
+          requiredByConfig: false,
+        };
+      }
       if (path === '/api/provider-accounts') {
         snapshotReads += 1;
         return snapshotReads >= 2 && savedAccountId
@@ -267,6 +275,14 @@ describe('setup provider step verification', () => {
             supportsMultipleAccounts: true,
           },
         ];
+      }
+      if (path === '/api/local-embeddings-runtime/status') {
+        return {
+          state: 'not_installed',
+          version: '3.16.2',
+          targetId: 'win32-x64',
+          requiredByConfig: false,
+        };
       }
       if (path === '/api/provider-accounts') {
         snapshotReads += 1;

@@ -15,6 +15,7 @@ import { syncProxyConfigToOpenClaw } from '../utils/openclaw-proxy';
 import { logger } from '../utils/logger';
 import { prependPathEntry } from '../utils/env-path';
 import { patchInstalledFeishuPluginCompatibility, patchInstalledWeChatPluginCompatibility } from '../utils/wechat-plugin-compat';
+import { getLocalEmbeddingsRuntimeManager } from '../services/local-embeddings-runtime-manager';
 
 export interface GatewayLaunchContext {
   appSettings: Awaited<ReturnType<typeof getAllSettings>>;
@@ -22,6 +23,7 @@ export interface GatewayLaunchContext {
   entryScript: string;
   gatewayArgs: string[];
   forkEnv: Record<string, string | undefined>;
+  localEmbeddingsPreloadPath: string | null;
   mode: 'dev' | 'packaged';
   binPathExists: boolean;
   loadedProviderKeyCount: number;
@@ -393,6 +395,7 @@ export async function prepareGatewayLaunchContext(port: number): Promise<Gateway
   const proxySummary = appSettings.proxyEnabled
     ? `http=${resolvedProxy.httpProxy || '-'}, https=${resolvedProxy.httpsProxy || '-'}, all=${resolvedProxy.allProxy || '-'}`
     : 'disabled';
+  const localEmbeddingsLaunch = await getLocalEmbeddingsRuntimeManager().getGatewayLaunchConfig();
 
   const { NODE_OPTIONS: _nodeOptions, ...baseEnv } = process.env;
   const baseEnvRecord = baseEnv as Record<string, string | undefined>;
@@ -404,6 +407,7 @@ export async function prepareGatewayLaunchContext(port: number): Promise<Gateway
     ...providerEnv,
     ...uvEnv,
     ...proxyEnv,
+    ...localEmbeddingsLaunch.env,
     OPENCLAW_GATEWAY_TOKEN: appSettings.gatewayToken,
     OPENCLAW_SKIP_CHANNELS: skipChannels ? '1' : '',
     CLAWDBOT_SKIP_CHANNELS: skipChannels ? '1' : '',
@@ -416,6 +420,7 @@ export async function prepareGatewayLaunchContext(port: number): Promise<Gateway
     entryScript,
     gatewayArgs,
     forkEnv,
+    localEmbeddingsPreloadPath: localEmbeddingsLaunch.preloadImportPath,
     mode,
     binPathExists,
     loadedProviderKeyCount,

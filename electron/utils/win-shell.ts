@@ -87,3 +87,14 @@ export function appendNodeRequireToNodeOptions(
   const normalized = normalizeNodeRequirePathForNodeOptions(modulePath);
   return `${nodeOptions ?? ''} --require "${normalized}"`.trim();
 }
+
+/**
+ * Append an ESM preload module path to NODE_OPTIONS safely.
+ */
+export function appendNodeImportToNodeOptions(
+  nodeOptions: string | undefined,
+  modulePath: string,
+): string {
+  const normalized = normalizeNodeRequirePathForNodeOptions(modulePath);
+  return `${nodeOptions ?? ''} --import "${normalized}"`.trim();
+}

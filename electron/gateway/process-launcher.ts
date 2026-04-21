@@ -4,7 +4,7 @@ import path from 'path';
 import type { GatewayLaunchContext } from './config-sync';
 import type { GatewayLifecycleState } from './process-policy';
 import { logger } from '../utils/logger';
-import { appendNodeRequireToNodeOptions } from '../utils/paths';
+import { appendNodeImportToNodeOptions, appendNodeRequireToNodeOptions } from '../utils/paths';
 
 const GATEWAY_FETCH_PRELOAD_SOURCE = `'use strict';
 (function () {
@@ -132,6 +132,12 @@ export async function launchGatewayProcess(options: {
     runtimeEnv.NODE_OPTIONS,
     OPENCLAW_EXPERIMENTAL_WARNING_FLAG,
   );
+  if (options.launchContext.localEmbeddingsPreloadPath) {
+    runtimeEnv.NODE_OPTIONS = appendNodeImportToNodeOptions(
+      runtimeEnv.NODE_OPTIONS,
+      options.launchContext.localEmbeddingsPreloadPath,
+    );
+  }
   if (!app.isPackaged) {
     try {
       const preloadPath = ensureGatewayFetchPreload();

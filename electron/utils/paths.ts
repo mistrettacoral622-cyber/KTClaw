@@ -14,6 +14,7 @@ export {
   prepareWinSpawn,
   normalizeNodeRequirePathForNodeOptions,
   appendNodeRequireToNodeOptions,
+  appendNodeImportToNodeOptions,
 } from './win-shell';
 
 /**

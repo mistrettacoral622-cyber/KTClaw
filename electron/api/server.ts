@@ -48,6 +48,7 @@ const routeDefinitions: LazyRouteDefinition[] = [
   { prefixes: ['/api/approvals'], loader: memoizeRouteLoader('approvals', () => import('./routes/approvals').then((mod) => mod.handleApprovalRoutes)) },
   { prefixes: ['/api/health'], loader: memoizeRouteLoader('health', () => import('./routes/health').then((mod) => mod.handleHealthRoutes)) },
   { prefixes: ['/api/memory'], loader: memoizeRouteLoader('memory', () => import('./routes/memory').then((mod) => mod.handleMemoryRoutes)) },
+  { prefixes: ['/api/local-embeddings-runtime'], loader: memoizeRouteLoader('local-embeddings-runtime', () => import('./routes/local-embeddings-runtime').then((mod) => mod.handleLocalEmbeddingsRuntimeRoutes)) },
   { prefixes: ['/api/mcp'], loader: memoizeRouteLoader('mcp', () => import('./routes/mcp').then((mod) => mod.handleMcpRoutes)) },
   { prefixes: ['/api/costs'], loader: memoizeRouteLoader('costs', () => import('./routes/costs').then((mod) => mod.handleCostsRoutes)) },
   { prefixes: ['/api/alerts'], loader: memoizeRouteLoader('alerts', () => import('./routes/alerts').then((mod) => mod.handleAlertsRoutes)) },

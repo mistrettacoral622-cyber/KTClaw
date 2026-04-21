@@ -5,13 +5,29 @@ import { tmpdir } from 'os';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockSendJson, mockParseJsonBody, mockHomedir, mockExecFile, mockExecSync, mockSpawnSync } = vi.hoisted(() => ({
+const {
+  mockSendJson,
+  mockParseJsonBody,
+  mockHomedir,
+  mockExecFile,
+  mockExecSync,
+  mockSpawnSync,
+  mockRuntimeGetStatus,
+} = vi.hoisted(() => ({
   mockSendJson: vi.fn(),
   mockParseJsonBody: vi.fn(),
   mockHomedir: vi.fn(),
   mockExecFile: vi.fn(),
   mockExecSync: vi.fn(),
   mockSpawnSync: vi.fn(),
+  mockRuntimeGetStatus: vi.fn(async () => ({
+    state: 'installed',
+    version: '3.16.2',
+    targetId: 'win32-x64',
+    specifier: '@node-llama-cpp/win-x64',
+    installDir: 'C:/runtime',
+    entryPath: 'C:/runtime/dist/index.js',
+  })),
 }));
 
 vi.mock('@electron/api/route-utils', () => ({
@@ -33,6 +49,12 @@ vi.mock('child_process', () => ({
   spawnSync: (...args: unknown[]) => mockSpawnSync(...args),
 }));
 
+vi.mock('@electron/services/local-embeddings-runtime-manager', () => ({
+  getLocalEmbeddingsRuntimeManager: () => ({
+    getStatus: (...args: unknown[]) => mockRuntimeGetStatus(...args),
+  }),
+}));
+
 describe('GET /api/memory and POST /api/memory/reindex', () => {
   let homeDir: string;
   let workspaceDir: string;
@@ -46,6 +68,14 @@ describe('GET /api/memory and POST /api/memory/reindex', () => {
     await mkdir(workspaceDir, { recursive: true });
     mockHomedir.mockReturnValue(homeDir);
     mockParseJsonBody.mockResolvedValue({});
+    mockRuntimeGetStatus.mockResolvedValue({
+      state: 'installed',
+      version: '3.16.2',
+      targetId: 'win32-x64',
+      specifier: '@node-llama-cpp/win-x64',
+      installDir: 'C:/runtime',
+      entryPath: 'C:/runtime/dist/index.js',
+    });
     mockExecFile.mockImplementation((file, args, options, callback) => {
       callback(null, JSON.stringify({ indexed: true, totalEntries: 3 }), '');
       return {} as never;
@@ -238,6 +268,50 @@ describe('GET /api/memory and POST /api/memory/reindex', () => {
     const [, statusCode, payload] = mockSendJson.mock.calls[0] as [unknown, number, { ok?: boolean }];
     expect(statusCode).toBe(200);
     expect(payload.ok).toBe(true);
+  });
+
+  it('returns install-required when memory config uses local embeddings but runtime is missing', async () => {
+    writeFileSync(
+      join(homeDir, '.openclaw', 'agents', 'main', 'openclaw.json'),
+      JSON.stringify({
+        agents: {
+          defaults: {
+            memorySearch: {
+              provider: 'local',
+            },
+          },
+        },
+      }),
+      'utf-8',
+    );
+    mockRuntimeGetStatus.mockResolvedValueOnce({
+      state: 'not_installed',
+      version: '3.16.2',
+      targetId: 'win32-x64',
+      specifier: '@node-llama-cpp/win-x64',
+      installDir: 'C:/runtime',
+      entryPath: null,
+      requiredByConfig: true,
+    });
+
+    const { handleMemoryRoutes } = await import('@electron/api/routes/memory');
+    const handled = await handleMemoryRoutes(
+      { method: 'POST' } as IncomingMessage,
+      {} as ServerResponse,
+      new URL('http://127.0.0.1:3210/api/memory/reindex'),
+      {} as never,
+    );
+
+    expect(handled).toBe(true);
+    expect(mockExecFile).not.toHaveBeenCalled();
+    expect(mockSendJson).toHaveBeenLastCalledWith(
+      expect.anything(),
+      409,
+      expect.objectContaining({
+        success: false,
+        code: 'LOCAL_EMBEDDINGS_RUNTIME_REQUIRED',
+      }),
+    );
   });
 
   it('creates a git snapshot for the selected scope and returns the commit hash', async () => {

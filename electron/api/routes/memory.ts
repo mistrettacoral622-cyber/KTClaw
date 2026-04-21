@@ -11,6 +11,7 @@ import { listAgentsSnapshot } from '../../utils/agent-config';
 import { expandPath } from '../../utils/paths';
 import { getDefaultProviderAccountId, getProviderAccount } from '../../services/providers/provider-store';
 import { getApiKey } from '../../utils/secure-storage';
+import { getLocalEmbeddingsRuntimeManager } from '../../services/local-embeddings-runtime-manager';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -581,6 +582,10 @@ function getMemoryConfig(workspacePath: string): MemoryConfig {
   }
 }
 
+function requiresLocalEmbeddingsRuntime(config: MemoryConfig): boolean {
+  return config.memorySearch.provider === 'local';
+}
+
 // ── Status ───────────────────────────────────────────────────────
 
 function getWhitelistedRelativePaths(config: MemoryConfig): Set<string> {
@@ -1065,6 +1070,21 @@ export async function handleMemoryRoutes(
   // POST /api/memory/reindex — trigger reindex
   if (url.pathname === '/api/memory/reindex' && req.method === 'POST') {
     try {
+      const scopes = await getMemoryScopes();
+      const activeScope = selectScope(scopes, url.searchParams.get('scope'));
+      const config = getMemoryConfig(activeScope.workspaceDir);
+      if (requiresLocalEmbeddingsRuntime(config)) {
+        const runtimeStatus = await getLocalEmbeddingsRuntimeManager().getStatus(true);
+        if (runtimeStatus.state !== 'installed') {
+          sendJson(res, 409, {
+            success: false,
+            code: 'LOCAL_EMBEDDINGS_RUNTIME_REQUIRED',
+            message: 'Local embeddings runtime is required before reindex can run.',
+            runtimeStatus,
+          });
+          return true;
+        }
+      }
       await execOpenclaw(['memory', 'reindex'], 30000);
       sendJson(res, 200, { ok: true });
     } catch (err) {
