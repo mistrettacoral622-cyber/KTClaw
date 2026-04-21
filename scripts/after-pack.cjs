@@ -22,6 +22,10 @@
 const { cpSync, existsSync, readdirSync, rmSync, statSync, mkdirSync, realpathSync } = require('fs');
 const { join, dirname, basename } = require('path');
 
+const NESTED_DEPENDENCY_REPAIRS = [
+  { packageName: 'hosted-git-info', dependencyName: 'lru-cache' },
+];
+
 // On Windows, paths in pnpm's virtual store can exceed the default MAX_PATH
 // limit (260 chars). Node.js 18.17+ respects the system LongPathsEnabled
 // registry key, but as a safety net we normalize paths to use the \\?\ prefix
@@ -296,6 +300,24 @@ function patchBrokenModules(nodeModulesDir) {
   }
 }
 
+function applyNestedDependencyRepairs(nodeModulesDir, sourceNodeModulesDir) {
+  let count = 0;
+  for (const { packageName, dependencyName } of NESTED_DEPENDENCY_REPAIRS) {
+    const packageDir = join(nodeModulesDir, packageName);
+    const depSourceDir = join(sourceNodeModulesDir, ...dependencyName.split('/'));
+    const depTargetDir = join(packageDir, 'node_modules', ...dependencyName.split('/'));
+
+    if (!existsSync(packageDir) || !existsSync(depSourceDir)) continue;
+
+    mkdirSync(dirname(depTargetDir), { recursive: true });
+    rmSync(depTargetDir, { recursive: true, force: true });
+    cpSync(depSourceDir, depTargetDir, { recursive: true, dereference: true });
+    count++;
+  }
+
+  return count;
+}
+
 // ── Plugin bundler ───────────────────────────────────────────────────────────
 // Bundles a single OpenClaw plugin (and its transitive deps) from node_modules
 // directly into the packaged resources directory.  Mirrors the logic in
@@ -460,6 +482,10 @@ exports.default = async function afterPack(context) {
   // Patch broken modules whose CJS transpiled output sets module.exports = undefined,
   // causing TypeError in Node.js 22+ ESM interop.
   patchBrokenModules(dest);
+  const nestedRepairCount = applyNestedDependencyRepairs(dest, nodeModulesRoot);
+  if (nestedRepairCount > 0) {
+    console.log(`[after-pack] ✅ Repaired ${nestedRepairCount} nested dependency edge case(s).`);
+  }
 
   // 1.1 Bundle OpenClaw plugins directly from node_modules into packaged resources.
   //     This is intentionally done in afterPack (not extraResources) because:

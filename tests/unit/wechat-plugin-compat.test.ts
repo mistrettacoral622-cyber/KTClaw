@@ -1,6 +1,10 @@
 // @vitest-environment node
+import { mkdtempSync, mkdirSync, realpathSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import {
+  ensurePluginLocalOpenClawPackage,
   patchFeishuPluginCompatibilitySource,
   patchWeChatPluginCompatibilitySource,
 } from '@electron/utils/wechat-plugin-compat';
@@ -87,5 +91,24 @@ describe('wechat plugin compatibility shim', () => {
 
     expect(patched).toContain('dmScope: "per-account-channel-peer"');
     expect(patched).toContain("kind: isGroup ? 'group' : 'direct'");
+  });
+
+  it('creates a local openclaw package alias for installed feishu plugins', () => {
+    const sandboxRoot = mkdtempSync(join(tmpdir(), 'ktclaw-feishu-compat-'));
+    const pluginRoot = join(sandboxRoot, 'plugin');
+    const openClawRoot = join(sandboxRoot, 'openclaw-runtime');
+
+    mkdirSync(join(pluginRoot, 'node_modules'), { recursive: true });
+    mkdirSync(openClawRoot, { recursive: true });
+
+    try {
+      const patched = ensurePluginLocalOpenClawPackage(pluginRoot, openClawRoot);
+      const aliasPath = join(pluginRoot, 'node_modules', 'openclaw');
+
+      expect(patched).toBe(true);
+      expect(realpathSync(aliasPath)).toBe(realpathSync(openClawRoot));
+    } finally {
+      rmSync(sandboxRoot, { recursive: true, force: true });
+    }
   });
 });

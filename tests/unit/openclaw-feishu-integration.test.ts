@@ -56,6 +56,7 @@ vi.mock('node:fs/promises', async () => {
 vi.mock('@electron/utils/paths', () => ({
   getOpenClawStatus: (...args: unknown[]) => mockGetOpenClawStatus(...args),
   getOpenClawConfigDir: () => 'C:/Users/test/.openclaw',
+  getOpenClawResolvedDir: () => 'C:/openclaw',
 }));
 
 vi.mock('@electron/utils/openclaw-doctor', () => ({
@@ -414,6 +415,7 @@ describe('feishu integration service', () => {
     expect(mockCp).toHaveBeenCalled();
     expect(mockPatchInstalledFeishuPluginCompatibility).toHaveBeenCalledWith(
       expect.stringContaining('feishu-openclaw-plugin'),
+      expect.any(String),
     );
     expect(result.success).toBe(true);
     expect(result.version).toBe('2026.3.25');

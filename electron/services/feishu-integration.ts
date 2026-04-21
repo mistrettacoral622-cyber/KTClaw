@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { getOpenClawConfigDir, getOpenClawStatus } from '../utils/paths';
+import { getOpenClawConfigDir, getOpenClawResolvedDir, getOpenClawStatus } from '../utils/paths';
 import { runOpenClawDoctor, type OpenClawDoctorResult } from '../utils/openclaw-doctor';
 import { validateChannelConfig, type ValidationResult } from '../utils/channel-config';
 import { patchInstalledFeishuPluginCompatibility } from '../utils/wechat-plugin-compat';
@@ -494,7 +494,7 @@ export async function installOrUpdateFeishuPlugin(): Promise<FeishuPluginInstall
   await mkdir(join(getOpenClawConfigDir(), 'extensions'), { recursive: true });
   await rm(installedPath, { recursive: true, force: true });
   await cp(source.dir, installedPath, { recursive: true, force: true });
-  patchInstalledFeishuPluginCompatibility(installedPath);
+  patchInstalledFeishuPluginCompatibility(installedPath, getOpenClawResolvedDir());
 
   return {
     success: true,

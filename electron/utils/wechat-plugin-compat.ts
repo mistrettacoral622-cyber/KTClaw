@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const NORMALIZE_IMPORT = 'import { normalizeAccountId } from "openclaw/plugin-sdk/account-id";';
@@ -41,6 +41,33 @@ export function patchInstalledWeChatPluginCompatibility(pluginRoot: string): boo
   }
 
   return patched;
+}
+
+function tryRealpath(targetPath: string): string | null {
+  try {
+    return realpathSync(targetPath);
+  } catch {
+    return null;
+  }
+}
+
+export function ensurePluginLocalOpenClawPackage(pluginRoot: string, openClawDir: string): boolean {
+  const openClawRealDir = tryRealpath(openClawDir);
+  if (!openClawRealDir) {
+    return false;
+  }
+
+  const nodeModulesDir = join(pluginRoot, 'node_modules');
+  const openClawAliasDir = join(nodeModulesDir, 'openclaw');
+  const existingRealDir = tryRealpath(openClawAliasDir);
+  if (existingRealDir === openClawRealDir) {
+    return false;
+  }
+
+  mkdirSync(nodeModulesDir, { recursive: true });
+  rmSync(openClawAliasDir, { recursive: true, force: true });
+  symlinkSync(openClawRealDir, openClawAliasDir, process.platform === 'win32' ? 'junction' : 'dir');
+  return true;
 }
 
 const FEISHU_PLUGIN_SDK_NAMESPACE_IMPORT = "import * as pluginSdk from 'openclaw/plugin-sdk';";
@@ -157,7 +184,7 @@ export function patchFeishuPluginCompatibilitySource(source: string): string {
   return next;
 }
 
-export function patchInstalledFeishuPluginCompatibility(pluginRoot: string): boolean {
+export function patchInstalledFeishuPluginCompatibility(pluginRoot: string, openClawDir?: string): boolean {
   const candidateFiles = [
     join(pluginRoot, 'src', 'core', 'accounts.js'),
     join(pluginRoot, 'src', 'core', 'accounts.ts'),
@@ -182,5 +209,9 @@ export function patchInstalledFeishuPluginCompatibility(pluginRoot: string): boo
     }
   }
 
-  return patched;
+  const patchedAlias = openClawDir
+    ? ensurePluginLocalOpenClawPackage(pluginRoot, openClawDir)
+    : false;
+
+  return patched || patchedAlias;
 }

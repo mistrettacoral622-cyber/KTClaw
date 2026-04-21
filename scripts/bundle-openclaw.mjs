@@ -17,7 +17,7 @@
  */
 
 import 'zx/globals';
-import { getBundleRootPackages } from './bundle-openclaw-lib.mjs';
+import { getBundledNestedDependencyRepairs, getBundleRootPackages } from './bundle-openclaw-lib.mjs';
 
 const ROOT = path.resolve(__dirname, '..');
 const OUTPUT = path.join(ROOT, 'build', 'openclaw');
@@ -229,6 +229,25 @@ for (const [realPath, pkgName] of collected) {
     echo`   ⚠️  Skipped ${pkgName}: ${err.message}`;
   }
 }
+
+function applyNestedDependencyRepairs(outputDir) {
+  const outputNodeModules = path.join(outputDir, 'node_modules');
+  for (const repair of getBundledNestedDependencyRepairs()) {
+    const packageDir = path.join(outputNodeModules, repair.packageName);
+    const depSourceDir = path.join(NODE_MODULES, ...repair.dependencyName.split('/'));
+    const depTargetDir = path.join(packageDir, 'node_modules', ...repair.dependencyName.split('/'));
+
+    if (!fs.existsSync(packageDir) || !fs.existsSync(depSourceDir)) {
+      continue;
+    }
+
+    fs.mkdirSync(path.dirname(depTargetDir), { recursive: true });
+    fs.rmSync(depTargetDir, { recursive: true, force: true });
+    fs.cpSync(depSourceDir, depTargetDir, { recursive: true, dereference: true });
+  }
+}
+
+applyNestedDependencyRepairs(OUTPUT);
 
 // 6. Clean up the bundle to reduce package size
 //

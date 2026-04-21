@@ -6,7 +6,7 @@ import { join } from 'path';
 import { getAllSettings } from '../utils/store';
 import { getApiKey, getDefaultProvider, getProvider } from '../utils/secure-storage';
 import { getProviderEnvVar, getKeyableProviderTypes } from '../utils/provider-registry';
-import { getOpenClawDir, getOpenClawEntryPath, isOpenClawPresent } from '../utils/paths';
+import { getOpenClawDir, getOpenClawEntryPath, getOpenClawResolvedDir, isOpenClawPresent } from '../utils/paths';
 import { getUvMirrorEnv } from '../utils/uv-env';
 import { listConfiguredChannels } from '../utils/channel-config';
 import { syncGatewayTokenToConfig, syncBrowserConfigToOpenClaw, sanitizeOpenClawConfig } from '../utils/openclaw-auth';
@@ -203,7 +203,7 @@ function ensureConfiguredPluginsUpgraded(configuredChannels: string[]): void {
         if (channelType === 'wechat' && patchInstalledWeChatPluginCompatibility(targetDir)) {
           logger.info('[plugin] Applied WeChat compatibility shim for OpenClaw 2026.3.22');
         }
-        if (channelType === 'feishu' && patchInstalledFeishuPluginCompatibility(targetDir)) {
+        if (channelType === 'feishu' && patchInstalledFeishuPluginCompatibility(targetDir, getOpenClawResolvedDir())) {
           logger.info('[plugin] Applied Feishu compatibility shim for OpenClaw 2026.3.22');
         }
       } catch (err) {
