@@ -14,16 +14,14 @@ describe('chat dispatch hints', () => {
     expect(augmented).toContain('start/open or navigate -> snapshot or screenshot -> act');
   });
 
-  it('adds image understanding hints when image attachments are present', () => {
-    const augmented = appendDispatchHints('What is shown in this image?', [
+  it('does not add any dispatch hints when image attachments are present', () => {
+    const original = 'What is shown in this image?';
+    const augmented = appendDispatchHints(original, [
       { mimeType: 'image/png' },
     ]);
 
-    expect(augmented).toContain('[KTCLAW_DISPATCH_HINTS]');
-    expect(augmented).toContain('Respond based on the attached image content directly');
-    expect(augmented).toContain('Do not search the workspace for unrelated older images');
-    expect(augmented).toContain('Do not invoke tools or skills to process the image');
-    expect(augmented).not.toContain('check whether a local skill or tool already fits');
+    expect(augmented).toBe(original);
+    expect(augmented).not.toContain('[KTCLAW_DISPATCH_HINTS]');
   });
 
   it('removes hidden dispatch hints from stored user text for display', () => {

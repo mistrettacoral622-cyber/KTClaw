@@ -142,12 +142,11 @@ function buildDispatchHints(
     return hints;
   }
 
-  // When images are attached, the model should look at the image directly
-  // instead of being nudged to search for tools first.
+  // When images are attached, skip all hints — let the user message and
+  // the image reach the model without any injected instructions.  Small
+  // models (e.g. Qwen3.5-9B) misinterpret hints as tool-calling cues and
+  // enter a tool-use loop instead of directly describing the image.
   if (needsImageHints) {
-    hints.push('Image attachments are present. Respond based on the attached image content directly.');
-    hints.push('Do not search the workspace for unrelated older images unless the user explicitly asks for that.');
-    hints.push('Do not invoke tools or skills to process the image unless the user explicitly requests it.');
     return hints;
   }
 
