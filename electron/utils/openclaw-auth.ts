@@ -11,7 +11,6 @@
 import { access, mkdir, readFile, writeFile } from 'fs/promises';
 import { constants } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
 import { listConfiguredAgentIds } from './agent-config';
 import {
   getProviderEnvVar,
@@ -1115,6 +1114,29 @@ export async function sanitizeOpenClawConfig(): Promise<void> {
         delete pEntries[LEGACY_WECHAT_ID];
         logger.info(`[sanitize] Migrated plugins.entries: ${LEGACY_WECHAT_ID} -> ${OPENCLAW_WECHAT_CHANNEL_TYPE}`);
         modified = true;
+      }
+
+      const managedChannelPlugins: Array<{ pluginId: string; channelType: string }> = [
+        { pluginId: 'openclaw-lark', channelType: 'feishu' },
+        { pluginId: 'dingtalk', channelType: 'dingtalk' },
+        { pluginId: 'wecom-openclaw-plugin', channelType: 'wecom' },
+        { pluginId: 'qqbot', channelType: 'qqbot' },
+        { pluginId: OPENCLAW_WECHAT_CHANNEL_TYPE, channelType: OPENCLAW_WECHAT_CHANNEL_TYPE },
+      ];
+
+      for (const { pluginId, channelType } of managedChannelPlugins) {
+        const hasConfiguredChannel = Boolean(channelsObj?.[channelType]);
+        if (hasConfiguredChannel) {
+          continue;
+        }
+        if (!pEntries?.[pluginId]) {
+          continue;
+        }
+        if (pEntries[pluginId].enabled !== false) {
+          pEntries[pluginId].enabled = false;
+          logger.info(`[sanitize] Disabled plugins.entries.${pluginId} (channel "${channelType}" is not configured)`);
+          modified = true;
+        }
       }
     }
 

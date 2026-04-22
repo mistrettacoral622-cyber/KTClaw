@@ -1,7 +1,6 @@
 import { app } from 'electron';
 import path from 'path';
 import { existsSync, readFileSync, cpSync, mkdirSync, rmSync, readdirSync, realpathSync } from 'fs';
-import { homedir } from 'os';
 import { join } from 'path';
 import { getAllSettings } from '../utils/store';
 import { getApiKey, getDefaultProvider, getProvider } from '../utils/secure-storage';

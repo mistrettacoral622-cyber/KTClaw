@@ -334,6 +334,7 @@ describe('agents route deletion restart safety', () => {
         responsibility: 'Research and evidence synthesis',
       }),
     ]);
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
   });
 
   it('forwards the rich create payload and returns createdAgentId', async () => {
@@ -371,6 +372,7 @@ describe('agents route deletion restart safety', () => {
         id: 'researcher',
       }),
     ]);
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
   });
 
   it('assigns an installed skill into the agent workspace', async () => {

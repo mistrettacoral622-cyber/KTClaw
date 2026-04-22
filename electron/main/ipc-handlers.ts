@@ -8,6 +8,7 @@ import { homedir } from 'node:os';
 import { join, extname, basename } from 'node:path';
 import crypto from 'node:crypto';
 import { GatewayManager } from '../gateway/manager';
+import { classifyGatewayRefresh } from '../gateway/refresh-classifier';
 import { ClawHubService, ClawHubSearchParams, ClawHubInstallParams, ClawHubUninstallParams } from '../gateway/clawhub';
 import {
   type ProviderConfig,
@@ -479,12 +480,14 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
                   await saveProviderKeyToOpenClaw(ock, trimmedKey);
                 } else {
                   await providerService.deleteLegacyProviderApiKey(providerId);
-                  await syncDeletedProviderApiKeyToRuntime(nextConfig, providerId, ock);
+                  await syncDeletedProviderApiKeyToRuntime(nextConfig, providerId, ock, gatewayManager);
                 }
               }
 
               try {
-                await syncUpdatedProviderToRuntime(nextConfig, apiKey, gatewayManager);
+                await syncUpdatedProviderToRuntime(nextConfig, apiKey, gatewayManager, {
+                  authOnly: Object.keys(updates).length === 0 && apiKey !== undefined,
+                });
               } catch (err) {
                 logger.warn('Failed to sync openclaw config after provider update', { scope: 'provider.updateWithKey' }, err);
               }
@@ -498,7 +501,7 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
                   await saveProviderKeyToOpenClaw(previousOck, previousKey);
                 } else {
                   await providerService.deleteLegacyProviderApiKey(providerId);
-                  await syncDeletedProviderApiKeyToRuntime(existing, providerId, previousOck);
+                  await syncDeletedProviderApiKeyToRuntime(existing, providerId, previousOck, gatewayManager);
                 }
               } catch (rollbackError) {
                 logger.warn('Failed to rollback provider updateWithKey', { scope: 'provider.updateWithKey' }, rollbackError);
@@ -519,7 +522,7 @@ function registerUnifiedRequestHandlers(gatewayManager: GatewayManager): void {
               const ock = getOpenClawProviderKey(providerType, providerId);
               try {
                 if (ock) {
-                  await syncDeletedProviderApiKeyToRuntime(provider, providerId, ock);
+                  await syncDeletedProviderApiKeyToRuntime(provider, providerId, ock, gatewayManager);
                 }
               } catch (err) {
                 logger.warn('Failed to remove provider API key from OpenClaw auth-profiles', { scope: 'provider.deleteApiKey' }, err);
@@ -1262,14 +1265,9 @@ function registerGatewayHandlers(
   }) => {
     try {
       let message = appendDispatchHints(params.message, params.media);
-      // The Gateway processes image attachments through TWO parallel paths:
-      // Path A: `attachments` param → parsed via `parseMessageWithAttachments` →
-      //   injected as inline vision content when the model supports images.
-      //   Format: { content: base64, mimeType: string, fileName?: string }
-      // Path B: `[media attached: ...]` in message text → Gateway's native image
-      //   detection (`detectAndLoadPromptImages`) reads the file from disk and
-      //   injects it as inline vision content. Also works for history messages.
-      // We use BOTH paths for maximum reliability.
+      // Inline image attachments are sent as base64 vision inputs only.
+      // Non-image uploads keep staged file references in message text so tools
+      // can still inspect the exact uploaded file when needed.
       const imageAttachments: Array<Record<string, unknown>> = [];
       const fileReferences: string[] = [];
 
@@ -1299,11 +1297,12 @@ function registerGatewayHandlers(
               mimeType: m.mimeType,
               fileName: m.fileName,
             });
+            continue;
           }
 
-          // Keep an explicit staged path in the message text for every upload.
-          // If the model/runtime ignores inline attachments, fallback tools can
-          // still inspect the exact current file instead of scanning old workspace images.
+          // Keep an explicit staged path in the message text for non-image uploads.
+          // This gives tools a stable reference without leaking local image paths
+          // back into the prompt when inline vision attachments are already present.
           fileReferences.push(mediaReference);
         }
       }
@@ -1412,10 +1411,6 @@ function registerGatewayHandlers(
  * For checking package status and channel configuration
  */
 function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
-  // Keep reload-first for feishu to avoid restart storms when channel auth/network is flaky.
-  // GatewayManager.reload() already falls back to restart when reload is unhealthy.
-  const forceRestartChannels = new Set(['dingtalk', 'wecom', 'whatsapp']);
-
   const scheduleGatewayChannelRestart = (reason: string): void => {
     if (gatewayManager.getStatus().state !== 'stopped') {
       logger.info(`Scheduling Gateway restart after ${reason}`);
@@ -1430,13 +1425,27 @@ function registerOpenClawHandlers(gatewayManager: GatewayManager): void {
       logger.info(`Gateway is stopped; skip immediate refresh after ${reason}`);
       return;
     }
-    if (forceRestartChannels.has(channelType)) {
+    const event = reason.includes('setDefaultAccount')
+      ? 'default_account_changed'
+      : reason.includes('Binding')
+        ? 'binding_changed'
+        : 'config_saved';
+    const action = classifyGatewayRefresh({
+      kind: 'channel',
+      event,
+      channelType,
+    });
+    if (action === 'restart') {
       logger.info(`Scheduling Gateway restart after ${reason}`);
       gatewayManager.debouncedRestart();
       return;
     }
-    logger.info(`Scheduling Gateway reload after ${reason}`);
-    gatewayManager.debouncedReload();
+    if (action === 'reload') {
+      logger.info(`Scheduling Gateway reload after ${reason}`);
+      gatewayManager.debouncedReload();
+      return;
+    }
+    logger.info(`Gateway refresh not required after ${reason}`);
   };
 
   // ── Generic plugin installer with version-aware upgrades ─────────
@@ -2012,13 +2021,15 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
             await syncProviderApiKeyToRuntime(nextConfig.type, providerId, trimmedKey);
           } else {
             await providerService.deleteLegacyProviderApiKey(providerId);
-            await syncDeletedProviderApiKeyToRuntime(nextConfig, providerId, ock);
+            await syncDeletedProviderApiKeyToRuntime(nextConfig, providerId, ock, gatewayManager);
           }
         }
 
         // Sync the provider configuration to openclaw.json so Gateway knows about it
         try {
-          await syncUpdatedProviderToRuntime(nextConfig, apiKey, gatewayManager);
+          await syncUpdatedProviderToRuntime(nextConfig, apiKey, gatewayManager, {
+            authOnly: Object.keys(updates).length === 0 && apiKey !== undefined,
+          });
         } catch (err) {
           logger.warn('Failed to sync openclaw config after provider update', { scope: 'provider.updateProvider' }, err);
         }
@@ -2033,7 +2044,7 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
             await saveProviderKeyToOpenClaw(previousOck, previousKey);
           } else {
             await providerService.deleteLegacyProviderApiKey(providerId);
-            await syncDeletedProviderApiKeyToRuntime(existing, providerId, previousOck);
+            await syncDeletedProviderApiKeyToRuntime(existing, providerId, previousOck, gatewayManager);
           }
         } catch (rollbackError) {
           logger.warn('Failed to rollback provider updateWithKey', { scope: 'provider.updateProvider' }, rollbackError);
@@ -2053,7 +2064,7 @@ function registerProviderHandlers(gatewayManager: GatewayManager): void {
       // Keep OpenClaw auth-profiles.json in sync with local key storage
       const provider = await providerService.getLegacyProvider(providerId);
       try {
-        await syncDeletedProviderApiKeyToRuntime(provider, providerId);
+        await syncDeletedProviderApiKeyToRuntime(provider, providerId, undefined, gatewayManager);
       } catch (err) {
         logger.warn('Failed to completely remove provider from OpenClaw', { scope: 'provider.deleteProviderApiKey' }, err);
       }

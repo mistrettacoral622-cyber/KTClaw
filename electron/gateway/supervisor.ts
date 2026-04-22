@@ -15,6 +15,8 @@ const SYSTEMD_GATEWAY_SERVICE_NAMES = [
   'moltbot-gateway',
 ];
 
+let managedPythonWarmupStarted = false;
+
 /**
  * Stop any openclaw gateway systemd user services on Linux to prevent
  * auto-respawn conflicts when KTClaw manages its own gateway process.
@@ -60,6 +62,10 @@ export async function stopSystemdGatewayService(): Promise<void> {
 }
 
 export function warmupManagedPythonReadiness(): void {
+  if (managedPythonWarmupStarted) {
+    return;
+  }
+  managedPythonWarmupStarted = true;
   void isPythonReady().then((pythonReady) => {
     if (!pythonReady) {
       logger.info('Python environment missing or incomplete, attempting background repair...');

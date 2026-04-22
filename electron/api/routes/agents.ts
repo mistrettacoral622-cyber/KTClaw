@@ -23,15 +23,22 @@ import {
   writeOpenClawConfig,
 } from '../../utils/channel-config';
 import { logger } from '../../utils/logger';
+import { classifyGatewayRefresh } from '../../gateway/refresh-classifier';
 import { syncAllProviderAuthToRuntime } from '../../services/providers/provider-runtime-sync';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
 import { transformCronJob } from './cron';
 
 function scheduleGatewayReload(ctx: HostApiContext, reason: string): void {
-  if (ctx.gatewayManager.getStatus().state !== 'stopped') {
-    ctx.gatewayManager.debouncedReload();
+  if (ctx.gatewayManager.getStatus().state === 'stopped') {
+    void reason;
     return;
+  }
+  const action = classifyGatewayRefresh({ kind: 'agent', event: 'updated' });
+  if (action === 'reload') {
+    ctx.gatewayManager.debouncedReload();
+  } else if (action === 'restart') {
+    ctx.gatewayManager.debouncedRestart();
   }
   void reason;
 }

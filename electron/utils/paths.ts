@@ -27,12 +27,39 @@ export function expandPath(path: string): string {
   return path;
 }
 
+function isPackagedApp(): boolean {
+  return app?.isPackaged === true;
+}
+
+function getAppPathSafe(): string | null {
+  if (typeof app?.getAppPath !== 'function') {
+    return null;
+  }
+  try {
+    return app.getAppPath();
+  } catch {
+    return null;
+  }
+}
+
+function getUserDataPathSafe(): string | null {
+  if (typeof app?.getPath !== 'function') {
+    return null;
+  }
+  try {
+    return app.getPath('userData');
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Get OpenClaw config directory
  */
 export function getOpenClawConfigDir(): string {
-  if (app.isPackaged) {
-    return join(app.getPath('userData'), 'openclaw');
+  const userDataPath = getUserDataPathSafe();
+  if (isPackagedApp() && userDataPath) {
+    return join(userDataPath, 'openclaw');
   }
   return join(homedir(), '.openclaw');
 }
@@ -63,14 +90,15 @@ export function getKTClawConfigDir(): string {
  * Get KTClaw logs directory
  */
 export function getLogsDir(): string {
-  return join(app.getPath('userData'), 'logs');
+  const userDataPath = getUserDataPathSafe();
+  return join(userDataPath ?? getKTClawConfigDir(), 'logs');
 }
 
 /**
  * Get KTClaw data directory
  */
 export function getDataDir(): string {
-  return app.getPath('userData');
+  return getUserDataPathSafe() ?? getKTClawConfigDir();
 }
 
 /**
@@ -86,7 +114,7 @@ export function ensureDir(dir: string): void {
  * Get resources directory (for bundled assets)
  */
 export function getResourcesDir(): string {
-  if (app.isPackaged) {
+  if (isPackagedApp()) {
     return join(process.resourcesPath, 'resources');
   }
   return join(__dirname, '../../resources');
@@ -105,12 +133,14 @@ export function getPreloadPath(): string {
  * - Development: prefer app-root/process-root node_modules, then fall back to the legacy dist-relative path
  */
 export function getOpenClawDir(): string {
-  if (app.isPackaged) {
+  if (isPackagedApp()) {
     return join(process.resourcesPath, 'openclaw');
   }
 
+  const appPath = getAppPathSafe();
+
   const candidates = [
-    typeof app.getAppPath === 'function' ? join(app.getAppPath(), 'node_modules', 'openclaw') : null,
+    appPath ? join(appPath, 'node_modules', 'openclaw') : null,
     join(process.cwd(), 'node_modules', 'openclaw'),
     join(__dirname, '../../node_modules/openclaw'),
   ].filter((candidate, index, all): candidate is string => {
@@ -153,7 +183,7 @@ export function getOpenClawEntryPath(): string {
  * Get ClawHub CLI entry script path (clawdhub.js)
  */
 export function getClawHubCliEntryPath(): string {
-  return join(app.getAppPath(), 'node_modules', 'clawhub', 'bin', 'clawdhub.js');
+  return join(getAppPathSafe() ?? process.cwd(), 'node_modules', 'clawhub', 'bin', 'clawdhub.js');
 }
 
 /**
@@ -161,7 +191,7 @@ export function getClawHubCliEntryPath(): string {
  */
 export function getClawHubCliBinPath(): string {
   const binName = process.platform === 'win32' ? 'clawhub.cmd' : 'clawhub';
-  return join(app.getAppPath(), 'node_modules', '.bin', binName);
+  return join(getAppPathSafe() ?? process.cwd(), 'node_modules', '.bin', binName);
 }
 
 /**

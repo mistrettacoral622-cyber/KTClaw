@@ -1,4 +1,8 @@
 import type { GatewayManager } from '../../gateway/manager';
+import {
+  classifyGatewayRefresh,
+  type GatewayRefreshIntent,
+} from '../../gateway/refresh-classifier';
 import { getProviderAccount, listProviderAccounts } from './provider-store';
 import { getProviderSecret } from '../secrets/secret-store';
 import type { ProviderConfig } from '../../utils/secure-storage';
@@ -162,12 +166,11 @@ export async function getProviderFallbackModelRefs(config: ProviderConfig): Prom
   return results;
 }
 
-type GatewayRefreshMode = 'reload' | 'restart';
-
 function scheduleGatewayRefresh(
   gatewayManager: GatewayManager | undefined,
   message: string,
-  options?: { delayMs?: number; onlyIfRunning?: boolean; mode?: GatewayRefreshMode },
+  intent: GatewayRefreshIntent,
+  options?: { delayMs?: number; onlyIfRunning?: boolean },
 ): void {
   if (!gatewayManager) {
     return;
@@ -177,12 +180,28 @@ function scheduleGatewayRefresh(
     return;
   }
 
-  logger.info(message);
-  if (options?.mode === 'restart') {
-    gatewayManager.debouncedRestart(options?.delayMs);
-    return;
+  const action = classifyGatewayRefresh(intent);
+  logger.info(`${message} (action=${action})`);
+
+  switch (action) {
+    case 'restart':
+      gatewayManager.debouncedRestart(options?.delayMs);
+      return;
+    case 'reload':
+      gatewayManager.debouncedReload(options?.delayMs);
+      return;
+    case 'secrets_reload':
+      if (gatewayManager.getStatus().state === 'stopped') {
+        return;
+      }
+      void gatewayManager.rpc('secrets.reload', {}, 30000).catch((error) => {
+        logger.warn('Gateway secrets.reload failed:', error);
+      });
+      return;
+    case 'none':
+    default:
+      return;
   }
-  gatewayManager.debouncedReload(options?.delayMs);
 }
 
 export async function syncProviderApiKeyToRuntime(
@@ -454,7 +473,8 @@ export async function syncSavedProviderToRuntime(
 
   scheduleGatewayRefresh(
     gatewayManager,
-    `Scheduling Gateway reload after saving provider "${context.runtimeProviderKey}" config`,
+    `Applying Gateway refresh policy after saving provider "${context.runtimeProviderKey}" config`,
+    { kind: 'provider', event: 'saved' },
   );
 }
 
@@ -462,6 +482,7 @@ export async function syncUpdatedProviderToRuntime(
   config: ProviderConfig,
   apiKey: string | undefined,
   gatewayManager?: GatewayManager,
+  options?: { authOnly?: boolean },
 ): Promise<void> {
   const context = await syncProviderToRuntime(config, apiKey);
   if (!context) {
@@ -495,7 +516,8 @@ export async function syncUpdatedProviderToRuntime(
 
   scheduleGatewayRefresh(
     gatewayManager,
-    `Scheduling Gateway reload after updating provider "${ock}" config`,
+    `Applying Gateway refresh policy after updating provider "${ock}" config`,
+    { kind: 'provider', event: options?.authOnly ? 'auth_changed' : 'updated' },
   );
 }
 
@@ -514,8 +536,8 @@ export async function syncDeletedProviderToRuntime(
 
   scheduleGatewayRefresh(
     gatewayManager,
-    `Scheduling Gateway restart after deleting provider "${ock}"`,
-    { mode: 'restart' },
+    `Applying Gateway refresh policy after deleting provider "${ock}"`,
+    { kind: 'provider', event: 'deleted' },
   );
 }
 
@@ -523,6 +545,7 @@ export async function syncDeletedProviderApiKeyToRuntime(
   provider: ProviderConfig | null,
   providerId: string,
   runtimeProviderKey?: string,
+  gatewayManager?: GatewayManager,
 ): Promise<void> {
   const ock = runtimeProviderKey
     ?? (provider?.type ? await resolveRuntimeProviderKey({ ...provider, id: providerId }) : null);
@@ -531,6 +554,12 @@ export async function syncDeletedProviderApiKeyToRuntime(
   }
 
   await removeProviderKeyFromOpenClaw(ock);
+  scheduleGatewayRefresh(
+    gatewayManager,
+    `Applying Gateway refresh policy after deleting provider api key for "${ock}"`,
+    { kind: 'provider', event: 'auth_changed' },
+    { onlyIfRunning: true },
+  );
 }
 
 export async function syncDefaultProviderToRuntime(
@@ -603,7 +632,8 @@ export async function syncDefaultProviderToRuntime(
       logger.info(`Configured openclaw.json for browser OAuth provider "${provider.id}"`);
       scheduleGatewayRefresh(
         gatewayManager,
-        `Scheduling Gateway reload after provider switch to "${browserOAuthRuntimeProvider}"`,
+        `Applying Gateway refresh policy after provider switch to "${browserOAuthRuntimeProvider}"`,
+        { kind: 'provider', event: 'default_changed' },
       );
       return;
     }
@@ -664,7 +694,8 @@ export async function syncDefaultProviderToRuntime(
 
   scheduleGatewayRefresh(
     gatewayManager,
-    `Scheduling Gateway reload after provider switch to "${ock}"`,
+    `Applying Gateway refresh policy after provider switch to "${ock}"`,
+    { kind: 'provider', event: 'default_changed' },
     { onlyIfRunning: true },
   );
 }

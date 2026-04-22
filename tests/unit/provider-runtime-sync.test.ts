@@ -75,6 +75,7 @@ import {
   syncDeletedProviderApiKeyToRuntime,
   syncDeletedProviderToRuntime,
   syncSavedProviderToRuntime,
+  syncUpdatedProviderToRuntime,
 } from '@electron/services/providers/provider-runtime-sync';
 
 function createProvider(overrides: Partial<ProviderConfig> = {}): ProviderConfig {
@@ -90,11 +91,12 @@ function createProvider(overrides: Partial<ProviderConfig> = {}): ProviderConfig
   };
 }
 
-function createGateway(state: 'running' | 'stopped' = 'running'): Pick<GatewayManager, 'debouncedReload' | 'debouncedRestart' | 'getStatus'> {
+function createGateway(state: 'running' | 'stopped' = 'running'): Pick<GatewayManager, 'debouncedReload' | 'debouncedRestart' | 'getStatus' | 'rpc'> {
   return {
     debouncedReload: vi.fn(),
     debouncedRestart: vi.fn(),
     getStatus: vi.fn(() => ({ state } as ReturnType<GatewayManager['getStatus']>)),
+    rpc: vi.fn(async () => ({ success: true })),
   };
 }
 
@@ -124,12 +126,13 @@ describe('provider-runtime-sync refresh strategy', () => {
     mocks.writeOpenClawConfig.mockResolvedValue(undefined);
   });
 
-  it('uses debouncedReload after saving provider config', async () => {
+  it('does not force a gateway refresh after saving provider config', async () => {
     const gateway = createGateway('running');
     await syncSavedProviderToRuntime(createProvider(), undefined, gateway as GatewayManager);
 
-    expect(gateway.debouncedReload).toHaveBeenCalledTimes(1);
+    expect(gateway.debouncedReload).not.toHaveBeenCalled();
     expect(gateway.debouncedRestart).not.toHaveBeenCalled();
+    expect(gateway.rpc).not.toHaveBeenCalled();
   });
 
   it('uses debouncedRestart after deleting provider config', async () => {
@@ -147,12 +150,43 @@ describe('provider-runtime-sync refresh strategy', () => {
     expect(mocks.removeProviderFromOpenClaw).not.toHaveBeenCalled();
   });
 
-  it('uses debouncedReload after switching default provider when gateway is running', async () => {
+  it('uses secrets reload after an auth-only provider update', async () => {
+    const gateway = createGateway('running');
+
+    await syncUpdatedProviderToRuntime(
+      createProvider(),
+      'sk-rotated',
+      gateway as GatewayManager,
+      { authOnly: true },
+    );
+
+    expect(gateway.rpc).toHaveBeenCalledWith('secrets.reload', {}, 30000);
+    expect(gateway.debouncedReload).not.toHaveBeenCalled();
+    expect(gateway.debouncedRestart).not.toHaveBeenCalled();
+  });
+
+  it('uses secrets reload after deleting only provider api key when gateway is running', async () => {
+    const gateway = createGateway('running');
+
+    await syncDeletedProviderApiKeyToRuntime(
+      createProvider(),
+      'moonshot',
+      undefined,
+      gateway as GatewayManager,
+    );
+
+    expect(gateway.rpc).toHaveBeenCalledWith('secrets.reload', {}, 30000);
+    expect(gateway.debouncedReload).not.toHaveBeenCalled();
+    expect(gateway.debouncedRestart).not.toHaveBeenCalled();
+  });
+
+  it('does not force a gateway refresh after switching default provider when gateway is running', async () => {
     const gateway = createGateway('running');
     await syncDefaultProviderToRuntime('moonshot', gateway as GatewayManager);
 
-    expect(gateway.debouncedReload).toHaveBeenCalledTimes(1);
+    expect(gateway.debouncedReload).not.toHaveBeenCalled();
     expect(gateway.debouncedRestart).not.toHaveBeenCalled();
+    expect(gateway.rpc).not.toHaveBeenCalled();
   });
 
   it('skips refresh after switching default provider when gateway is stopped', async () => {

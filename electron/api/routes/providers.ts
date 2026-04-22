@@ -123,7 +123,9 @@ export async function handleProviderRoutes(
         return true;
       }
       const nextAccount = await providerService.updateAccount(accountId, body.updates, body.apiKey);
-      await syncUpdatedProviderToRuntime(providerAccountToConfig(nextAccount), body.apiKey, ctx.gatewayManager);
+      await syncUpdatedProviderToRuntime(providerAccountToConfig(nextAccount), body.apiKey, ctx.gatewayManager, {
+        authOnly: !hasPatchChanges && body.apiKey !== undefined,
+      });
       sendJson(res, 200, { success: true, account: nextAccount });
     } catch (error) {
       sendJson(res, 500, { success: false, error: String(error) });
@@ -146,6 +148,7 @@ export async function handleProviderRoutes(
           existing ? providerAccountToConfig(existing) : null,
           accountId,
           runtimeProviderKey,
+          ctx.gatewayManager,
         );
         sendJson(res, 200, { success: true });
         return true;
@@ -338,10 +341,12 @@ export async function handleProviderRoutes(
           await syncProviderApiKeyToRuntime(nextConfig.type, providerId, trimmedKey);
         } else {
           await providerService.deleteLegacyProviderApiKey(providerId);
-          await syncDeletedProviderApiKeyToRuntime(existing, providerId);
+          await syncDeletedProviderApiKeyToRuntime(existing, providerId, undefined, ctx.gatewayManager);
         }
       }
-      await syncUpdatedProviderToRuntime(nextConfig, body.apiKey, ctx.gatewayManager);
+      await syncUpdatedProviderToRuntime(nextConfig, body.apiKey, ctx.gatewayManager, {
+        authOnly: !hasPatchChanges && body.apiKey !== undefined,
+      });
       sendJson(res, 200, { success: true });
     } catch (error) {
       sendJson(res, 500, { success: false, error: String(error) });
@@ -356,7 +361,7 @@ export async function handleProviderRoutes(
       const existing = await providerService.getLegacyProvider(providerId);
       if (url.searchParams.get('apiKeyOnly') === '1') {
         await providerService.deleteLegacyProviderApiKey(providerId);
-        await syncDeletedProviderApiKeyToRuntime(existing, providerId);
+        await syncDeletedProviderApiKeyToRuntime(existing, providerId, undefined, ctx.gatewayManager);
         sendJson(res, 200, { success: true });
         return true;
       }

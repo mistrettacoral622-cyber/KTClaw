@@ -16,6 +16,7 @@ type DeferredRestartContext = RestartDeferralState & {
 
 export class GatewayRestartController {
   private deferredRestartPending = false;
+  private deferredRestartReason: string | null = null;
   private restartDebounceTimer: NodeJS.Timeout | null = null;
 
   isRestartDeferred(context: RestartDeferralState): boolean {
@@ -33,6 +34,9 @@ export class GatewayRestartController {
       );
     }
     this.deferredRestartPending = true;
+    if (reason === 'restart' || this.deferredRestartReason == null) {
+      this.deferredRestartReason = reason;
+    }
   }
 
   flushDeferredRestart(
@@ -56,9 +60,18 @@ export class GatewayRestartController {
     }
 
     this.deferredRestartPending = false;
+    const deferredReason = this.deferredRestartReason;
+    this.deferredRestartReason = null;
     if (action === 'drop') {
       logger.info(
         `Dropping deferred Gateway restart (${trigger}) because lifecycle already recovered (state=${context.state}, shouldReconnect=${context.shouldReconnect})`,
+      );
+      return;
+    }
+
+    if (deferredReason === 'reload' && context.state === 'running') {
+      logger.info(
+        `Dropping deferred Gateway reload (${trigger}) because lifecycle already recovered to running`,
       );
       return;
     }
@@ -87,5 +100,6 @@ export class GatewayRestartController {
 
   resetDeferredRestart(): void {
     this.deferredRestartPending = false;
+    this.deferredRestartReason = null;
   }
 }

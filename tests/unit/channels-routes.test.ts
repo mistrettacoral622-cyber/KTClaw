@@ -1,7 +1,10 @@
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'http';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  homeDir: '',
   sendJson: vi.fn(),
   parseJsonBody: vi.fn(),
   listConfiguredChannels: vi.fn(async () => ['feishu']),
@@ -18,6 +21,14 @@ const mocks = vi.hoisted(() => ({
   setChannelDefaultAccount: vi.fn(),
   whatsAppStart: vi.fn(),
 }));
+
+vi.mock('node:os', async () => {
+  const actual = await vi.importActual<typeof import('node:os')>('node:os');
+  return {
+    ...actual,
+    homedir: () => mocks.homeDir,
+  };
+});
 
 vi.mock('@electron/api/route-utils', () => ({
   sendJson: mocks.sendJson,
@@ -101,6 +112,21 @@ describe('channels routes', () => {
     vi.resetModules();
     vi.clearAllMocks();
     vi.useRealTimers();
+    mocks.homeDir = join(
+      process.cwd(),
+      '.tmp-test-home',
+      `channels-routes-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    );
+    rmSync(mocks.homeDir, { recursive: true, force: true });
+    mkdirSync(
+      join(mocks.homeDir, '.openclaw', 'extensions', 'feishu-openclaw-plugin'),
+      { recursive: true },
+    );
+    writeFileSync(
+      join(mocks.homeDir, '.openclaw', 'extensions', 'feishu-openclaw-plugin', 'openclaw.plugin.json'),
+      '{"id":"feishu-openclaw-plugin"}',
+      'utf8',
+    );
   });
 
   it('returns normalized runtime capabilities for configured channels', async () => {
@@ -274,7 +300,8 @@ describe('channels routes', () => {
 
     expect(handled).toBe(true);
     expect(mocks.setChannelDefaultAccount).toHaveBeenCalledWith('feishu', 'agent-a');
-    expect(ctx.gatewayManager.debouncedReload).toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedRestart).not.toHaveBeenCalled();
     expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, { success: true });
   });
 
@@ -304,7 +331,8 @@ describe('channels routes', () => {
 
     expect(handled).toBe(true);
     expect(mocks.assignChannelAccountToAgent).toHaveBeenCalledWith('main', 'openclaw-weixin', 'default');
-    expect(ctx.gatewayManager.debouncedReload).toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedRestart).not.toHaveBeenCalled();
     expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, { success: true });
   });
 
@@ -333,7 +361,8 @@ describe('channels routes', () => {
 
     expect(handled).toBe(true);
     expect(mocks.clearChannelBinding).toHaveBeenCalledWith('openclaw-weixin', 'default');
-    expect(ctx.gatewayManager.debouncedReload).toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedRestart).not.toHaveBeenCalled();
     expect(mocks.sendJson).toHaveBeenLastCalledWith(expect.anything(), 200, { success: true });
   });
 
@@ -655,6 +684,8 @@ describe('channels routes', () => {
 
     expect(handled).toBe(true);
     expect(mocks.saveChannelConfig).toHaveBeenCalledWith('feishu', { webhook: 'https://example.test/hook' }, 'agent-a');
+    expect(ctx.gatewayManager.debouncedReload).not.toHaveBeenCalled();
+    expect(ctx.gatewayManager.debouncedRestart).not.toHaveBeenCalled();
 
     mocks.parseJsonBody.mockResolvedValueOnce({ accountId: 'agent-a' });
     handled = await handleChannelRoutes(

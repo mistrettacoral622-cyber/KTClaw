@@ -171,4 +171,32 @@ describe('sanitizeOpenClawConfig', () => {
     expect(plugins.entries?.wechat).toBeUndefined();
     expect(plugins.entries?.['openclaw-weixin']?.enabled).toBe(true);
   });
+
+  it('disables managed channel plugins that are not configured as active channels', async () => {
+    await writeOpenClawJson({
+      channels: {
+        slack: {
+          enabled: true,
+        },
+      },
+      plugins: {
+        entries: {
+          'openclaw-lark': { enabled: true },
+          'openclaw-weixin': { enabled: true },
+          qqbot: { enabled: true },
+          customPlugin: { enabled: true },
+        },
+      },
+    });
+
+    const { sanitizeOpenClawConfig } = await import('@electron/utils/openclaw-auth');
+    await sanitizeOpenClawConfig();
+
+    const config = await readOpenClawJson();
+    const plugins = config.plugins as { entries?: Record<string, { enabled?: boolean }> };
+    expect(plugins.entries?.['openclaw-lark']?.enabled).toBe(false);
+    expect(plugins.entries?.['openclaw-weixin']?.enabled).toBe(false);
+    expect(plugins.entries?.qqbot?.enabled).toBe(false);
+    expect(plugins.entries?.customPlugin?.enabled).toBe(true);
+  });
 });

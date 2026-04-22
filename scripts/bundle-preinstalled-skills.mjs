@@ -1,5 +1,3 @@
-#!/usr/bin/env zx
-
 import 'zx/globals';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, mkdirSync, rmSync, cpSync, writeFileSync } from 'node:fs';
@@ -181,5 +179,8 @@ const invokedViaArgv = process.argv.some((arg) => arg?.includes('bundle-preinsta
 const invokedViaNpmScript = process.env.npm_lifecycle_event === 'bundle:preinstalled-skills';
 
 if (scriptPath === currentModulePath || invokedViaArgv || invokedViaNpmScript) {
-  await main();
+  void main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

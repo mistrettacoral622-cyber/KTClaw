@@ -5,11 +5,15 @@ const {
   execMock,
   createServerMock,
   wsAutoOpenState,
+  isPythonReadyMock,
+  setupManagedPythonMock,
 } = vi.hoisted(() => ({
   probeGatewayReadyMock: vi.fn(),
   execMock: vi.fn(),
   createServerMock: vi.fn(),
   wsAutoOpenState: { value: true },
+  isPythonReadyMock: vi.fn(),
+  setupManagedPythonMock: vi.fn(),
 }));
 
 vi.mock('electron', () => ({
@@ -23,6 +27,11 @@ vi.mock('electron', () => ({
 
 vi.mock('@electron/gateway/ws-client', () => ({
   probeGatewayReady: (...args: unknown[]) => probeGatewayReadyMock(...args),
+}));
+
+vi.mock('@electron/utils/uv-setup', () => ({
+  isPythonReady: (...args: unknown[]) => isPythonReadyMock(...args),
+  setupManagedPython: (...args: unknown[]) => setupManagedPythonMock(...args),
 }));
 
 vi.mock('child_process', () => ({
@@ -107,6 +116,8 @@ describe('gateway supervisor stability', () => {
     });
     createServerMock.mockImplementation(() => createMockServer());
     wsAutoOpenState.value = true;
+    isPythonReadyMock.mockResolvedValue(true);
+    setupManagedPythonMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -183,5 +194,20 @@ describe('gateway supervisor stability', () => {
 
     expect(existing).toBeNull();
     expect(createServerMock).toHaveBeenCalled();
+  });
+
+  it('runs managed python warmup at most once per process session', async () => {
+    isPythonReadyMock.mockResolvedValue(false);
+
+    const { warmupManagedPythonReadiness } = await import('@electron/gateway/supervisor');
+
+    warmupManagedPythonReadiness();
+    warmupManagedPythonReadiness();
+
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(isPythonReadyMock).toHaveBeenCalledTimes(1);
+    expect(setupManagedPythonMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -15,6 +15,20 @@ export interface GatewayStatus {
   connectedAt?: number;
   version?: string;
   reconnectAttempts?: number;
+  startupDiagnostics?: {
+    outcome: 'idle' | 'running' | 'success' | 'error';
+    startedAt?: number;
+    completedAt?: number;
+    error?: string;
+    phases: Array<{
+      phase: string;
+      startedAt: number;
+      endedAt?: number;
+      durationMs?: number;
+      outcome: 'running' | 'success' | 'error';
+      error?: string;
+    }>;
+  };
 }
 
 /**

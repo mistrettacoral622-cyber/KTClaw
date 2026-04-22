@@ -230,7 +230,7 @@ describe('app:request security', () => {
     });
   });
 
-  it('includes staged image references in the Gateway message text for image fallback inspection', async () => {
+  it('keeps staged image paths out of the Gateway message text when inline image attachments are present', async () => {
     const handler = handlers.get('chat:sendWithMedia');
     expect(handler).toBeDefined();
 
@@ -264,7 +264,7 @@ describe('app:request security', () => {
             fileName: 'current-upload.png',
           }),
         ],
-        message: expect.stringContaining(`[media attached: ${filePath} (image/png) | ${filePath}]`),
+        message: expect.not.stringContaining(filePath),
       }),
       120000,
     );

@@ -51,6 +51,10 @@ import {
   type GatewayReloadPolicy,
 } from './reload-policy';
 import { classifyGatewayStderrMessage, recordGatewayStartupStderrLine } from './startup-stderr';
+import {
+  GatewayStartupDiagnostics,
+  type GatewayStartupDiagnosticsSnapshot,
+} from './startup-diagnostics';
 import { runGatewayStartupSequence } from './startup-orchestrator';
 
 export interface GatewayStatus {
@@ -62,6 +66,7 @@ export interface GatewayStatus {
   connectedAt?: number;
   version?: string;
   reconnectAttempts?: number;
+  startupDiagnostics?: GatewayStartupDiagnosticsSnapshot;
 }
 
 /**
@@ -98,6 +103,7 @@ export class GatewayManager extends EventEmitter {
   private pendingRequests: Map<string, PendingGatewayRequest> = new Map();
   private deviceIdentity: DeviceIdentity | null = null;
   private restartInFlight: Promise<void> | null = null;
+  private readonly startupDiagnostics = new GatewayStartupDiagnostics();
   private readonly connectionMonitor = new GatewayConnectionMonitor();
   private readonly lifecycleController = new GatewayLifecycleController();
   private readonly restartController = new GatewayRestartController();
@@ -141,6 +147,7 @@ export class GatewayManager extends EventEmitter {
       },
     });
     this.reconnectConfig = { ...DEFAULT_RECONNECT_CONFIG, ...config };
+    this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
     // Device identity is loaded lazily in start() — not in the constructor —
     // so that async file I/O and key generation don't block module loading.
   }
@@ -212,6 +219,8 @@ export class GatewayManager extends EventEmitter {
     logger.info(`Gateway start requested (port=${this.status.port})`);
     this.lastSpawnSummary = null;
     this.shouldReconnect = true;
+    this.startupDiagnostics.begin();
+    this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
     await this.refreshReloadPolicy(true);
 
     // Lazily load device identity (async file I/O + key generation).
@@ -232,6 +241,21 @@ export class GatewayManager extends EventEmitter {
     // Fire-and-forget: only needs to run once, not on every retry.
     warmupManagedPythonReadiness();
 
+    const tracePhase = async <T>(phase: string, fn: () => Promise<T>): Promise<T> => {
+      this.startupDiagnostics.phaseStarted(phase);
+      this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
+      try {
+        const result = await fn();
+        this.startupDiagnostics.phaseSucceeded(phase);
+        this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
+        return result;
+      } catch (error) {
+        this.startupDiagnostics.phaseFailed(phase, error);
+        this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
+        throw error;
+      }
+    };
+
     try {
       await runGatewayStartupSequence({
         port: this.status.port,
@@ -245,14 +269,20 @@ export class GatewayManager extends EventEmitter {
           this.lifecycleController.assert(startEpoch, phase);
         },
         stopSystemService: async () => {
-          await unloadLaunchctlGatewayService();
-          await stopSystemdGatewayService();
+          await tracePhase('stop-system-service', async () => {
+            await unloadLaunchctlGatewayService();
+            await stopSystemdGatewayService();
+          });
         },
         findExistingGateway: async (port, ownedPid) => {
-          return await findExistingGatewayProcess({ port, ownedPid });
+          return await tracePhase('find-existing', async () => {
+            return await findExistingGatewayProcess({ port, ownedPid });
+          });
         },
         connect: async (port, externalToken) => {
-          await this.connect(port, externalToken);
+          await tracePhase('connect', async () => {
+            await this.connect(port, externalToken);
+          });
         },
         onConnectedToExistingGateway: () => {
           // If the existing gateway is our own process (for example after
@@ -266,22 +296,28 @@ export class GatewayManager extends EventEmitter {
           this.startHealthCheck();
         },
         waitForPortFree: async (port) => {
-          await waitForPortFree(port);
+          await tracePhase('wait-port-free', async () => {
+            await waitForPortFree(port);
+          });
         },
         startProcess: async () => {
-          await this.startProcess();
+          await tracePhase('start-process', async () => {
+            await this.startProcess();
+          });
         },
         waitForReady: async (port) => {
-          await waitForGatewayReady({
-            port,
-            getProcessExitCode: () => this.processExitCode,
+          await tracePhase('wait-ready', async () => {
+            await waitForGatewayReady({
+              port,
+              getProcessExitCode: () => this.processExitCode,
+            });
           });
         },
         onConnectedToManagedGateway: () => {
           this.startHealthCheck();
           logger.debug('Gateway started successfully');
         },
-        runDoctorRepair: async () => await runOpenClawDoctorRepair(),
+        runDoctorRepair: async () => await tracePhase('doctor-repair', async () => await runOpenClawDoctorRepair()),
         onDoctorRepairSuccess: () => {
           this.setStatus({ state: 'starting', error: undefined, reconnectAttempts: 0 });
         },
@@ -289,6 +325,8 @@ export class GatewayManager extends EventEmitter {
           await new Promise((resolve) => setTimeout(resolve, ms));
         },
       });
+      this.startupDiagnostics.finish('success');
+      this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
     } catch (error) {
       if (error instanceof LifecycleSupersededError) {
         logger.debug(error.message);
@@ -298,6 +336,8 @@ export class GatewayManager extends EventEmitter {
         `Gateway start failed (port=${this.status.port}, reconnectAttempts=${this.reconnectAttempts}, spawn=${this.lastSpawnSummary ?? 'n/a'})`,
         error
       );
+      this.startupDiagnostics.finish('error', error);
+      this.setStatus({ startupDiagnostics: this.startupDiagnostics.getSnapshot() });
       this.setStatus({ state: 'error', error: String(error) });
       throw error;
     } finally {

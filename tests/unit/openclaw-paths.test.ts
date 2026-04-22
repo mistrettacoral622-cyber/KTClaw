@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -96,5 +97,15 @@ describe('OpenClaw path resolution', () => {
     const { getOpenClawConfigDir } = await importPathsModule();
 
     expect(getOpenClawConfigDir()).toBe(join('C:/Users/test/AppData/Roaming/KTClaw', 'openclaw'));
+  });
+
+  it('falls back to the home-scoped OpenClaw state directory when Electron app paths are unavailable', async () => {
+    mockGetPath.mockImplementation(() => {
+      throw new Error('userData unavailable');
+    });
+
+    const { getOpenClawConfigDir } = await importPathsModule();
+
+    expect(getOpenClawConfigDir()).toBe(join(homedir(), '.openclaw'));
   });
 });

@@ -20,6 +20,7 @@ vi.mock('@electron/utils/agent-config', () => ({
 
 vi.mock('@electron/utils/paths', () => ({
   expandPath: vi.fn((path: string) => path.replace('~', '/home/test')),
+  getOpenClawSkillsDir: vi.fn(() => '/home/test/.openclaw/skills'),
 }));
 
 vi.mock('os', () => ({

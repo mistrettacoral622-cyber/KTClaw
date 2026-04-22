@@ -109,6 +109,7 @@ export async function handleGatewayRoutes(
               mimeType: m.mimeType,
               fileName: m.fileName,
             });
+            continue;
           }
 
           fileReferences.push(mediaReference);

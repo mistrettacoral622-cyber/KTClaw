@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import { app } from 'electron';
 import { existsSync, cpSync, mkdirSync, rmSync, readFileSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -29,6 +28,7 @@ import {
   listConfiguredAgentIds,
 } from '../../utils/agent-config';
 import { logger } from '../../utils/logger';
+import { classifyGatewayRefresh } from '../../gateway/refresh-classifier';
 import { createChannelConversationBindingStore, type ChannelConversationBindingRecord } from '../../services/channel-conversation-bindings';
 import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
@@ -79,10 +79,6 @@ function scheduleGatewayChannelRestart(ctx: HostApiContext, reason: string): voi
   void reason;
 }
 
-// Keep reload-first for feishu to avoid restart storms when channel auth/network is flaky.
-// GatewayManager.reload() already falls back to restart when reload is unhealthy.
-const FORCE_RESTART_CHANNELS = new Set(['dingtalk', 'wecom']);
-
 function scheduleGatewayChannelSaveRefresh(
   ctx: HostApiContext,
   channelType: string,
@@ -91,12 +87,24 @@ function scheduleGatewayChannelSaveRefresh(
   if (ctx.gatewayManager.getStatus().state === 'stopped') {
     return;
   }
-  if (FORCE_RESTART_CHANNELS.has(channelType)) {
+  const event = reason.includes('setDefaultAccount')
+    ? 'default_account_changed'
+    : reason.includes('Binding')
+      ? 'binding_changed'
+      : 'config_saved';
+  const action = classifyGatewayRefresh({
+    kind: 'channel',
+    event,
+    channelType,
+  });
+  if (action === 'restart') {
     ctx.gatewayManager.debouncedRestart();
     void reason;
     return;
   }
-  ctx.gatewayManager.debouncedReload();
+  if (action === 'reload') {
+    ctx.gatewayManager.debouncedReload();
+  }
   void reason;
 }
 
@@ -2027,32 +2035,6 @@ async function listDingTalkTargetOptions(accountId?: string, query?: string): Pr
 
 async function listWeChatTargetOptions(accountId?: string, query?: string): Promise<ChannelTargetOptionView[]> {
   return await listSessionDerivedTargetOptions({ channelType: OPENCLAW_WECHAT_CHANNEL_TYPE, accountId, query });
-}
-
-type DirectoryEntry = {
-  kind: 'user' | 'group' | 'channel';
-  id: string;
-  name?: string;
-  handle?: string;
-};
-
-function buildDirectoryTargetOptions(
-  entries: DirectoryEntry[],
-  normalizeTarget: (target: string) => string | undefined,
-): ChannelTargetOptionView[] {
-  const results: ChannelTargetOptionView[] = [];
-  const seen = new Set<string>();
-  for (const entry of entries) {
-    const normalized = normalizeTarget(entry.id) ?? entry.id;
-    if (!normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    results.push({
-      value: normalized,
-      label: buildChannelTargetLabel(entry.name || entry.handle || entry.id, normalized),
-      kind: entry.kind,
-    });
-  }
-  return results;
 }
 
 async function listQQBotKnownTargetOptions(accountId?: string, query?: string): Promise<ChannelTargetOptionView[]> {
