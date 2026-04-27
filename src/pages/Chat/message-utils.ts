@@ -113,10 +113,10 @@ export function extractMediaRefs(message: RawMessage | unknown): Array<{ filePat
   }
 
   const refs: Array<{ filePath: string; mimeType: string }> = [];
-  const regex = /\[media attached:\s*([^\s(]+)\s*\(([^)]+)\)\s*\|[^\]]*\]/g;
+  const regex = /\[media attached:\s*(.+?)\s*\(([-+.\w]+\/[-+.\w]+)\)\s*\|[^\]]*\]/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
-    refs.push({ filePath: match[1], mimeType: match[2] });
+    refs.push({ filePath: match[1].trim(), mimeType: match[2] });
   }
   return refs;
 }

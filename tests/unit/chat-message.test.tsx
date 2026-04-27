@@ -160,4 +160,26 @@ describe('ChatMessage', () => {
 
     expect(screen.getByText('静态思考片段')).toBeInTheDocument();
   });
+  it('shows image attachments as openable file cards when preview generation failed', () => {
+    const message: RawMessage = {
+      role: 'assistant',
+      content: 'Found this local image.',
+      _attachedFiles: [
+        {
+          id: 'img-1',
+          fileName: 'cat face.jpg',
+          mimeType: 'image/jpeg',
+          fileSize: 2048,
+          preview: null,
+          filePath: '/home/user/My Photos/cat face.jpg',
+        },
+      ],
+    };
+
+    render(<ChatMessage message={message} showThinking={false} />);
+
+    expect(screen.getByText('cat face.jpg')).toBeInTheDocument();
+    expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open cat face\.jpg/ })).toBeInTheDocument();
+  });
 });

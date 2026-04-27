@@ -2447,6 +2447,7 @@ function mimeToExt(mimeType: string): string {
 }
 
 const OUTBOUND_DIR = getOutboundMediaDir();
+const MAX_DIRECT_THUMBNAIL_BYTES = 12 * 1024 * 1024;
 
 /**
  * Generate a preview data URL for image files.
@@ -2454,9 +2455,12 @@ const OUTBOUND_DIR = getOutboundMediaDir();
  * longer side so the image is never squished). The frontend handles
  * square cropping via CSS object-fit: cover.
  */
-async function generateImagePreview(filePath: string, mimeType: string): Promise<string | null> {
+async function generateImagePreview(filePath: string, mimeType: string, fileSize?: number): Promise<string | null> {
   try {
-    const readOriginal = async (): Promise<string> => {
+    const readOriginal = async (): Promise<string | null> => {
+      if (typeof fileSize === 'number' && fileSize > MAX_DIRECT_THUMBNAIL_BYTES) {
+        return null;
+      }
       const { readFile: readFileAsync } = await import('fs/promises');
       const buf = await readFileAsync(filePath);
       return `data:${mimeType};base64,${buf.toString('base64')}`;
@@ -2471,6 +2475,9 @@ async function generateImagePreview(filePath: string, mimeType: string): Promise
         ? img.resize({ width: maxDim })   // landscape / square → constrain width
         : img.resize({ height: maxDim }); // portrait → constrain height
       return `data:image/png;base64,${resized.toPNG().toString('base64')}`;
+    }
+    if (typeof fileSize === 'number' && fileSize > MAX_DIRECT_THUMBNAIL_BYTES) {
+      return `data:image/png;base64,${img.toPNG().toString('base64')}`;
     }
     // Small image — use original (async read to avoid blocking)
     return readOriginal();
@@ -2503,7 +2510,7 @@ function registerFileHandlers(): void {
       // Generate preview for images
       let preview: string | null = null;
       if (mimeType.startsWith('image/')) {
-        preview = await generateImagePreview(stagedPath, mimeType);
+        preview = await generateImagePreview(stagedPath, mimeType, s.size);
       }
 
       results.push({ id, fileName, mimeType, fileSize: s.size, stagedPath, preview });
@@ -2532,7 +2539,7 @@ function registerFileHandlers(): void {
     // Generate preview for images
     let preview: string | null = null;
     if (mimeType.startsWith('image/')) {
-      preview = await generateImagePreview(stagedPath, mimeType);
+      preview = await generateImagePreview(stagedPath, mimeType, fileSize);
     }
 
     return { id, fileName: payload.fileName, mimeType, fileSize, stagedPath, preview };
@@ -2601,7 +2608,7 @@ function registerFileHandlers(): void {
         const s = await fsP.stat(filePath);
         let preview: string | null = null;
         if (mimeType.startsWith('image/')) {
-          preview = await generateImagePreview(filePath, mimeType);
+          preview = await generateImagePreview(filePath, mimeType, s.size);
         }
         results[filePath] = { preview, fileSize: s.size };
       } catch {

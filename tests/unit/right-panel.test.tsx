@@ -3,9 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RightPanel } from '@/components/layout/RightPanel';
 import { useRightPanelStore } from '@/stores/rightPanelStore';
 
-const { updateAgentMock, toastSuccessMock } = vi.hoisted(() => ({
+const { updateAgentMock, toastSuccessMock, invokeIpcMock } = vi.hoisted(() => ({
   updateAgentMock: vi.fn(async () => undefined),
   toastSuccessMock: vi.fn(),
+  invokeIpcMock: vi.fn(async () => ''),
 }));
 
 const agentsState = {
@@ -48,6 +49,13 @@ const chatState = {
           preview: null,
           filePath: 'C:/tmp/brief.md',
         },
+        {
+          fileName: 'cat face.jpg',
+          mimeType: 'image/jpeg',
+          fileSize: 2048,
+          preview: 'data:image/jpeg;base64,Y2F0',
+          filePath: 'C:/tmp/My Photos/cat face.jpg',
+        },
       ],
     },
   ],
@@ -85,6 +93,10 @@ vi.mock('sonner', () => ({
   },
 }));
 
+vi.mock('@/lib/api-client', () => ({
+  invokeIpc: (...args: unknown[]) => invokeIpcMock(...args),
+}));
+
 describe('RightPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,6 +110,16 @@ describe('RightPanel', () => {
 
     expect(screen.getByText('Files')).toBeInTheDocument();
     expect(screen.getByText('brief.md')).toBeInTheDocument();
+    expect(screen.getByAltText('cat face.jpg')).toHaveAttribute('src', 'data:image/jpeg;base64,Y2F0');
+  });
+
+  it('opens a file from the file panel when a stored path is available', () => {
+    useRightPanelStore.getState().openPanel('file', 'main');
+
+    render(<RightPanel />);
+    fireEvent.click(screen.getByRole('button', { name: /Open cat face\.jpg/ }));
+
+    expect(invokeIpcMock).toHaveBeenCalledWith('shell:openPath', 'C:/tmp/My Photos/cat face.jpg');
   });
 
   it('edits and saves the selected agent in agent mode', async () => {

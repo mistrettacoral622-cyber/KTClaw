@@ -18,6 +18,7 @@ import 'katex/contrib/mhchem';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, File, Folder } from 'lucide-react';
+import { invokeIpc } from '@/lib/api-client';
 
 const CODE_BLOCK_LINE_LIMIT = 200;
 const CODE_BLOCK_CHAR_LIMIT = 20000;
@@ -89,8 +90,10 @@ const normalizeDisplayMath = (content: string): string =>
     inner.includes('\n') ? `$$\n${inner.trim()}\n$$` : match
   );
 
-const encodeFileUrl = (url: string): string =>
-  encodeURI(url).replace(/\(/g, '%28').replace(/\)/g, '%29');
+const encodeFileUrl = (url: string): string => {
+  const decoded = safeDecodeURIComponent(url) || url;
+  return encodeURI(decoded).replace(/\(/g, '%28').replace(/\)/g, '%29');
+};
 
 const encodeFileUrlDestination = (dest: string): string => {
   const trimmed = dest.trim();
@@ -356,11 +359,9 @@ const createComponents = (resolveLocalFilePath?: (href: string, text: string) =>
         const filePath = safeDecodeURIComponent(rawPath) || rawPath;
 
         const handleClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-          const ipc = window.electron?.ipcRenderer;
-          if (!ipc) return;
           e.preventDefault();
           try {
-            const result = await ipc.invoke('shell:openPath', filePath);
+            const result = await invokeIpc<string>('shell:openPath', filePath);
             if (typeof result === 'string' && result) {
               console.error('Failed to open file:', filePath, result);
             }

@@ -4,7 +4,7 @@
  * with markdown, thinking sections, images, and tool cards.
  */
 import { useState, useCallback, useEffect, memo } from 'react';
-import { Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Film, Music, FileArchive, File, X, FolderOpen, ZoomIn, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, Copy, Check, ChevronDown, ChevronRight, Wrench, FileText, Film, Music, FileArchive, File, Image as ImageIcon, X, FolderOpen, ZoomIn, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import MarkdownContent from './MarkdownContent';
 import { Button } from '@/components/ui/button';
@@ -230,14 +230,7 @@ export const ChatMessage = memo(function ChatMessage({
                     mimeType={file.mimeType}
                     onPreview={() => setLightboxImg({ src: file.preview!, fileName: file.fileName, filePath: file.filePath, mimeType: file.mimeType })}
                   />
-                ) : (
-                  <div
-                    key={`local-${i}`}
-                    className="w-36 h-36 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-center text-muted-foreground"
-                  >
-                    <File className="h-8 w-8" />
-                  </div>
-                );
+                ) : <FileCard key={`local-${i}`} file={file} />;
               }
               // Non-image files → file card
               return <FileCard key={`local-${i}`} file={file} />;
@@ -292,13 +285,7 @@ export const ChatMessage = memo(function ChatMessage({
                   />
                 );
               }
-              if (isImage && !file.preview) {
-                return (
-                  <div key={`local-${i}`} className="w-36 h-36 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-center text-muted-foreground">
-                    <File className="h-8 w-8" />
-                  </div>
-                );
-              }
+              if (isImage && !file.preview) return <FileCard key={`local-${i}`} file={file} />;
               return <FileCard key={`local-${i}`} file={file} />;
             })}
           </div>
@@ -493,6 +480,7 @@ function formatFileSize(bytes: number): string {
 }
 
 function FileIcon({ mimeType, className }: { mimeType: string; className?: string }) {
+  if (mimeType.startsWith('image/')) return <ImageIcon className={className} />;
   if (mimeType.startsWith('video/')) return <Film className={className} />;
   if (mimeType.startsWith('audio/')) return <Music className={className} />;
   if (mimeType.startsWith('text/') || mimeType === 'application/json' || mimeType === 'application/xml') return <FileText className={className} />;
@@ -502,29 +490,45 @@ function FileIcon({ mimeType, className }: { mimeType: string; className?: strin
 }
 
 function FileCard({ file }: { file: AttachedFileMeta }) {
+  const isImage = file.mimeType.startsWith('image/');
+  const canOpen = Boolean(file.filePath);
   const handleOpen = useCallback(() => {
     if (file.filePath) {
       invokeIpc('shell:openPath', file.filePath);
     }
   }, [file.filePath]);
 
-  return (
-    <div 
-      className={cn(
-        "flex items-center gap-3 rounded-xl border border-black/10 dark:border-white/10 px-3 py-2.5 bg-black/5 dark:bg-white/5 max-w-[220px]",
-        file.filePath && "cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-      )}
-      onClick={handleOpen}
-      title={file.filePath ? "Open file" : undefined}
-    >
+  const content = (
+    <>
       <FileIcon mimeType={file.mimeType} className="h-5 w-5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 overflow-hidden">
         <p className="text-xs font-medium truncate">{file.fileName}</p>
         <p className="text-[10px] text-muted-foreground">
-          {file.fileSize > 0 ? formatFileSize(file.fileSize) : 'File'}
+          {isImage && !file.preview ? 'Preview unavailable' : file.fileSize > 0 ? formatFileSize(file.fileSize) : 'File'}
         </p>
       </div>
-    </div>
+    </>
+  );
+
+  const className = cn(
+    "flex items-center gap-3 rounded-xl border border-black/10 dark:border-white/10 px-3 py-2.5 bg-black/5 dark:bg-white/5 max-w-[240px] appearance-none text-left",
+    canOpen && "cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors",
+  );
+
+  if (!canOpen) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      onClick={handleOpen}
+      title="Open file"
+      aria-label={`Open ${file.fileName}`}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -547,15 +551,17 @@ function ImageThumbnail({
 }) {
   void filePath; void base64; void mimeType;
   return (
-    <div
-      className="relative w-36 h-36 rounded-xl border overflow-hidden border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 group/img cursor-zoom-in"
+    <button
+      type="button"
+      className="relative w-36 h-36 rounded-xl border overflow-hidden border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 group/img cursor-zoom-in p-0"
       onClick={onPreview}
+      aria-label={`Preview ${fileName}`}
     >
       <img src={src} alt={fileName} className="w-full h-full object-cover" />
       <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/25 transition-colors flex items-center justify-center">
         <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover/img:opacity-100 transition-opacity drop-shadow" />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -578,15 +584,17 @@ function ImagePreviewCard({
 }) {
   void filePath; void base64; void mimeType;
   return (
-    <div
-      className="relative max-w-xs rounded-xl border overflow-hidden border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 group/img cursor-zoom-in"
+    <button
+      type="button"
+      className="relative max-w-xs rounded-xl border overflow-hidden border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 group/img cursor-zoom-in p-0"
       onClick={onPreview}
+      aria-label={`Preview ${fileName}`}
     >
       <img src={src} alt={fileName} className="block w-full" />
       <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-colors flex items-center justify-center">
         <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover/img:opacity-100 transition-opacity drop-shadow" />
       </div>
-    </div>
+    </button>
   );
 }
 

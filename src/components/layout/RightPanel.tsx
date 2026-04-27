@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, Upload, UserCircle } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, UserCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,16 @@ import { useAgentsStore } from '@/stores/agents';
 import { useChatStore, type RawMessage } from '@/stores/chat';
 import { useRightPanelStore } from '@/stores/rightPanelStore';
 import { TaskDetailPanel } from '@/pages/TaskKanban/TaskDetailPanel';
+import { invokeIpc } from '@/lib/api-client';
 
 type FileEntry = {
   id: string;
   fileName: string;
   fileSize: number;
   uploadedAt: number | null;
+  filePath?: string;
+  mimeType: string;
+  preview?: string | null;
 };
 
 function formatFileSize(fileSize: number): string {
@@ -50,6 +54,9 @@ function collectFiles(messages: RawMessage[]): FileEntry[] {
         fileName: file.fileName,
         fileSize: file.fileSize,
         uploadedAt,
+        filePath: file.filePath,
+        mimeType: file.mimeType,
+        preview: file.preview,
       });
     }
   }
@@ -61,6 +68,9 @@ function FileListPanel() {
   const messages = useChatStore((state) => state.messages);
   const { t } = useTranslation();
   const files = collectFiles(messages);
+  const openFile = (filePath?: string) => {
+    if (filePath) void invokeIpc('shell:openPath', filePath);
+  };
 
   if (files.length === 0) {
     return (
@@ -74,9 +84,31 @@ function FileListPanel() {
   return (
     <div className="flex max-h-full flex-col gap-2 overflow-y-auto">
       {files.map((file) => (
-        <div key={file.id} className="rounded-lg border border-border px-3 py-3">
+        <button
+          key={file.id}
+          type="button"
+          className={`w-full appearance-none rounded-lg border border-border px-3 py-3 text-left transition-colors ${file.filePath ? 'cursor-pointer hover:bg-muted/60' : 'cursor-default'}`}
+          onClick={() => openFile(file.filePath)}
+          disabled={!file.filePath}
+          aria-label={file.filePath ? `Open ${file.fileName}` : file.fileName}
+        >
           <div className="flex items-start gap-3">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            {file.mimeType.startsWith('image/') && file.preview ? (
+              <img
+                src={file.preview}
+                alt={file.fileName}
+                className="h-10 w-10 shrink-0 rounded-md border border-border object-cover"
+                loading="lazy"
+              />
+            ) : file.mimeType.startsWith('image/') ? (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{file.fileName}</p>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -85,7 +117,7 @@ function FileListPanel() {
               </div>
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

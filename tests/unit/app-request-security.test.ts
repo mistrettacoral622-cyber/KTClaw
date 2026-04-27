@@ -404,6 +404,33 @@ describe('app:request security', () => {
     });
   });
 
+  it('does not read an oversized original image when nativeImage cannot decode it', async () => {
+    mockNativeImageCreateFromPath.mockReturnValueOnce({
+      isEmpty: () => true,
+      getSize: () => ({ width: 0, height: 0 }),
+      resize: () => ({ toPNG: () => Buffer.from('') }),
+    });
+    fsStatMock.mockResolvedValueOnce({ size: 25 * 1024 * 1024 });
+    const handler = handlers.get('media:getThumbnails');
+    expect(handler).toBeDefined();
+    const filePath = join(homedir(), 'Pictures', 'huge photo.png');
+
+    const response = await handler?.({}, [
+      {
+        filePath,
+        mimeType: 'image/png',
+      },
+    ]);
+
+    expect(fsReadFileMock).not.toHaveBeenCalled();
+    expect(response).toEqual({
+      [filePath]: {
+        preview: null,
+        fileSize: 25 * 1024 * 1024,
+      },
+    });
+  });
+
   it('blocks thumbnail reads when file read permission is denied', async () => {
     mockCheckPermission.mockResolvedValueOnce('block');
     const handler = handlers.get('media:getThumbnails');
