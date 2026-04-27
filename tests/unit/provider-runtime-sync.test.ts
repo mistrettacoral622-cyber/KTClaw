@@ -5,6 +5,31 @@ import type { ProviderConfig } from '@electron/utils/secure-storage';
 const mocks = vi.hoisted(() => ({
   getProviderAccount: vi.fn(),
   listProviderAccounts: vi.fn(),
+  providerAccountToConfig: vi.fn((account: {
+    id: string;
+    label: string;
+    vendorId: string;
+    baseUrl?: string;
+    apiProtocol?: 'openai-completions' | 'openai-responses' | 'anthropic-messages';
+    model?: string;
+    fallbackModels?: string[];
+    fallbackAccountIds?: string[];
+    enabled: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }) => ({
+    id: account.id,
+    name: account.label,
+    type: account.vendorId,
+    baseUrl: account.baseUrl,
+    apiProtocol: account.apiProtocol,
+    model: account.model,
+    fallbackModels: account.fallbackModels,
+    fallbackProviderIds: account.fallbackAccountIds,
+    enabled: account.enabled,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  })),
   getProviderSecret: vi.fn(),
   getAllProviders: vi.fn(),
   getApiKey: vi.fn(),
@@ -27,6 +52,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@electron/services/providers/provider-store', () => ({
   getProviderAccount: mocks.getProviderAccount,
   listProviderAccounts: mocks.listProviderAccounts,
+  providerAccountToConfig: mocks.providerAccountToConfig,
 }));
 
 vi.mock('@electron/services/secrets/secret-store', () => ({
@@ -71,6 +97,7 @@ vi.mock('@electron/utils/logger', () => ({
 }));
 
 import {
+  syncAllProviderAuthToRuntime,
   syncDefaultProviderToRuntime,
   syncDeletedProviderApiKeyToRuntime,
   syncDeletedProviderToRuntime,
@@ -252,5 +279,55 @@ describe('provider-runtime-sync refresh strategy', () => {
         ],
       }),
     }));
+  });
+
+  it('syncs OpenAI-compatible provider config during startup auth sync', async () => {
+    mocks.listProviderAccounts.mockResolvedValue([
+      {
+        id: 'openai-qwen35-9b-local',
+        vendorId: 'openai',
+        label: 'OpenAI-Compatible Qwen',
+        authMode: 'api_key',
+        baseUrl: 'http://10.101.80.18:8888/v1',
+        apiProtocol: 'openai-completions',
+        model: 'Qwen3.5-9B',
+        enabled: true,
+        isDefault: false,
+        createdAt: '2026-04-20T10:08:02.575Z',
+        updatedAt: '2026-04-20T10:08:02.575Z',
+      },
+    ]);
+    mocks.getProviderSecret.mockResolvedValue({
+      type: 'api_key',
+      accountId: 'openai-qwen35-9b-local',
+      apiKey: 'not-validated',
+    });
+    mocks.getProviderConfig.mockReturnValue({
+      api: 'openai-responses',
+      baseUrl: 'https://api.openai.com/v1',
+      apiKeyEnv: 'OPENAI_API_KEY',
+    });
+    mocks.readOpenClawConfig.mockResolvedValue({
+      agents: {
+        list: [
+          {
+            id: 'main',
+            model: 'openai/Qwen3.5-9B',
+          },
+        ],
+      },
+    });
+
+    await syncAllProviderAuthToRuntime();
+
+    expect(mocks.syncProviderConfigToOpenClaw).toHaveBeenCalledWith(
+      'openai',
+      'Qwen3.5-9B',
+      expect.objectContaining({
+        baseUrl: 'http://10.101.80.18:8888/v1',
+        api: 'openai-completions',
+      }),
+    );
+    expect(mocks.saveProviderKeyToOpenClaw).toHaveBeenCalledWith('openai', 'not-validated');
   });
 });

@@ -26,6 +26,7 @@ import { OPENCLAW_WECHAT_CHANNEL_TYPE } from './channel-alias';
 import { withConfigLock } from './config-mutex';
 import { logger } from './logger';
 import { getOpenClawConfigDir } from './paths';
+import { modelLooksVisionCapable } from '../../shared/chat-dispatch-hints';
 
 const AUTH_STORE_VERSION = 1;
 const AUTH_PROFILE_FILENAME = 'auth-profiles.json';
@@ -504,17 +505,30 @@ function mergeProviderModels(
   ...groups: Array<Array<Record<string, unknown>>>
 ): Array<Record<string, unknown>> {
   const merged: Array<Record<string, unknown>> = [];
-  const seen = new Set<string>();
+  const indexes = new Map<string, number>();
 
   for (const group of groups) {
     for (const item of group) {
       const id = typeof item?.id === 'string' ? item.id : '';
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      merged.push(item);
+      if (!id) continue;
+      const existingIndex = indexes.get(id);
+      if (existingIndex === undefined) {
+        indexes.set(id, merged.length);
+        merged.push(item);
+      } else {
+        merged[existingIndex] = { ...merged[existingIndex], ...item };
+      }
     }
   }
   return merged;
+}
+
+function buildRuntimeModelEntry(id: string): Record<string, unknown> {
+  return {
+    id,
+    name: id,
+    input: modelLooksVisionCapable(id) ? ['text', 'image'] : ['text'],
+  };
 }
 
 function upsertOpenClawProviderEntry(
@@ -537,7 +551,7 @@ function upsertOpenClawProviderEntry(
   const registryModels = options.includeRegistryModels
     ? ((getProviderConfig(provider)?.models ?? []).map((m) => ({ ...m })) as Array<Record<string, unknown>>)
     : [];
-  const runtimeModels = (options.modelIds ?? []).map((id) => ({ id, name: id }));
+  const runtimeModels = (options.modelIds ?? []).map(buildRuntimeModelEntry);
 
   const nextProvider: Record<string, unknown> = {
     ...existingProvider,

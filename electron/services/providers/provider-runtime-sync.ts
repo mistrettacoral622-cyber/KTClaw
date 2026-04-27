@@ -3,7 +3,7 @@ import {
   classifyGatewayRefresh,
   type GatewayRefreshIntent,
 } from '../../gateway/refresh-classifier';
-import { getProviderAccount, listProviderAccounts } from './provider-store';
+import { getProviderAccount, listProviderAccounts, providerAccountToConfig } from './provider-store';
 import { getProviderSecret } from '../secrets/secret-store';
 import type { ProviderConfig } from '../../utils/secure-storage';
 import { getAllProviders, getApiKey, getDefaultProvider, getProvider } from '../../utils/secure-storage';
@@ -217,43 +217,12 @@ export async function syncAllProviderAuthToRuntime(): Promise<void> {
   const accounts = await listProviderAccounts();
 
   for (const account of accounts) {
-    const runtimeProviderKey = await resolveRuntimeProviderKey({
-      id: account.id,
-      name: account.label,
-      type: account.vendorId,
-      baseUrl: account.baseUrl,
-      model: account.model,
-      fallbackModels: account.fallbackModels,
-      fallbackProviderIds: account.fallbackAccountIds,
-      enabled: account.enabled,
-      createdAt: account.createdAt,
-      updatedAt: account.updatedAt,
-    });
+    await syncProviderToRuntime(providerAccountToConfig(account), undefined);
+  }
 
-    const secret = await getProviderSecret(account.id);
-    if (!secret) {
-      continue;
-    }
-
-    if (secret.type === 'api_key') {
-      await saveProviderKeyToOpenClaw(runtimeProviderKey, secret.apiKey);
-      continue;
-    }
-
-    if (secret.type === 'local' && secret.apiKey) {
-      await saveProviderKeyToOpenClaw(runtimeProviderKey, secret.apiKey);
-      continue;
-    }
-
-    if (secret.type === 'oauth') {
-      await saveOAuthTokenToOpenClaw(runtimeProviderKey, {
-        access: secret.accessToken,
-        refresh: secret.refreshToken,
-        expires: secret.expiresAt,
-        email: secret.email,
-        projectId: secret.subject,
-      });
-    }
+  const defaultProviderId = await getDefaultProvider();
+  if (defaultProviderId && accounts.some((account) => account.id === defaultProviderId)) {
+    await syncDefaultProviderToRuntime(defaultProviderId);
   }
 
   await normalizeAgentModelRefsInOpenClawConfig();

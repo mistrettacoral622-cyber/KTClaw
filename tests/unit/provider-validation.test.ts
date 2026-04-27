@@ -121,6 +121,41 @@ describe('validateApiKeyWithProvider', () => {
     );
   });
 
+  it('falls back to /chat/completions when an OpenAI-compatible /models request closes early', async () => {
+    proxyAwareFetch
+      .mockRejectedValueOnce(new Error('Empty reply from server'))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          id: 'chatcmpl-test',
+          choices: [{ index: 0, message: { role: 'assistant', content: 'ok' } }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+    const { validateApiKeyWithProvider } = await import('@electron/services/providers/provider-validation');
+    const result = await validateApiKeyWithProvider('custom', 'any-key', {
+      baseUrl: 'http://10.101.80.18:8888/v1',
+      apiProtocol: 'openai-completions',
+      model: 'Qwen3.5-9B',
+    });
+
+    expect(result).toMatchObject({ valid: true });
+    expect(proxyAwareFetch).toHaveBeenNthCalledWith(
+      2,
+      'http://10.101.80.18:8888/v1/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'Qwen3.5-9B',
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 1,
+        }),
+      })
+    );
+  });
+
   it('uses the provided model when probing custom chat completions fallback', async () => {
     proxyAwareFetch
       .mockResolvedValueOnce(

@@ -130,6 +130,50 @@ describe('saveProviderKeyToOpenClaw', () => {
   });
 });
 
+describe('syncProviderConfigToOpenClaw', () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    await rm(testHome, { recursive: true, force: true });
+    await rm(testUserData, { recursive: true, force: true });
+  });
+
+  it('marks registered OpenAI-compatible local models as image-capable by default', async () => {
+    await writeOpenClawJson({
+      models: {
+        providers: {
+          openai: {
+            baseUrl: 'https://api.openai.com/v1',
+            api: 'openai-responses',
+            models: [
+              { id: 'Qwen3.5-9B', name: 'Qwen3.5-9B' },
+            ],
+          },
+        },
+      },
+    });
+
+    const { syncProviderConfigToOpenClaw } = await import('@electron/utils/openclaw-auth');
+
+    await syncProviderConfigToOpenClaw('openai', 'Qwen3.5-9B', {
+      baseUrl: 'http://10.101.80.18:8888/v1',
+      api: 'openai-completions',
+      apiKeyEnv: 'OPENAI_API_KEY',
+    });
+
+    const config = await readOpenClawJson();
+    const provider = (config.models as Record<string, unknown>).providers as Record<string, {
+      models: Array<Record<string, unknown>>;
+    }>;
+
+    expect(provider.openai.models).toContainEqual(expect.objectContaining({
+      id: 'Qwen3.5-9B',
+      name: 'Qwen3.5-9B',
+      input: ['text', 'image'],
+    }));
+  });
+});
+
 describe('sanitizeOpenClawConfig', () => {
   beforeEach(async () => {
     vi.resetModules();

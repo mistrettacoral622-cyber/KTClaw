@@ -150,6 +150,13 @@ function classifyAuthResponse(
   return { valid: false, error: extractApiErrorMessage(status, data) };
 }
 
+function shouldFallbackFromModelsProbe(result: ValidationResult): boolean {
+  if (result.status === 404) {
+    return true;
+  }
+  return result.status === undefined && !result.valid;
+}
+
 async function validateOpenAiCompatibleKey(
   providerType: string,
   apiKey: string,
@@ -166,9 +173,9 @@ async function validateOpenAiCompatibleKey(
   const { modelsUrl, probeUrl } = resolveOpenAiProbeUrls(trimmedBaseUrl, apiProtocol);
   const modelsResult = await performProviderValidationRequest(providerType, modelsUrl, headers);
 
-  if (modelsResult.status === 404) {
+  if (shouldFallbackFromModelsProbe(modelsResult)) {
     logger.info(
-      `[ktclaw-validate] ${providerType} /models returned 404, falling back to ${apiProtocol} probe`,
+      `[ktclaw-validate] ${providerType} /models unavailable, falling back to ${apiProtocol} probe`,
     );
     if (apiProtocol === 'openai-responses') {
       return await performResponsesProbe(providerType, probeUrl, headers, probeModel);
