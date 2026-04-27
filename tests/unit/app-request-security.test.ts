@@ -28,10 +28,18 @@ const {
   mockGetSetting,
   mockResetSettings,
   mockProviderService,
+  mockCheckPermission,
+  mockNativeImageCreateFromPath,
 } = vi.hoisted(() => ({
   mockGetAllSettings: vi.fn(),
   mockGetSetting: vi.fn(),
   mockResetSettings: vi.fn(),
+  mockCheckPermission: vi.fn(async () => 'allow'),
+  mockNativeImageCreateFromPath: vi.fn(() => ({
+    isEmpty: () => false,
+    getSize: () => ({ width: 20, height: 20 }),
+    resize: () => ({ toPNG: () => Buffer.from('resized') }),
+  })),
   mockProviderService: {
     listLegacyProvidersWithKeyInfo: vi.fn(),
     getLegacyProvider: vi.fn(),
@@ -77,11 +85,7 @@ vi.mock('electron', () => ({
     relaunch: vi.fn(),
   },
   nativeImage: {
-    createFromPath: vi.fn(() => ({
-      isEmpty: () => true,
-      getSize: () => ({ width: 0, height: 0 }),
-      resize: () => ({ toPNG: () => Buffer.from('') }),
-    })),
+    createFromPath: mockNativeImageCreateFromPath,
   },
 }));
 
@@ -100,6 +104,11 @@ vi.mock('@electron/utils/store', () => ({
   getSetting: mockGetSetting,
   resetSettings: mockResetSettings,
   setSetting: vi.fn(),
+}));
+
+vi.mock('@electron/utils/permissions-enforcer', () => ({
+  checkPermission: mockCheckPermission,
+  appendAuditLog: vi.fn(),
 }));
 
 vi.mock('@electron/services/providers/provider-service', () => ({
@@ -152,6 +161,7 @@ describe('app:request security', () => {
     handlers.clear();
     vi.clearAllMocks();
     gatewayManager.getStatus.mockReturnValue({ state: 'stopped', port: 18789 });
+    mockCheckPermission.mockResolvedValue('allow');
     fsAccessMock.mockResolvedValue(undefined);
     fsReadFileMock.mockResolvedValue(Buffer.from('file'));
     fsStatMock.mockResolvedValue({ size: 123 });
@@ -346,7 +356,56 @@ describe('app:request security', () => {
     );
   });
 
-  it('blocks thumbnail reads for non-staged media paths', async () => {
+  it('allows thumbnail reads for local image paths through the file read permission gate', async () => {
+    const handler = handlers.get('media:getThumbnails');
+    expect(handler).toBeDefined();
+    const filePath = join(homedir(), 'Pictures', 'private.png');
+
+    const response = await handler?.({}, [
+      {
+        filePath,
+        mimeType: 'image/png',
+      },
+    ]);
+
+    expect(mockCheckPermission).toHaveBeenCalledWith('file:read', { path: filePath });
+    expect(fsStatMock).toHaveBeenCalledWith(filePath);
+    expect(mockNativeImageCreateFromPath).toHaveBeenCalledWith(filePath);
+    expect(response).toEqual({
+      [filePath]: {
+        preview: 'data:image/png;base64,ZmlsZQ==',
+        fileSize: 123,
+      },
+    });
+  });
+
+  it('falls back to a direct thumbnail data URL when nativeImage cannot decode the file', async () => {
+    mockNativeImageCreateFromPath.mockReturnValueOnce({
+      isEmpty: () => true,
+      getSize: () => ({ width: 0, height: 0 }),
+      resize: () => ({ toPNG: () => Buffer.from('') }),
+    });
+    const handler = handlers.get('media:getThumbnails');
+    expect(handler).toBeDefined();
+    const filePath = join(homedir(), 'Pictures', 'private.png');
+
+    const response = await handler?.({}, [
+      {
+        filePath,
+        mimeType: 'image/png',
+      },
+    ]);
+
+    expect(response).toEqual({
+      [filePath]: {
+        preview: 'data:image/png;base64,ZmlsZQ==',
+        fileSize: 123,
+      },
+    });
+  });
+
+  it('blocks thumbnail reads when file read permission is denied', async () => {
+    mockCheckPermission.mockResolvedValueOnce('block');
     const handler = handlers.get('media:getThumbnails');
     expect(handler).toBeDefined();
     const filePath = join(homedir(), 'Pictures', 'private.png');
@@ -359,6 +418,7 @@ describe('app:request security', () => {
     ]);
 
     expect(fsStatMock).not.toHaveBeenCalled();
+    expect(mockNativeImageCreateFromPath).not.toHaveBeenCalled();
     expect(response).toEqual({
       [filePath]: {
         preview: null,

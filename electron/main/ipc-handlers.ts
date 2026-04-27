@@ -38,6 +38,7 @@ import { getProviderConfig } from '../utils/provider-registry';
 import { deviceOAuthManager, OAuthProviderType } from '../utils/device-oauth';
 import { browserOAuthManager, type BrowserOAuthProviderType } from '../utils/browser-oauth';
 import { getOutboundMediaDir, isOutboundMediaPath } from '../utils/outbound-media';
+import { appendAuditLog, checkPermission } from '../utils/permissions-enforcer';
 import { appendDispatchHints } from '../../shared/chat-dispatch-hints';
 import { applyProxySettings } from './proxy';
 import { syncLaunchAtStartupSettingFromStore } from './launch-at-startup';
@@ -2455,8 +2456,13 @@ const OUTBOUND_DIR = getOutboundMediaDir();
  */
 async function generateImagePreview(filePath: string, mimeType: string): Promise<string | null> {
   try {
+    const readOriginal = async (): Promise<string> => {
+      const { readFile: readFileAsync } = await import('fs/promises');
+      const buf = await readFileAsync(filePath);
+      return `data:${mimeType};base64,${buf.toString('base64')}`;
+    };
     const img = nativeImage.createFromPath(filePath);
-    if (img.isEmpty()) return null;
+    if (img.isEmpty()) return readOriginal();
     const size = img.getSize();
     const maxDim = 512; // keep enough resolution for crisp display on Retina
     // Only resize if larger than threshold — specify ONE dimension to keep ratio
@@ -2467,9 +2473,7 @@ async function generateImagePreview(filePath: string, mimeType: string): Promise
       return `data:image/png;base64,${resized.toPNG().toString('base64')}`;
     }
     // Small image — use original (async read to avoid blocking)
-    const { readFile: readFileAsync } = await import('fs/promises');
-    const buf = await readFileAsync(filePath);
-    return `data:${mimeType};base64,${buf.toString('base64')}`;
+    return readOriginal();
   } catch {
     return null;
   }
@@ -2579,9 +2583,19 @@ function registerFileHandlers(): void {
     const fsP = await import('fs/promises');
     const results: Record<string, { preview: string | null; fileSize: number }> = {};
     for (const { filePath, mimeType } of paths) {
-      if (!isOutboundMediaPath(filePath)) {
+      const permResult = await checkPermission('file:read', { path: filePath });
+      if (permResult === 'block') {
         results[filePath] = { preview: null, fileSize: 0 };
         continue;
+      }
+      if (permResult === 'confirm') {
+        await appendAuditLog({
+          timestamp: new Date().toISOString(),
+          action: 'file:read',
+          result: 'confirm-auto-allowed',
+          context: { path: filePath },
+          globalRiskLevel: 'standard',
+        });
       }
       try {
         const s = await fsP.stat(filePath);

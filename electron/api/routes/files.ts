@@ -6,7 +6,6 @@ import type { HostApiContext } from '../context';
 import { parseJsonBody, sendJson } from '../route-utils';
 import { checkPermission, appendAuditLog } from '../../utils/permissions-enforcer';
 import { getOpenClawConfigDir } from '../../utils/paths';
-import { isOutboundMediaPath } from '../../utils/outbound-media';
 
 const EXT_MIME_MAP: Record<string, string> = {
   '.png': 'image/png',
@@ -59,8 +58,13 @@ const OUTBOUND_DIR = join(getOpenClawConfigDir(), 'media', 'outbound');
 
 async function generateImagePreview(filePath: string, mimeType: string): Promise<string | null> {
   try {
+    const readOriginal = async (): Promise<string> => {
+      const { readFile } = await import('node:fs/promises');
+      const buf = await readFile(filePath);
+      return `data:${mimeType};base64,${buf.toString('base64')}`;
+    };
     const img = nativeImage.createFromPath(filePath);
-    if (img.isEmpty()) return null;
+    if (img.isEmpty()) return readOriginal();
     const size = img.getSize();
     const maxDim = 512;
     if (size.width > maxDim || size.height > maxDim) {
@@ -69,12 +73,25 @@ async function generateImagePreview(filePath: string, mimeType: string): Promise
         : img.resize({ height: maxDim });
       return `data:image/png;base64,${resized.toPNG().toString('base64')}`;
     }
-    const { readFile } = await import('node:fs/promises');
-    const buf = await readFile(filePath);
-    return `data:${mimeType};base64,${buf.toString('base64')}`;
+    return readOriginal();
   } catch {
     return null;
   }
+}
+
+async function canReadThumbnailPath(filePath: string): Promise<boolean> {
+  const permResult = await checkPermission('file:read', { path: filePath });
+  if (permResult === 'block') return false;
+  if (permResult === 'confirm') {
+    await appendAuditLog({
+      timestamp: new Date().toISOString(),
+      action: 'file:read',
+      result: 'confirm-auto-allowed',
+      context: { path: filePath },
+      globalRiskLevel: 'standard',
+    });
+  }
+  return true;
 }
 
 export async function handleFileRoutes(
@@ -159,7 +176,7 @@ export async function handleFileRoutes(
       const fsP = await import('node:fs/promises');
       const results: Record<string, { preview: string | null; fileSize: number }> = {};
       for (const { filePath, mimeType } of body.paths) {
-        if (!isOutboundMediaPath(filePath)) {
+        if (!await canReadThumbnailPath(filePath)) {
           results[filePath] = { preview: null, fileSize: 0 };
           continue;
         }
